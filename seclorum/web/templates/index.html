@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head><title>Seclorum</title></head>
+<body>
+    <h1>File Browser</h1>
+    <ul>
+    {% for file in files %}
+        <li>{{ file }}</li>
+    {% endfor %}
+    </ul>
+    <a href="/chat">Chat with Agents</a>
+</body>
+</html>

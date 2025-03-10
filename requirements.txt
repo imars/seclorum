@@ -1,0 +1,6 @@
+pydantic
+flask
+flask-socketio
+gitpython
+click
+ollama
