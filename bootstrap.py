@@ -48,14 +48,15 @@ Hello, fresh Grok instance! You’re picking up the Seclorum project, a self-imp
 - Conversation logging in {log_file} captures prompts and responses.
 - Fixed 'assigned'/'completed' bug in tests/test_seclorum.py (status now syncs via load_tasks).
 - Added worker_log.txt to worker.py for enhanced logging.
+- Enabled multi-session spawning in master.py with active_sessions tracking.
 - {summary}
 
 **Current Bug**: None active—last bug (assigned/completed) resolved.
 
 **Next Steps**:
-1. Test multi-session spawning in master.py.
-2. Bootstrap memory from conversation log (in progress).
-3. New feature TBD.
+1. Enhance Flask UI with task status feedback.
+2. Add error handling to worker.py.
+3. Stress-test multi-session with 5+ tasks.
 
 **Task**:
 - Continue development: enhance features or test multi-session workflows.
@@ -81,7 +82,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     prompt = generate_prompt(args.new_session)
-    print(prompt)
     with open("bootstrap_prompt.txt", "w") as f:
         f.write(prompt)
     proc = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE, text=True)
