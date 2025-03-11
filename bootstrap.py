@@ -1,5 +1,6 @@
 import json
 import os
+import argparse
 from datetime import datetime
 
 def load_conversation_log(log_file):
@@ -15,9 +16,9 @@ def summarize_conversation(log):
     last_response = log["responses"][-1] if log["responses"] else {"timestamp": "N/A", "text": "None"}
     return f"Conversation: {prompts} prompts, {responses} responses\nLast Prompt: {last_prompt['timestamp']} - {last_prompt['text']}\nLast Response: {last_response['timestamp']} - {last_response['text']}"
 
-def generate_prompt():
-    current_chat_id = datetime.now().isoformat().replace(":", "-")[:19]
+def generate_prompt(new_session_id=None):
     previous_chat_id = "https://x.com/i/grok?conversation=1899252825097416864"
+    current_chat_id = new_session_id if new_session_id else datetime.now().isoformat().replace(":", "-")[:19]
     log_file = "logs/conversations/conversation_2025-03-11-1.json"
     log = load_conversation_log(log_file)
     summary = summarize_conversation(log)
@@ -59,7 +60,11 @@ Use the repo, log file, and Chat {previous_chat_id} context to resume. Chain fut
     return prompt
 
 if __name__ == "__main__":
-    prompt = generate_prompt()
+    parser = argparse.ArgumentParser(description="Generate a bootstrap prompt for Seclorum handoff.")
+    parser.add_argument("--new-session", type=str, help="New chat session ID (e.g., X conversation URL or custom ID)")
+    args = parser.parse_args()
+    
+    prompt = generate_prompt(args.new_session)
     print(prompt)
     with open("bootstrap_prompt.txt", "w") as f:
         f.write(prompt)
