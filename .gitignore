@@ -16,3 +16,5 @@ __pycache__/
 seclorum.egg-info/
 dist/
 build/
+bootstrap_output.txt
+bootstrap_prompt.txt
