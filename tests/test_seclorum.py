@@ -25,7 +25,6 @@ def run_app_in_background():
         text=True
     )
     time.sleep(3)
-    # Check if server is up with a simple GET request
     try:
         response = requests.get("http://127.0.0.1:5000/", timeout=5)
         print(f"Server check response: {response.status_code}")
@@ -54,7 +53,7 @@ def check_outputs(expected_task_id, expected_description):
     print(f"log.txt content:\n{log_content}")
     assert f"Task {expected_task_id} assigned to WebUI" in log_content, "Task assignment missing"
     assert f"Spawned session for WebUI on Task {expected_task_id}" in log_content, "Session spawn missing"
-    assert "Received update from WebUI: Feature built" in log_content, "Update missing"
+    assert f"Received update from WebUI: {expected_description} completed" in log_content, "Update missing"
 
     with open("MasterNode_tasks.json", "r") as f:
         tasks = json.load(f)
@@ -63,15 +62,10 @@ def check_outputs(expected_task_id, expected_description):
     assert tasks[str(expected_task_id)]["description"] == expected_description, "Wrong description"
     assert tasks[str(expected_task_id)]["status"] == "completed", "Status not completed"
 
-    with open("worker_log.txt", "r") as f:
-        worker_log = f.read()
-    print(f"worker_log.txt content:\n{worker_log}")
-    assert f"Simulating WebUI working on Task {expected_task_id}: {expected_description}" in worker_log, "Worker log missing"
-
     with open("project/changes.txt", "r") as f:
         changes = f.read()
     print(f"project/changes.txt content:\n{changes}")
-    assert "MasterNode: Update from WebUI" in changes, "Changes file missing update"
+    assert f"MasterNode: Update from WebUI" in changes, "Changes file missing update"
 
     git_log = subprocess.run(
         ["git", "--git-dir=project/.git", "log", "--oneline"],
@@ -84,7 +78,7 @@ def test_seclorum_workflow():
     try:
         kill_existing_server()
         print("Cleaning up previous files...")
-        for file in ["log.txt", "MasterNode_tasks.json", "worker_log.txt", "project/changes.txt"]:
+        for file in ["log.txt", "MasterNode_tasks.json", "project/changes.txt"]:
             if os.path.exists(file):
                 os.remove(file)
         if os.path.exists("project"):
@@ -95,10 +89,14 @@ def test_seclorum_workflow():
         task_description = "Build feature"
         submit_task(task_description)
 
-        print("Simulating update...")
+        # Wait for worker to complete (2s sleep + buffer)
+        print("Waiting for worker to complete...")
+        time.sleep(4)
+
         from seclorum.agents.master import MasterNode
         master = MasterNode()
-        master.receive_update("WebUI", "Feature built")
+        status = master.get_session_status(task_id)
+        print(f"Session status for Task {task_id}: {status}")
 
         check_outputs(task_id, task_description)
         print("Test passed!")
