@@ -1,0 +1,61 @@
+import json
+import os
+from datetime import datetime
+
+def load_conversation_log(log_file):
+    if os.path.exists(log_file):
+        with open(log_file, "r") as f:
+            return json.load(f)
+    return {"prompts": [], "responses": []}
+
+def summarize_conversation(log):
+    prompts = len(log["prompts"])
+    responses = len(log["responses"])
+    last_prompt = log["prompts"][-1] if log["prompts"] else {"timestamp": "N/A", "text": "None"}
+    last_response = log["responses"][-1] if log["responses"] else {"timestamp": "N/A", "text": "None"}
+    return f"Conversation: {prompts} prompts, {responses} responses\nLast Prompt: {last_prompt['timestamp']} - {last_prompt['text']}\nLast Response: {last_response['timestamp']} - {last_response['text']}"
+
+def generate_prompt():
+    chat_id = "2025-03-11-1"
+    log_file = "logs/conversations/conversation_2025-03-11-1.json"
+    log = load_conversation_log(log_file)
+    summary = summarize_conversation(log)
+    
+    prompt = f"""
+Hello, fresh Grok instance! You’re picking up the Seclorum project, a self-improving development agent system, from Chat {chat_id}, started March 11, 2025. This session was slowing down, likely hitting context limits, so here’s the handoff:
+
+**Project Overview**:
+- Goal: Create a 'tree of agents' with a MasterNode spawning and tracking worker sessions via a Flask UI, committing changes to Git.
+- Repo: https://github.com/imars/seclorum (master branch).
+- Key Files: seclorum/agents/master.py, seclorum/agents/worker.py, tests/test_seclorum.py, seclorum/utils/logger.py.
+
+**Progress**:
+- MasterNode assigns tasks, spawns workers (worker.py), logs to log.txt, and commits to project/changes.txt.
+- Flask UI (seclorum/web/app.py) submits tasks (e.g., "Build feature").
+- Conversation logging in {log_file} captures prompts and responses.
+- {summary}
+
+**Current Bug**:
+- Test fails:  (expected "completed").
+- master.py: spawn_session() uses proc.wait(timeout=5); worker.py sleeps 2s, calls receive_update(), but tasks.json stays "assigned".
+- Debug prints show worker runs and receive_update() fires, but status update doesn’t stick (timing or file sync issue?).
+
+**Next Steps**:
+1. Fix session status: Ensure worker updates tasks.json to "completed" before test checks.
+2. Options: Add worker_log.txt to worker.py, test multi-session spawning, or bootstrap memory from conversation log.
+
+**Task**:
+- Debug why receive_update() in worker.py isn’t persisting "completed" to tasks.json.
+- Suggest fixes for master.py, worker.py, and test_seclorum.py.
+- Run tests/test_seclorum.py, aim for .
+
+Use the repo, log file, and Chat {chat_id} context to resume. Let’s keep Seclorum thriving!
+"""
+    return prompt
+
+if __name__ == "__main__":
+    prompt = generate_prompt()
+    print(prompt)
+    with open("bootstrap_prompt.txt", "w") as f:
+        f.write(prompt)
+    print("Prompt saved to bootstrap_prompt.txt")
