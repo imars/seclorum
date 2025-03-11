@@ -1,4 +1,4 @@
-from .framework import Agent, AgentConfig
-from .local import LocalAgent
-
-__all__ = ["Agent", "AgentConfig", "LocalAgent"]
+from .base import Agent
+from .master import MasterNode
+from .framework import *
+from .local import *

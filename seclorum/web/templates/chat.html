@@ -2,8 +2,13 @@
 <html>
 <head><title>Seclorum Chat</title></head>
 <body>
-    <h1>Chat with Agents</h1>
-    <p>Chat functionality coming soon!</p>
-    <a href="/">Back to File Browser</a>
+    <h1>Chat with Seclorum</h1>
+    <form method="post">
+        <input type="text" name="task" placeholder="Enter task">
+        <input type="submit" value="Submit">
+    </form>
+    {% if message %}
+        <p>{{ message }}</p>
+    {% endif %}
 </body>
 </html>

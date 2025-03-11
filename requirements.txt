@@ -1,6 +1,3 @@
-pydantic
 flask
-flask-socketio
+requests
 gitpython
-click
-ollama
