@@ -42,7 +42,7 @@ Hello, fresh Grok instance! You’re picking up the Seclorum project, a self-imp
 - {summary}
 
 **Current Bug**:
-- Test fails:  (expected "completed").
+- Test fails: `Session status for Task 1: assigned` (expected "completed").
 - master.py: spawn_session() uses proc.wait(timeout=5); worker.py sleeps 2s, calls receive_update(), but tasks.json stays "assigned".
 - Debug prints show worker runs and receive_update() executes, but status update doesn’t persist (timing, file sync, or instance isolation issue?).
 
@@ -53,7 +53,14 @@ Hello, fresh Grok instance! You’re picking up the Seclorum project, a self-imp
 **Task**:
 - Debug why receive_update() in worker.py isn’t syncing "completed" to tasks.json.
 - Suggest fixes for master.py, worker.py, and test_seclorum.py.
-- Run tests/test_seclorum.py, aim for .
+- Run tests/test_seclorum.py, aim for `Session status: completed`.
+
+**Repo Structure**:
+- Run `tree -I "__pycache__|*.pyc|*.log|logs|.git|.DS_Store"` in the repo root to see the current structure.
+
+**Instructions**:
+- For file contents, use `utils/copycb.py` to request them from the user instead of hypothesizing (e.g., `python utils/copycb.py seclorum/agents/master.py`).
+- Use `cat`-formatted syntax (e.g., `cat << EOF > file.py ... EOF`) for all file examples.
 
 **Chat Chain**:
 - Previous Chat: {previous_chat_id}
@@ -72,7 +79,6 @@ if __name__ == "__main__":
     print(prompt)
     with open("bootstrap_prompt.txt", "w") as f:
         f.write(prompt)
-    # Copy to clipboard using pbcopy
     proc = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE, text=True)
     proc.communicate(input=prompt)
     print("Prompt saved to bootstrap_prompt.txt and copied to clipboard")
