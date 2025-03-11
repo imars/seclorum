@@ -12,16 +12,19 @@ class MasterNode(Agent):
             with open(self.sessions_file, "r") as f:
                 self.sessions = json.load(f)
         else:
-            self.sessions = {}  # {task_id: {"pid": int, "node_name": str, "description": str}}
+            self.sessions = {}
+        self.load_tasks()  # Load tasks at init
+
+    def load_tasks(self):
         if os.path.exists("MasterNode_tasks.json"):
             with open("MasterNode_tasks.json", "r") as f:
                 self.tasks = json.load(f)
         else:
             self.tasks = {}
 
-    def save_sessions(self):
-        with open(self.sessions_file, "w") as f:
-            json.dump(self.sessions, f)
+    def save_tasks(self):
+        with open("MasterNode_tasks.json", "w") as f:
+            json.dump(self.tasks, f)
 
     def assign_task(self, task_id, description, node_name):
         task = {"task_id": task_id, "description": description, "status": "assigned"}
@@ -37,12 +40,14 @@ class MasterNode(Agent):
 
     def receive_update(self, node_name, update):
         self.log_update(f"Received update from {node_name}: {update}")
+        print(f"DEBUG: Updating status for {node_name} with {update}")
         for task_id, task in self.tasks.items():
             if task.get("node_name") == node_name or (node_name in self.nodes and self.nodes[node_name]["task_id"] == int(task_id)):
                 self.tasks[task_id]["status"] = "completed"
                 self.save_tasks()
                 if str(task_id) in self.sessions:
                     self.log_update(f"Session for Task {task_id} completed (PID: {self.sessions[str(task_id)]['pid']})")
+                print(f"DEBUG: Task {task_id} status set to completed")
                 break
         else:
             print(f"No task found for node {node_name}")
@@ -52,16 +57,22 @@ class MasterNode(Agent):
         cmd = ["python", "seclorum/agents/worker.py", str(task_id), description, node_name]
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.sessions[str(task_id)] = {"pid": proc.pid, "node_name": node_name, "description": description}
-        proc.wait(timeout=5)  # Wait for worker to finish (2s sleep + buffer)
-        self.save_sessions()
+        self.save_tasks()  # Fixed: was save_sessions()
         self.log_update(f"Spawned session for {node_name} on Task {task_id} (PID: {proc.pid})")
+        print(f"DEBUG: Waiting for worker PID {proc.pid}")
+        proc.wait(timeout=5)
+        print(f"DEBUG: Worker PID {proc.pid} finished")
         self.tasks[str(task_id)]["node_name"] = node_name
+        self.load_tasks()  # Reload tasks after worker finishes
         self.save_tasks()
 
     def get_session_status(self, task_id):
+        self.load_tasks()  # Ensure latest status
         task_id = str(task_id)
         if task_id in self.tasks:
-            return self.tasks[task_id]["status"]  # Trust tasks.json status
+            status = self.tasks[task_id]["status"]
+            print(f"DEBUG: Status for Task {task_id} is {status}")
+            return status
         return "not found"
 
 if __name__ == "__main__":
