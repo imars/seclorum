@@ -51,21 +51,24 @@ def submit_task(task_description, logger):
         logger.log_response(f"Failed: {e}")
         raise
 
-def check_outputs(expected_task_id, expected_description, logger):
+def check_outputs(expected_task_ids, expected_descriptions, logger):
     print("Checking outputs...")
     with open("log.txt", "r") as f:
         log_content = f.read()
     print(f"log.txt content:\n{log_content}")
-    assert f"Task {expected_task_id} assigned to WebUI" in log_content, "Task assignment missing"
-    assert f"Spawned session for WebUI on Task {expected_task_id}" in log_content, "Session spawn missing"
-    assert f"Received update from WebUI: {expected_description} completed" in log_content, "Update missing"
+    for tid, desc in zip(expected_task_ids, expected_descriptions):
+        assert f"Task {tid} assigned to WebUI" in log_content, f"Task {tid} assignment missing"
+        assert f"Spawned session for WebUI on Task {tid}" in log_content, f"Session spawn for {tid} missing"
+        assert f"Received update from WebUI: {desc} completed" in log_content, f"Update for {tid} missing"
 
     with open("MasterNode_tasks.json", "r") as f:
         tasks = json.load(f)
     print(f"MasterNode_tasks.json content:\n{tasks}")
-    assert str(expected_task_id) in tasks, f"Task {expected_task_id} not in tasks"
-    assert tasks[str(expected_task_id)]["description"] == expected_description, "Wrong description"
-    assert tasks[str(expected_task_id)]["status"] == "completed", "Status not completed"
+    for tid, desc in zip(expected_task_ids, expected_descriptions):
+        tid_str = str(tid)
+        assert tid_str in tasks, f"Task {tid} not in tasks"
+        assert tasks[tid_str]["description"] == desc, f"Wrong description for {tid}"
+        assert tasks[tid_str]["status"] == "completed", f"Status not completed for {tid}"
 
     with open("project/changes.txt", "r") as f:
         changes = f.read()
@@ -95,21 +98,24 @@ def test_seclorum_workflow():
             subprocess.run(["rm", "-rf", "project"])
 
         proc = run_app_in_background()
-        task_id = 1
-        task_description = "Build feature"
-        submit_task(task_description, logger)
+        task_ids = [1, 2]
+        task_descriptions = ["Build feature", "Test feature"]
+        for desc in task_descriptions:
+            submit_task(desc, logger)
 
-        print("Waiting for worker to complete...")
-        time.sleep(3)  # Increased to ensure worker finishes
+        print("Waiting for workers to complete...")
+        time.sleep(5)  # Give both workers time
 
         from seclorum.agents.master import MasterNode
         master = MasterNode()
-        status = master.get_session_status(task_id)
-        print(f"Session status for Task {task_id}: {status}")
-        logger.log_response(f"Session status: {status}")
-        assert status == "completed", f"Expected completed, got {status}"
+        master.check_sessions()  # Poll for completion
+        for tid in task_ids:
+            status = master.get_session_status(tid)
+            print(f"Session status for Task {tid}: {status}")
+            logger.log_response(f"Session status: {status}")
+            assert status == "completed", f"Expected completed, got {status}"
 
-        check_outputs(task_id, task_description, logger)
+        check_outputs(task_ids, task_descriptions, logger)
         print("Test passed!")
         logger.log_response("Test passed!")
     except Exception as e:

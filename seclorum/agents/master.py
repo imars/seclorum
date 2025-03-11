@@ -14,6 +14,7 @@ class MasterNode(Agent):
         else:
             self.sessions = {}
         self.load_tasks()  # Load tasks at init
+        self.active_sessions = {}  # Track running Popen objects
 
     def load_tasks(self):
         if os.path.exists("MasterNode_tasks.json"):
@@ -57,14 +58,20 @@ class MasterNode(Agent):
         cmd = ["python", "seclorum/agents/worker.py", str(task_id), description, node_name]
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.sessions[str(task_id)] = {"pid": proc.pid, "node_name": node_name, "description": description}
-        self.save_tasks()  # Fixed: was save_sessions()
-        self.log_update(f"Spawned session for {node_name} on Task {task_id} (PID: {proc.pid})")
-        print(f"DEBUG: Waiting for worker PID {proc.pid}")
-        proc.wait(timeout=5)
-        print(f"DEBUG: Worker PID {proc.pid} finished")
-        self.tasks[str(task_id)]["node_name"] = node_name
-        self.load_tasks()  # Reload tasks after worker finishes
+        self.active_sessions[str(task_id)] = proc  # Store Popen object
         self.save_tasks()
+        self.log_update(f"Spawned session for {node_name} on Task {task_id} (PID: {proc.pid})")
+        print(f"DEBUG: Spawned worker PID {proc.pid}")
+
+    def check_sessions(self):
+        completed = []
+        for task_id, proc in list(self.active_sessions.items()):
+            if proc.poll() is not None:  # Process has finished
+                print(f"DEBUG: Worker PID {proc.pid} finished for Task {task_id}")
+                completed.append(task_id)
+        for task_id in completed:
+            del self.active_sessions[task_id]
+        self.load_tasks()  # Refresh tasks after checking
 
     def get_session_status(self, task_id):
         self.load_tasks()  # Ensure latest status
