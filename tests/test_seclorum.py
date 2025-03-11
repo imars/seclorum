@@ -100,7 +100,7 @@ def test_seclorum_workflow():
         submit_task(task_description, logger)
 
         print("Waiting for worker to complete...")
-        time.sleep(4)
+        time.sleep(5)  # Increased to 5s
 
         from seclorum.agents.master import MasterNode
         master = MasterNode()
