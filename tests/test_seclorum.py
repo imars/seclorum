@@ -8,7 +8,7 @@ from seclorum.utils.logger import ConversationLogger
 
 def kill_existing_server():
     print("Killing existing server...")
-    cmd = "lsof -i :5000 | grep LISTEN | awk '{print $2}' | sort -u | xargs -r kill -9"
+    cmd = "lsof -i :5000 | grep LISTEN | awk '{print }' | sort -u | xargs -r kill -9"
     result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = result.stdout.decode(), result.stderr.decode()
     print(f"Kill result: stdout={stdout}, stderr={stderr}")
@@ -100,7 +100,7 @@ def test_seclorum_workflow():
         submit_task(task_description, logger)
 
         print("Waiting for worker to complete...")
-        time.sleep(1)  # Reduced since spawn_session waits
+        time.sleep(3)  # Increased to ensure worker finishes
 
         from seclorum.agents.master import MasterNode
         master = MasterNode()
