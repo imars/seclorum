@@ -2,3 +2,17 @@ logs/
 __pycache__/
 *.pyc
 .DS_Store
+# Runtime artifacts
+MasterNode_tasks.json
+log.txt
+sessions.json
+project/
+conversation_*.json
+logs/
+
+# Python build files
+*.pyc
+__pycache__/
+seclorum.egg-info/
+dist/
+build/
