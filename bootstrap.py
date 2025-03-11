@@ -18,7 +18,11 @@ def summarize_conversation(log):
 
 def generate_prompt(new_session_id=None):
     previous_chat_id = "https://x.com/i/grok?conversation=1899252825097416864"
-    current_chat_id = new_session_id if new_session_id else datetime.now().isoformat().replace(":", "-")[:19]
+    # If new_session_id is a URL, extract just the ID; otherwise, use it as-is or timestamp
+    if new_session_id and "conversation=" in new_session_id:
+        current_chat_id = new_session_id.split("conversation=")[-1]
+    else:
+        current_chat_id = new_session_id if new_session_id else datetime.now().isoformat().replace(":", "-")[:19]
     log_file = "logs/conversations/conversation_2025-03-11-1.json"
     log = load_conversation_log(log_file)
     summary = summarize_conversation(log)
