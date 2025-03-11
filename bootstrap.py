@@ -16,8 +16,8 @@ def summarize_conversation(log):
     return f"Conversation: {prompts} prompts, {responses} responses\nLast Prompt: {last_prompt['timestamp']} - {last_prompt['text']}\nLast Response: {last_response['timestamp']} - {last_response['text']}"
 
 def generate_prompt():
-    current_chat_id = datetime.now().isoformat().replace(":", "-")[:19]  # e.g., 2025-03-11T18-45-00
-    previous_chat_id = "https://x.com/i/grok?conversation=1899252825097416864"  # This chat’s URL
+    current_chat_id = datetime.now().isoformat().replace(":", "-")[:19]
+    previous_chat_id = "https://x.com/i/grok?conversation=1899252825097416864"
     log_file = "logs/conversations/conversation_2025-03-11-1.json"
     log = load_conversation_log(log_file)
     summary = summarize_conversation(log)
