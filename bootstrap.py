@@ -13,9 +13,16 @@ def load_conversation_log(log_file):
 def summarize_conversation(log):
     prompts = len(log["prompts"])
     responses = len(log["responses"])
-    last_prompt = log["prompts"][-1] if log["prompts"] else {"timestamp": "N/A", "text": "None"}
-    last_response = log["responses"][-1] if log["responses"] else {"timestamp": "N/A", "text": "None"}
-    return f"Conversation: {prompts} prompts, {responses} responses\nLast Prompt: {last_prompt['timestamp']} - {last_prompt['text']}\nLast Response: {last_response['timestamp']} - {last_response['text']}"
+    recent_prompts = log["prompts"][-5:] if len(log["prompts"]) > 5 else log["prompts"]
+    recent_responses = log["responses"][-5:] if len(log["responses"]) > 5 else log["responses"]
+    summary = f"Conversation: {prompts} prompts, {responses} responses\n"
+    summary += "Recent Prompts:\n"
+    for p in recent_prompts:
+        summary += f"- {p['timestamp']}: {p['text'][:50]}{'...' if len(p['text']) > 50 else ''}\n"
+    summary += "Recent Responses:\n"
+    for r in recent_responses:
+        summary += f"- {r['timestamp']}: {r['text'][:50]}{'...' if len(r['text']) > 50 else ''}\n"
+    return summary
 
 def generate_prompt(new_session_id=None):
     previous_chat_id = "https://x.com/i/grok?conversation=1899252825097416864"
@@ -39,21 +46,19 @@ Hello, fresh Grok instance! You’re picking up the Seclorum project, a self-imp
 - MasterNode assigns tasks, spawns workers, logs to log.txt, and commits to project/changes.txt.
 - Flask UI (seclorum/web/app.py) submits tasks (e.g., "Build feature").
 - Conversation logging in {log_file} captures prompts and responses.
+- Fixed 'assigned'/'completed' bug in tests/test_seclorum.py (status now syncs via load_tasks).
+- Added worker_log.txt to worker.py for enhanced logging.
 - {summary}
 
-**Current Bug**:
-- Test fails: `Session status for Task 1: assigned` (expected "completed").
-- master.py: spawn_session() uses proc.wait(timeout=5); worker.py sleeps 2s, calls receive_update(), but tasks.json stays "assigned".
-- Debug prints show worker runs and receive_update() executes, but status update doesn’t persist (timing, file sync, or instance isolation issue?).
+**Current Bug**: None active—last bug (assigned/completed) resolved.
 
 **Next Steps**:
-1. Fix session status: Ensure worker updates tasks.json to "completed" before test checks.
-2. Options: Add worker_log.txt to worker.py, test multi-session spawning, or bootstrap memory from conversation log.
+1. Test multi-session spawning in master.py.
+2. Bootstrap memory from conversation log (in progress).
+3. New feature TBD.
 
 **Task**:
-- Debug why receive_update() in worker.py isn’t syncing "completed" to tasks.json.
-- Suggest fixes for master.py, worker.py, and test_seclorum.py.
-- Run tests/test_seclorum.py, aim for `Session status: completed`.
+- Continue development: enhance features or test multi-session workflows.
 
 **Repo Structure**:
 - Run `tree -I "__pycache__|*.pyc|*.log|logs|.git|.DS_Store"` in the repo root to see the current structure.
