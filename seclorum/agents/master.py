@@ -52,6 +52,7 @@ class MasterNode(Agent):
         cmd = ["python", "seclorum/agents/worker.py", str(task_id), description, node_name]
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.sessions[str(task_id)] = {"pid": proc.pid, "node_name": node_name, "description": description}
+        proc.wait(timeout=5)  # Wait for worker to finish (2s sleep + buffer)
         self.save_sessions()
         self.log_update(f"Spawned session for {node_name} on Task {task_id} (PID: {proc.pid})")
         self.tasks[str(task_id)]["node_name"] = node_name
@@ -59,12 +60,8 @@ class MasterNode(Agent):
 
     def get_session_status(self, task_id):
         task_id = str(task_id)
-        if task_id in self.sessions:
-            pid = self.sessions[task_id]["pid"]
-            proc = subprocess.Popen(["ps", "-p", str(pid)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout, stderr = proc.communicate()
-            is_alive = proc.returncode == 0 and str(pid) in stdout.decode()
-            return "running" if is_alive else "completed"
+        if task_id in self.tasks:
+            return self.tasks[task_id]["status"]  # Trust tasks.json status
         return "not found"
 
 if __name__ == "__main__":

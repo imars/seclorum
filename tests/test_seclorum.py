@@ -100,14 +100,14 @@ def test_seclorum_workflow():
         submit_task(task_description, logger)
 
         print("Waiting for worker to complete...")
-        time.sleep(5)  # Increased to 5s
+        time.sleep(1)  # Reduced since spawn_session waits
 
         from seclorum.agents.master import MasterNode
         master = MasterNode()
         status = master.get_session_status(task_id)
         print(f"Session status for Task {task_id}: {status}")
         logger.log_response(f"Session status: {status}")
-        assert status != "not found", "Session tracking failed"
+        assert status == "completed", f"Expected completed, got {status}"
 
         check_outputs(task_id, task_description, logger)
         print("Test passed!")
