@@ -29,11 +29,20 @@ class Worker(Agent):
         # Clean description for complex tasks
         task_input = self.description.replace("[complex]", "").strip()
         try:
-            result = subprocess.check_output(
+            process = subprocess.Popen(
                 ["ollama", "run", self.model, f"Respond to this task: {task_input}"],
-                text=True,
-                stderr=subprocess.STDOUT
-            ).strip()
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            stdout, stderr = process.communicate(timeout=30)  # Timeout after 30s
+            if process.returncode == 0:
+                result = stdout.strip()
+            else:
+                result = f"Error processing task with Ollama ({self.model}): {stderr.strip()}"
+        except subprocess.TimeoutExpired:
+            process.kill()
+            result = f"Task timed out after 30s with {self.model}"
         except subprocess.CalledProcessError as e:
             result = f"Error processing task with Ollama ({self.model}): {e.output}"
         self.log_update(f"Task {self.task_id} result: {result}")

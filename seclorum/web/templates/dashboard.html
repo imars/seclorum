@@ -4,45 +4,44 @@
     <meta charset="UTF-8">
     <title>Seclorum Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f9; }
-        h1 { color: #333; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background: #4CAF50; color: white; }
-        tr:nth-child(even) { background: #f9f9f9; }
-        tr:hover { background: #f1f1f1; }
-        .status-assigned { color: #ff9800; }
-        .status-completed { color: #4CAF50; }
-        .result { white-space: pre-wrap; font-size: 0.9em; }
-        button { background: #f44336; color: white; border: none; padding: 5px 10px; cursor: pointer; }
-        button:hover { background: #d32f2f; }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>Seclorum Dashboard</h1>
-    <table id="task-table">
-        <thead>
-            <tr>
-                <th>Task ID</th>
-                <th>Description</th>
-                <th>Status</th>
-                <th>Result</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="task-body">
-            {% for task_id, task in tasks.items() %}
-            <tr id="task-{{ task.task_id }}">
-                <td>{{ task.task_id }}</td>
-                <td>{{ task.description }}</td>
-                <td class="status-{{ task.status }}">{{ task.status }}</td>
-                <td class="result">{{ task.result }}</td>
-                <td><button onclick="deleteTask({{ task.task_id }})">Delete</button></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<body class="bg-gray-100 font-sans p-6">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Seclorum Dashboard</h1>
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white shadow-md rounded-lg">
+            <thead>
+                <tr class="bg-green-500 text-white">
+                    <th class="py-3 px-4 text-left">Task ID</th>
+                    <th class="py-3 px-4 text-left">Description</th>
+                    <th class="py-3 px-4 text-left">Status</th>
+                    <th class="py-3 px-4 text-left">Result</th>
+                    <th class="py-3 px-4 text-left">Action</th>
+                </tr>
+            </thead>
+            <tbody id="task-body">
+                {% for task_id, task in tasks.items() %}
+                <tr id="task-{{ task.task_id }}" class="border-b hover:bg-gray-50">
+                    <td class="py-3 px-4">{{ task.task_id }}</td>
+                    <td class="py-3 px-4">{{ task.description }}</td>
+                    <td class="py-3 px-4 {{ 'text-yellow-500' if task.status == 'assigned' else 'text-green-500' }}">{{ task.status }}</td>
+                    <td class="py-3 px-4 text-sm text-gray-700 whitespace-pre-wrap">
+                        {% if task.status == 'assigned' %}
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div class="bg-blue-600 h-2.5 rounded-full animate-pulse" style="width: 100%"></div>
+                            </div>
+                        {% else %}
+                            {{ task.result }}
+                        {% endif %}
+                    </td>
+                    <td class="py-3 px-4">
+                        <button onclick="deleteTask({{ task.task_id }})" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Delete</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
     <script>
         const socket = io.connect('http://127.0.0.1:5000');
@@ -58,18 +57,21 @@
             if (!row) {
                 row = document.createElement('tr');
                 row.id = `task-${data.task_id}`;
+                row.className = 'border-b hover:bg-gray-50';
                 row.innerHTML = `
-                    <td>${data.task_id}</td>
-                    <td>${data.description}</td>
-                    <td class="status-${data.status}">${data.status}</td>
-                    <td class="result">${data.result || ''}</td>
-                    <td><button onclick="deleteTask(${data.task_id})">Delete</button></td>
+                    <td class="py-3 px-4">${data.task_id}</td>
+                    <td class="py-3 px-4">${data.description}</td>
+                    <td class="py-3 px-4 ${data.status === 'assigned' ? 'text-yellow-500' : 'text-green-500'}">${data.status}</td>
+                    <td class="py-3 px-4 text-sm text-gray-700 whitespace-pre-wrap">
+                        ${data.status === 'assigned' ? '<div class="w-full bg-gray-200 rounded-full h-2.5"><div class="bg-blue-600 h-2.5 rounded-full animate-pulse" style="width: 100%"></div></div>' : data.result || ''}
+                    </td>
+                    <td class="py-3 px-4"><button onclick="deleteTask(${data.task_id})" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Delete</button></td>
                 `;
                 tbody.appendChild(row);
             } else {
                 row.cells[2].textContent = data.status;
-                row.cells[2].className = `status-${data.status}`;
-                row.cells[3].textContent = data.result || '';
+                row.cells[2].className = `py-3 px-4 ${data.status === 'assigned' ? 'text-yellow-500' : 'text-green-500'}`;
+                row.cells[3].innerHTML = data.status === 'assigned' ? '<div class="w-full bg-gray-200 rounded-full h-2.5"><div class="bg-blue-600 h-2.5 rounded-full animate-pulse" style="width: 100%"></div></div>' : data.result || '';
             }
         });
 

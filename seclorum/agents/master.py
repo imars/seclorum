@@ -18,7 +18,7 @@ class MasterNode(Agent, RedisMixin):
 
     def start(self):
         """Start the agent's resources and processes."""
-        self.connect_redis()  # Connect to Redis
+        self.connect_redis()
         if not self.ollama_process or self.ollama_process.poll() is not None:
             try:
                 subprocess.check_call(["ollama", "ps"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -51,7 +51,7 @@ class MasterNode(Agent, RedisMixin):
             self.ollama_process = None
         self.save_tasks()
         self.save_sessions()
-        self.disconnect_redis()  # Disconnect from Redis
+        self.disconnect_redis()
         self.log_update("MasterNode stopped")
 
     def load_tasks(self):
@@ -99,7 +99,7 @@ class MasterNode(Agent, RedisMixin):
         self.commit_changes(f"Update from {node_name}")
 
     def spawn_session(self, node_name, task_id, description):
-        cmd = ["python", "seclorum/agents/worker.py", str(task_id), description, node_name]
+        cmd = [sys.executable, "seclorum/agents/worker.py", str(task_id), description, node_name]
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.sessions[str(task_id)] = {"pid": proc.pid, "node_name": node_name, "description": description}
         self.active_sessions[str(task_id)] = proc
@@ -112,7 +112,8 @@ class MasterNode(Agent, RedisMixin):
         completed = []
         for task_id, proc in list(self.active_sessions.items()):
             if proc.poll() is not None:
-                print(f"DEBUG: Worker PID {proc.pid} finished for Task {task_id}")
+                stdout, stderr = proc.communicate()
+                print(f"DEBUG: Worker PID {proc.pid} finished for Task {task_id}, stdout: {stdout.decode()}, stderr: {stderr.decode()}")
                 completed.append(task_id)
         for task_id in completed:
             del self.active_sessions[task_id]
