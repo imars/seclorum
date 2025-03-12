@@ -4,6 +4,12 @@
 HISTORY_FILE="tests/test_history.log"
 TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
 
+# Check for cleanup flag
+CLEANUP=false
+if [ "$1" = "--cleanup" ]; then
+    CLEANUP=true
+fi
+
 # Kill any existing redis-stack-server on port 6379
 echo "Checking for existing redis-stack-server on port 6379..."
 REDIS_PIDS=$(lsof -i :6379 -t || true)
@@ -70,8 +76,25 @@ else
     echo "Tests failed, skipping commit."
 fi
 
-# Leave server running
-echo "Server running at http://127.0.0.1:5000. Use 'python tests/manage_seclorum.py stop' or Ctrl+C to stop."
+# Cleanup if requested
+if [ "$CLEANUP" = true ]; then
+    echo "Stopping Seclorum and redis-stack-server..."
+    kill -TERM $SECLORUM_PID 2>/dev/null || true
+    kill -TERM $REDIS_PID 2>/dev/null || true
+    sleep 2
+    # Kill any stragglers (Flask debug reloader, etc.)
+    pkill -9 -f "python tests/manage_seclorum.py" 2>/dev/null || true
+    pkill -9 -f redis-stack-server 2>/dev/null || true
+    if lsof -i :5000 > /dev/null || lsof -i :6379 > /dev/null; then
+        echo "Error: Cleanup failed, ports still in use!"
+        echo "Port 5000: $(lsof -i :5000)"
+        echo "Port 6379: $(lsof -i :6379)"
+    else
+        echo "Cleanup complete."
+    fi
+else
+    echo "Server running at http://127.0.0.1:5000. Use 'python tests/manage_seclorum.py stop' or Ctrl+C to stop."
+fi
 
 # Exit with status
 if [ "$TESTS_PASSED" = true ]; then
