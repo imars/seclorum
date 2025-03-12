@@ -27,7 +27,7 @@ def run_app_in_background():
     )
     time.sleep(3)
     try:
-        response = requests.get("http://127.0.0.1:5000/", timeout=5)
+        response = requests.get("http://127.0.0.1:5000/chat", timeout=5)  # Changed to /chat
         print(f"Server check response: {response.status_code}")
     except requests.RequestException as e:
         stdout, stderr = proc.communicate(timeout=5)
@@ -88,7 +88,7 @@ def test_seclorum_workflow():
     try:
         kill_existing_server()
         print("Cleaning up previous files...")
-        for file in ["log.txt", "MasterNode_tasks.json", "sessions.json", "project/changes.txt"]:
+        for file in ["log.txt", "MasterNode_tasks.json", "sessions.json", "project/changes.txt", "worker_log.txt"]:
             if os.path.exists(file):
                 os.remove(file)
         convo_file = os.path.join("logs/conversations", f"conversation_{chat_id}.json")

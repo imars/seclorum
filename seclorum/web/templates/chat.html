@@ -10,5 +10,11 @@
     {% if message %}
         <p>{{ message }}</p>
     {% endif %}
+    <h2>Task Statuses</h2>
+    <ul>
+    {% for task_id, task in tasks.items() %}
+        <li>Task {{ task.task_id }}: {{ task.description }} - Status: {{ task.status }}</li>
+    {% endfor %}
+    </ul>
 </body>
 </html>

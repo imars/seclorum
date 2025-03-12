@@ -9,21 +9,27 @@ def log(message, log_file="worker_log.txt"):
         f.write(f"Worker: {message}\n")
 
 def run_worker(task_id, description, node_name):
-    log(f"Started for Task {task_id}: {description}")
-    time.sleep(2)
-    log(f"Updating status for Task {task_id}")
-    # Update tasks.json directly (temporary fix)
-    tasks_file = "MasterNode_tasks.json"
-    if os.path.exists(tasks_file):
-        with open(tasks_file, "r") as f:
-            tasks = json.load(f)
-        tasks[str(task_id)]["status"] = "completed"
-        with open(tasks_file, "w") as f:
-            json.dump(tasks, f)
-            f.flush()  # Ensure write hits disk
-    master = MasterNode()
-    master.receive_update(node_name, f"{description} completed")
-    log(f"Finished for Task {task_id}")
+    try:
+        log(f"Started for Task {task_id}: {description}")
+        time.sleep(2)
+        log(f"Updating status for Task {task_id}")
+        # Update tasks.json directly (temporary fix)
+        tasks_file = "MasterNode_tasks.json"
+        if os.path.exists(tasks_file):
+            with open(tasks_file, "r") as f:
+                tasks = json.load(f)
+            tasks[str(task_id)]["status"] = "completed"
+            with open(tasks_file, "w") as f:
+                json.dump(tasks, f)
+                f.flush()  # Ensure write hits disk
+        else:
+            raise FileNotFoundError(f"{tasks_file} not found")
+        master = MasterNode()
+        master.receive_update(node_name, f"{description} completed")
+        log(f"Finished for Task {task_id}")
+    except Exception as e:
+        log(f"Error on Task {task_id}: {str(e)}")
+        raise
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
