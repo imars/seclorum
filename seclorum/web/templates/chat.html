@@ -11,6 +11,9 @@
         .task-item { transition: background-color 0.3s ease; }
         .task-item.completed { background-color: #d1fae5; }
         .log-container { max-height: 300px; overflow-y: auto; }
+        .progress-bar { height: 8px; background-color: #e5e7eb; border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; background-color: #3b82f6; transition: width 0.3s ease; }
+        .progress-error { background-color: #ef4444; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-4">
@@ -29,10 +32,16 @@
         <ul id="task-list" class="task-list space-y-2">
             {% for task_id, task in tasks.items() %}
                 <li class="task-item p-3 border border-gray-200 rounded-lg {% if task.status == 'completed' %}completed{% endif %}" data-task-id="{{ task.task_id }}">
-                    <strong>Task {{ task.task_id }}:</strong> {{ task.description }} - Status: <span class="status">{{ task.status }}</span>
-                    {% if task.result %}
-                        <p class="text-sm text-gray-600 mt-1">Result: {{ task.result }}</p>
-                    {% endif %}
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <strong>Task {{ task.task_id }}:</strong> {{ task.description }} - Status: <span class="status">{{ task.status }}</span>
+                            {% if task.result %}
+                                <p class="text-sm text-gray-600 mt-1">Result: {{ task.result }}</p>
+                            {% endif %}
+                            <div class="progress-bar mt-1"><div class="progress-fill" style="width: {% if task.status == 'completed' %}100{% else %}0{% endif %}%;"></div></div>
+                        </div>
+                        <button onclick="deleteTask({{ task.task_id }})" class="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">Delete</button>
+                    </div>
                 </li>
             {% endfor %}
         </ul>
@@ -52,7 +61,15 @@
                 taskItem.dataset.taskId = data.task_id;
                 ul.insertBefore(taskItem, ul.firstChild);
             }
-            taskItem.innerHTML = `<strong>Task ${data.task_id}:</strong> ${data.description || taskItem.querySelector("strong").nextSibling.textContent.split(" - ")[0]} - Status: <span class="status">${data.status}</span>` + (data.result ? `<p class="text-sm text-gray-600 mt-1">Result: ${data.result}</p>` : "");
+            taskItem.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <strong>Task ${data.task_id}:</strong> ${data.description || taskItem.querySelector("strong").nextSibling.textContent.split(" - ")[0]} - Status: <span class="status">${data.status}</span>
+                        ${data.result ? `<p class="text-sm text-gray-600 mt-1">Result: ${data.result}</p>` : ""}
+                        <div class="progress-bar mt-1"><div class="progress-fill" style="width: ${data.status === "completed" ? 100 : 0}%"></div></div>
+                    </div>
+                    <button onclick="deleteTask(${data.task_id})" class="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">Delete</button>
+                </div>`;
             if (data.status === "completed") {
                 taskItem.classList.add("completed");
             }
@@ -62,6 +79,44 @@
             logDiv.appendChild(p);
             logDiv.scrollTop = logDiv.scrollHeight;
         });
+
+        socket.on("progress_update", function(data) {
+            let taskItem = document.querySelector(`li[data-task-id="${data.task_id}"]`);
+            if (taskItem) {
+                let progressFill = taskItem.querySelector(".progress-fill");
+                if (data.progress >= 0) {
+                    progressFill.style.width = `${data.progress}%`;
+                    if (data.progress === 100) {
+                        taskItem.classList.add("completed");
+                    }
+                } else {
+                    progressFill.classList.add("progress-error");
+                    progressFill.style.width = "100%";
+                    const logDiv = document.getElementById("worker-log");
+                    const p = document.createElement("p");
+                    p.textContent = `Task ${data.task_id}: Error - ${data.error}`;
+                    logDiv.appendChild(p);
+                    logDiv.scrollTop = logDiv.scrollHeight;
+                }
+            }
+        });
+
+        function deleteTask(taskId) {
+            fetch(`/delete_task/${taskId}`, { method: "POST" })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const taskItem = document.querySelector(`li[data-task-id="${taskId}"]`);
+                        if (taskItem) taskItem.remove();
+                        const logDiv = document.getElementById("worker-log");
+                        const p = document.createElement("p");
+                        p.textContent = `Task ${taskId}: Deleted`;
+                        logDiv.appendChild(p);
+                        logDiv.scrollTop = logDiv.scrollHeight;
+                    }
+                })
+                .catch(error => console.error("Error deleting task:", error));
+        }
     </script>
 </body>
 </html>
