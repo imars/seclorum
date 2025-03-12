@@ -15,17 +15,23 @@ def main():
     if action == "start":
         # Start Redis
         redis_process = subprocess.Popen(["redis-stack-server"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        redis_pid = redis_process.pid
+        initial_pid = redis_process.pid
+        print(f"Initial Redis PID from Popen: {initial_pid}")
+        time.sleep(2)  # Wait for Redis to start
+        try:
+            redis_pids = subprocess.check_output(["lsof", "-i", ":6379", "-t"]).decode().strip().split()
+            redis_pid = int(redis_pids[0])  # Take first PID
+            print(f"Redis PIDs from lsof after 2s: {redis_pids}, using {redis_pid}")
+            if not os.system("redis-cli ping > /dev/null 2>&1"):
+                print("Redis started successfully.")
+            else:
+                raise subprocess.CalledProcessError(1, "redis-cli ping")
+        except (subprocess.CalledProcessError, IndexError) as e:
+            print(f"Error: Redis failed to start or PID not found: {e}")
+            redis_process.terminate()
+            sys.exit(1)
         with open(REDIS_PID_FILE, "w") as f:
             f.write(str(redis_pid))
-        time.sleep(2)  # Wait for Redis to start
-        if not os.system("redis-cli ping > /dev/null 2>&1"):
-            print("Redis started successfully.")
-        else:
-            print("Error: Redis failed to start.")
-            redis_process.terminate()
-            os.remove(REDIS_PID_FILE)
-            sys.exit(1)
 
         # Start Flask with MasterNode
         master_node = MasterNode()
@@ -39,7 +45,7 @@ def main():
         except KeyboardInterrupt:
             master_node.stop()
             os.remove(FLASK_PID_FILE)
-            redis_process.terminate()
+            os.kill(redis_pid, signal.SIGTERM)
             os.remove(REDIS_PID_FILE)
             print("Seclorum stopped via Ctrl+C.")
     elif action == "stop":
@@ -72,7 +78,7 @@ def main():
             except ProcessLookupError:
                 print(f"No Redis process found with PID {redis_pid}.")
                 os.remove(REDIS_PID_FILE)
-        # Fallback: Kill anything on 6379
+        # Fallback
         try:
             redis_pids = subprocess.check_output(["lsof", "-i", ":6379", "-t"]).decode().strip().split()
             if redis_pids:
