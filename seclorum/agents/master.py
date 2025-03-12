@@ -11,7 +11,9 @@ class MasterNode(Agent):
         self.sessions_file = "sessions.json"
         self.ollama_process = None
         self.active_sessions = {}
+        self.sessions = {}  # Initialize sessions dict
         self.load_tasks()
+        self.load_sessions()  # Load sessions from file if exists
 
     def start(self):
         """Start the agent's resources and processes."""
@@ -46,6 +48,7 @@ class MasterNode(Agent):
                 self.ollama_process.kill()
             self.ollama_process = None
         self.save_tasks()
+        self.save_sessions()  # Save sessions on stop
         self.log_update("MasterNode stopped")
 
     def load_tasks(self):
@@ -57,6 +60,17 @@ class MasterNode(Agent):
 
     def save_tasks(self):
         super().save_tasks()
+
+    def load_sessions(self):
+        if os.path.exists(self.sessions_file):
+            with open(self.sessions_file, "r") as f:
+                self.sessions = json.load(f)
+        else:
+            self.sessions = {}
+
+    def save_sessions(self):
+        with open(self.sessions_file, "w") as f:
+            json.dump(self.sessions, f)
 
     def add_insight(self, insight):
         self.log_update(f"Insight: {insight}")
@@ -96,6 +110,7 @@ class MasterNode(Agent):
         self.sessions[str(task_id)] = {"pid": proc.pid, "node_name": node_name, "description": description}
         self.active_sessions[str(task_id)] = proc
         self.save_tasks()
+        self.save_sessions()  # Persist sessions
         self.log_update(f"Spawned session for {node_name} on Task {task_id} (PID: {proc.pid})")
         print(f"DEBUG: Spawned worker PID {proc.pid}")
 
