@@ -1,20 +1,67 @@
 <!DOCTYPE html>
-<html>
-<head><title>Seclorum Chat</title></head>
-<body>
-    <h1>Chat with Seclorum</h1>
-    <form method="post">
-        <input type="text" name="task" placeholder="Enter task">
-        <input type="submit" value="Submit">
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Seclorum Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+    <style>
+        body { font-family: "Arial", sans-serif; background-color: #f0f4f8; }
+        .task-list { max-height: 500px; overflow-y: auto; }
+        .task-item { transition: background-color 0.3s ease; }
+        .task-item.completed { background-color: #d1fae5; }
+        .log-container { max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Chat with Seclorum</h1>
+    <form method="post" class="w-full max-w-md mb-6">
+        <div class="flex space-x-2">
+            <input type="text" name="task" placeholder="Enter task" class="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <input type="submit" value="Submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        </div>
+        {% if message %}
+            <p class="mt-2 text-green-600">{{ message }}</p>
+        {% endif %}
     </form>
-    {% if message %}
-        <p>{{ message }}</p>
-    {% endif %}
-    <h2>Task Statuses</h2>
-    <ul>
-    {% for task_id, task in tasks.items() %}
-        <li>Task {{ task.task_id }}: {{ task.description }} - Status: {{ task.status }}</li>
-    {% endfor %}
-    </ul>
+    <div class="w-full max-w-2xl bg-white shadow-lg rounded-lg p-4 mb-4">
+        <h2 class="text-xl font-semibold text-gray-700 mb-4">Task Statuses</h2>
+        <ul id="task-list" class="task-list space-y-2">
+            {% for task_id, task in tasks.items() %}
+                <li class="task-item p-3 border border-gray-200 rounded-lg {% if task.status == 'completed' %}completed{% endif %}" data-task-id="{{ task.task_id }}">
+                    <strong>Task {{ task.task_id }}:</strong> {{ task.description }} - Status: <span class="status">{{ task.status }}</span>
+                    {% if task.result %}
+                        <p class="text-sm text-gray-600 mt-1">Result: {{ task.result }}</p>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="w-full max-w-2xl bg-white shadow-lg rounded-lg p-4">
+        <h2 class="text-xl font-semibold text-gray-700 mb-4">Worker Log</h2>
+        <div id="worker-log" class="log-container text-sm text-gray-600"></div>
+    </div>
+    <script>
+        const socket = io();
+        socket.on("task_update", function(data) {
+            let taskItem = document.querySelector(`li[data-task-id="${data.task_id}"]`);
+            if (!taskItem) {
+                const ul = document.getElementById("task-list");
+                taskItem = document.createElement("li");
+                taskItem.className = "task-item p-3 border border-gray-200 rounded-lg";
+                taskItem.dataset.taskId = data.task_id;
+                ul.insertBefore(taskItem, ul.firstChild);
+            }
+            taskItem.innerHTML = `<strong>Task ${data.task_id}:</strong> ${data.description || taskItem.querySelector("strong").nextSibling.textContent.split(" - ")[0]} - Status: <span class="status">${data.status}</span>` + (data.result ? `<p class="text-sm text-gray-600 mt-1">Result: ${data.result}</p>` : "");
+            if (data.status === "completed") {
+                taskItem.classList.add("completed");
+            }
+            const logDiv = document.getElementById("worker-log");
+            const p = document.createElement("p");
+            p.textContent = `Task ${data.task_id}: ${data.status}${data.result ? " - " + data.result : ""}`;
+            logDiv.appendChild(p);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        });
+    </script>
 </body>
 </html>
