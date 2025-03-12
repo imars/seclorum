@@ -110,6 +110,14 @@ class MasterNode(Agent):
         return "not found"
 
     def __del__(self):
+        for task_id, proc in list(self.active_sessions.items()):
+            if proc.poll() is None:
+                print(f"Terminating active session PID {proc.pid} for Task {task_id}")
+                proc.terminate()
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
         self.stop_ollama()
 
 if __name__ == "__main__":
