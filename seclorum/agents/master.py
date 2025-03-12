@@ -1,22 +1,24 @@
 from .base import Agent
+from .redis_mixin import RedisMixin
 import subprocess
 import json
 import os
 import time
 
-class MasterNode(Agent):
+class MasterNode(Agent, RedisMixin):
     def __init__(self):
-        super().__init__(name="MasterNode")
+        Agent.__init__(self, name="MasterNode")
+        RedisMixin.__init__(self)
         self.nodes = {}
-        self.sessions_file = "sessions.json"
         self.ollama_process = None
         self.active_sessions = {}
-        self.sessions = {}  # Initialize sessions dict
+        self.sessions = {}
         self.load_tasks()
-        self.load_sessions()  # Load sessions from file if exists
+        self.load_sessions()
 
     def start(self):
         """Start the agent's resources and processes."""
+        self.connect_redis()  # Connect to Redis
         if not self.ollama_process or self.ollama_process.poll() is not None:
             try:
                 subprocess.check_call(["ollama", "ps"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -48,29 +50,21 @@ class MasterNode(Agent):
                 self.ollama_process.kill()
             self.ollama_process = None
         self.save_tasks()
-        self.save_sessions()  # Save sessions on stop
+        self.save_sessions()
+        self.disconnect_redis()  # Disconnect from Redis
         self.log_update("MasterNode stopped")
 
     def load_tasks(self):
-        if os.path.exists("MasterNode_tasks.json"):
-            with open("MasterNode_tasks.json", "r") as f:
-                self.tasks = json.load(f)
-        else:
-            self.tasks = {}
+        self.tasks = self.retrieve_data("MasterNode_tasks") or {}
 
     def save_tasks(self):
-        super().save_tasks()
+        self.store_data("MasterNode_tasks", self.tasks)
 
     def load_sessions(self):
-        if os.path.exists(self.sessions_file):
-            with open(self.sessions_file, "r") as f:
-                self.sessions = json.load(f)
-        else:
-            self.sessions = {}
+        self.sessions = self.retrieve_data("MasterNode_sessions") or {}
 
     def save_sessions(self):
-        with open(self.sessions_file, "w") as f:
-            json.dump(self.sessions, f)
+        self.store_data("MasterNode_sessions", self.sessions)
 
     def add_insight(self, insight):
         self.log_update(f"Insight: {insight}")
@@ -110,7 +104,7 @@ class MasterNode(Agent):
         self.sessions[str(task_id)] = {"pid": proc.pid, "node_name": node_name, "description": description}
         self.active_sessions[str(task_id)] = proc
         self.save_tasks()
-        self.save_sessions()  # Persist sessions
+        self.save_sessions()
         self.log_update(f"Spawned session for {node_name} on Task {task_id} (PID: {proc.pid})")
         print(f"DEBUG: Spawned worker PID {proc.pid}")
 

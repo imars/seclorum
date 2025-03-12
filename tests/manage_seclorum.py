@@ -3,9 +3,9 @@ import time
 from seclorum.agents.master import MasterNode
 from seclorum.web.app import app, socketio  # Import Flask app and SocketIO
 
-master_node = MasterNode()
-
 def main():
+    master_node = MasterNode()
+    app.master_node = master_node  # Attach to app for routes to use
     action = sys.argv[1] if len(sys.argv) > 1 else "start"
     if action == "start":
         master_node.start()
