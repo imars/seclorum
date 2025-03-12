@@ -73,7 +73,7 @@ def handle_connect(auth=None):
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     try:
-        socketio.run(app, debug=True)
+        socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
     finally:
         if master_node:
             master_node.stop_ollama()
