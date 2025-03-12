@@ -1,54 +1,54 @@
 import sys
-import json
-import os
-import requests
-from seclorum.agents.master import MasterNode
+import time
+import subprocess
+from .base import Agent
 
-def log(message, log_file="worker_log.txt"):
-    with open(log_file, "a") as f:
-        f.write(f"Worker: {message}\n")
+class Worker(Agent):
+    def __init__(self, task_id, description, node_name):
+        super().__init__(name=f"Worker_{task_id}")
+        self.task_id = task_id
+        self.description = description
+        self.node_name = node_name
+        self.model = "deepseek-r1:8b" if description.startswith("[complex]") else "llama3.2"
 
-def call_ollama(task_id, description, model="deepseek-r1:8b"):
-    url = "http://localhost:11434/api/generate"
-    payload = {
-        "model": model,
-        "prompt": f"Perform this task: {description}",
-        "stream": False
-    }
-    try:
-        response = requests.post(url, json=payload, timeout=10)
-        response.raise_for_status()
-        result = response.json().get("response", "Task completed")
-        return result.strip()
-    except Exception as e:
-        raise Exception(f"Ollama error: {str(e)}")
+    def start(self):
+        """Start the worker and process the task."""
+        self.log_update(f"Worker started for Task {self.task_id}: {self.description} using {self.model}")
+        self.process_task()
+        self.stop()
 
-def run_worker(task_id, description, node_name):
-    try:
-        log(f"Started for Task {task_id}: {description}")
-        result = call_ollama(task_id, description)
-        log(f"Agent response for Task {task_id}: {result}")
-        tasks_file = "MasterNode_tasks.json"
-        if not os.path.exists(tasks_file):
-            raise FileNotFoundError(f"{tasks_file} missing")
-        with open(tasks_file, "r") as f:
-            tasks = json.load(f)
-        if str(task_id) not in tasks:
-            raise ValueError(f"Task {task_id} not found in {tasks_file}")
-        tasks[str(task_id)]["status"] = "completed"
-        tasks[str(task_id)]["result"] = result
-        with open(tasks_file, "w") as f:
-            json.dump(tasks, f)
-            f.flush()
+    def stop(self):
+        """Stop the worker and log completion."""
+        self.log_update(f"Worker stopped for Task {self.task_id}")
+        print(f"Worker completed Task {self.task_id}")
+
+    def process_task(self):
+        """Process the task using Ollama with the selected model."""
+        print(f"Processing Task {self.task_id}: {self.description} with {self.model}")
+        time.sleep(1)  # Simulate initial setup
+        # Clean description for complex tasks
+        task_input = self.description.replace("[complex]", "").strip()
+        try:
+            result = subprocess.check_output(
+                ["ollama", "run", self.model, f"Respond to this task: {task_input}"],
+                text=True,
+                stderr=subprocess.STDOUT
+            ).strip()
+        except subprocess.CalledProcessError as e:
+            result = f"Error processing task with Ollama ({self.model}): {e.output}"
+        self.log_update(f"Task {self.task_id} result: {result}")
+        self.report_result(result)
+
+    def report_result(self, result):
+        """Send the result back to MasterNode."""
+        from seclorum.agents.master import MasterNode
         master = MasterNode()
-        master.receive_update(node_name, f"{description} completed: {result}")
-        log(f"Finished for Task {task_id}")
-    except Exception as e:
-        log(f"Error on Task {task_id}: {str(e)}")
-        raise
+        master.receive_update(self.node_name, f"Task {self.task_id} completed: {result}")
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
-        print("Usage: worker.py <task_id> <description> <node_name>")
+        print("Usage: python worker.py <task_id> <description> <node_name>")
         sys.exit(1)
-    run_worker(int(sys.argv[1]), sys.argv[2], sys.argv[3])
+    task_id, description, node_name = sys.argv[1], sys.argv[2], sys.argv[3]
+    worker = Worker(task_id, description, node_name)
+    worker.start()

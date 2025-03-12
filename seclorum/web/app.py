@@ -47,6 +47,7 @@ def delete_task(task_id):
             proc = app.master_node.active_sessions[task_id_str]
             proc.terminate()
             del app.master_node.active_sessions[task_id_str]
+        socketio.emit("task_update", {"task_id": task_id, "deleted": True})
         return jsonify({"success": True})
     return jsonify({"success": False, "error": "Task not found"})
 
@@ -62,4 +63,4 @@ if __name__ == "__main__":
     from seclorum.agents.master import MasterNode
     app.master_node = MasterNode()
     app.master_node.start()
-    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+    socketio.run(app, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)

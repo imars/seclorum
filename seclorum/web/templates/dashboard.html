@@ -3,59 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <title>Seclorum Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
     <style>
-        body { font-family: "Arial", sans-serif; background-color: #f0f4f8; }
-        .task-list { max-height: 500px; overflow-y: auto; }
-        .task-item { transition: background-color 0.3s ease; }
-        .task-item.completed { background-color: #d1fae5; }
-        .progress-bar { height: 8px; background-color: #e5e7eb; border-radius: 4px; overflow: hidden; }
-        .progress-fill { height: 100%; background-color: #3b82f6; transition: width 0.3s ease; }
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f9; }
+        h1 { color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #4CAF50; color: white; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        tr:hover { background: #f1f1f1; }
+        .status-assigned { color: #ff9800; }
+        .status-completed { color: #4CAF50; }
+        .result { white-space: pre-wrap; font-size: 0.9em; }
+        button { background: #f44336; color: white; border: none; padding: 5px 10px; cursor: pointer; }
+        button:hover { background: #d32f2f; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-4">
-    <h1 class="text-3xl font-bold text-gray-800 mb-6">Seclorum Task Dashboard</h1>
-    <div class="w-full max-w-2xl bg-white shadow-lg rounded-lg p-4 mb-4">
-        <h2 class="text-xl font-semibold text-gray-700 mb-4">Active Sessions</h2>
-        <ul class="task-list space-y-2">
-            {% for task_id, proc in active.items() %}
-                <li class="task-item p-3 border border-gray-200 rounded-lg">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <strong>Task {{ task_id }}:</strong> Running (PID: {{ proc.pid }}, Alive: {{ proc.poll() is none|lower }})
-                            <div class="progress-bar mt-1">
-                                <div class="progress-fill" style="width: {{ '100' if proc.poll() is none else '0' }}%;"></div>
-                            </div>
-                        </div>
-                    </div>
-                </li>
+<body>
+    <h1>Seclorum Dashboard</h1>
+    <table id="task-table">
+        <thead>
+            <tr>
+                <th>Task ID</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Result</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="task-body">
+            {% for task_id, task in tasks.items() %}
+            <tr id="task-{{ task.task_id }}">
+                <td>{{ task.task_id }}</td>
+                <td>{{ task.description }}</td>
+                <td class="status-{{ task.status }}">{{ task.status }}</td>
+                <td class="result">{{ task.result }}</td>
+                <td><button onclick="deleteTask({{ task.task_id }})">Delete</button></td>
+            </tr>
             {% endfor %}
-        </ul>
-    </div>
-    <div class="w-full max-w-2xl bg-white shadow-lg rounded-lg p-4">
-        <h2 class="text-xl font-semibold text-gray-700 mb-4">All Tasks</h2>
-        {% if tasks is defined and tasks %}
-            <ul class="task-list space-y-2">
-                {% for task_id, task in tasks.items() %}
-                    <li class="task-item p-3 border border-gray-200 rounded-lg {% if task.status == 'completed' %}completed{% endif %}" data-task-id="{{ task.task_id }}">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <strong>Task {{ task.task_id }}:</strong> {{ task.description }} - Status: <span class="status">{{ task.status }}</span>
-                                {% if task.result %}
-                                    <p class="text-sm text-gray-600 mt-1">Result: {{ task.result }}</p>
-                                {% endif %}
-                                <div class="progress-bar mt-1">
-                                    <div class="progress-fill" style="width: {% if task.status == 'completed' %}100{% else %}0{% endif %}%;"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p class="text-gray-600">No tasks available.</p>
-        {% endif %}
-    </div>
-    <p class="mt-4"><a href="/chat" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Submit New Task</a></p>
+        </tbody>
+    </table>
+
+    <script>
+        const socket = io.connect('http://127.0.0.1:5000');
+
+        socket.on('task_update', function(data) {
+            const tbody = document.getElementById('task-body');
+            if (data.deleted) {
+                const row = document.getElementById(`task-${data.task_id}`);
+                if (row) row.remove();
+                return;
+            }
+            let row = document.getElementById(`task-${data.task_id}`);
+            if (!row) {
+                row = document.createElement('tr');
+                row.id = `task-${data.task_id}`;
+                row.innerHTML = `
+                    <td>${data.task_id}</td>
+                    <td>${data.description}</td>
+                    <td class="status-${data.status}">${data.status}</td>
+                    <td class="result">${data.result || ''}</td>
+                    <td><button onclick="deleteTask(${data.task_id})">Delete</button></td>
+                `;
+                tbody.appendChild(row);
+            } else {
+                row.cells[2].textContent = data.status;
+                row.cells[2].className = `status-${data.status}`;
+                row.cells[3].textContent = data.result || '';
+            }
+        });
+
+        function deleteTask(taskId) {
+            fetch(`/delete_task/${taskId}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) console.error('Delete failed:', data.error);
+                });
+        }
+    </script>
 </body>
 </html>
