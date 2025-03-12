@@ -4,30 +4,7 @@
 HISTORY_FILE="tests/test_history.log"
 TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
 
-# Kill any existing redis-stack-server on port 6379
-echo "Checking for existing redis-stack-server on port 6379..."
-REDIS_PIDS=$(lsof -i :6379 -t || true)
-if [ -n "$REDIS_PIDS" ]; then
-    echo "Killing redis-stack-server PIDs: $REDIS_PIDS..."
-    echo "$REDIS_PIDS" | xargs kill -9
-    sleep 1
-fi
-
-# Start redis-stack-server
-echo "Starting redis-stack-server..."
-redis-stack-server &
-REDIS_PID=$!
-sleep 2
-
-# Verify Redis is running
-if ! redis-cli ping | grep -q "PONG"; then
-    echo "Error: redis-stack-server failed to start!"
-    kill -9 $REDIS_PID 2>/dev/null || true
-    echo "$TIMESTAMP - test_web_endpoints.sh - FAILED: Redis failed" >> "$HISTORY_FILE"
-    exit 1
-fi
-
-# Start Seclorum
+# Start Seclorum (includes Redis)
 echo "Starting Seclorum..."
 python tests/manage_seclorum.py start &
 SECLORUM_PID=$!
