@@ -26,25 +26,29 @@ class Worker(Agent):
         """Process the task using Ollama with the selected model."""
         print(f"Processing Task {self.task_id}: {self.description} with {self.model}")
         time.sleep(1)  # Simulate initial setup
-        # Clean description for complex tasks
         task_input = self.description.replace("[complex]", "").strip()
-        try:
-            process = subprocess.Popen(
-                ["ollama", "run", self.model, f"Respond to this task: {task_input}"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
-            stdout, stderr = process.communicate(timeout=30)  # Timeout after 30s
-            if process.returncode == 0:
-                result = stdout.strip()
-            else:
-                result = f"Error processing task with Ollama ({self.model}): {stderr.strip()}"
-        except subprocess.TimeoutExpired:
-            process.kill()
-            result = f"Task timed out after 30s with {self.model}"
-        except subprocess.CalledProcessError as e:
-            result = f"Error processing task with Ollama ({self.model}): {e.output}"
+        for attempt in range(3):  # Retry up to 3 times
+            try:
+                process = subprocess.Popen(
+                    ["ollama", "run", self.model, f"Respond to this task: {task_input}"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                stdout, stderr = process.communicate(timeout=60)  # Longer timeout
+                if process.returncode == 0:
+                    result = stdout.strip()
+                    break
+                else:
+                    result = f"Error processing task with Ollama ({self.model}): {stderr.strip()}"
+            except subprocess.TimeoutExpired:
+                process.kill()
+                result = f"Task timed out after 60s with {self.model} on attempt {attempt + 1}"
+            except subprocess.CalledProcessError as e:
+                result = f"Error processing task with Ollama ({self.model}): {e.output}"
+            time.sleep(2)  # Wait before retry
+        else:
+            result = f"Failed after 3 attempts: Ollama unavailable or unresponsive"
         self.log_update(f"Task {self.task_id} result: {result}")
         self.report_result(result)
 

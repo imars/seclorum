@@ -23,11 +23,16 @@ class MasterNode(Agent, RedisMixin):
         if not self.ollama_process or self.ollama_process.poll() is not None:
             try:
                 subprocess.check_call(["ollama", "ps"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                print("Ollama server already running.")
             except subprocess.CalledProcessError:
                 print("Starting Ollama server...")
                 self.ollama_process = subprocess.Popen(["ollama", "serve"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                time.sleep(2)
-                print("Ollama started.")
+                time.sleep(5)  # Give it more time to start
+                stdout, stderr = self.ollama_process.communicate(timeout=5)
+                if self.ollama_process.poll() is None:
+                    print("Ollama started successfully.")
+                else:
+                    print(f"Ollama failed to start: stdout={stdout.decode()}, stderr={stderr.decode()}")
         self.check_sessions()
         self.log_update("MasterNode started")
 
