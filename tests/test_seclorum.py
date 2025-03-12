@@ -100,13 +100,19 @@ def test_seclorum_workflow():
             subprocess.run(["rm", "-rf", "project"])
 
         proc = run_app_in_background()
-        task_ids = [1, 2]
-        task_descriptions = ["Build feature", "Test feature"]
+        task_ids = [1, 2, 3, 4, 5]
+        task_descriptions = [
+            "Build feature",
+            "Test feature",
+            "Design UI",
+            "Write docs",
+            "Review code"
+        ]
         for desc in task_descriptions:
             submit_task(desc, logger)
 
         print("Waiting for workers to complete...")
-        time.sleep(5)  # Give both workers time
+        time.sleep(8)  # More time for 5 tasks
 
         from seclorum.agents.master import MasterNode
         master = MasterNode()
