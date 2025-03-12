@@ -13,6 +13,27 @@ if [ "$1" = "--cleanup" ]; then
     CLEANUP=true
 fi
 
+# Function to clean up processes
+cleanup() {
+    echo "Caught SIGINT, stopping processes..."
+    if [ -n "$APP_PID" ]; then
+        echo "Stopping Seclorum app (PID: $APP_PID)..."
+        kill -TERM $APP_PID 2>/dev/null || true
+    fi
+    if [ -n "$REDIS_PID" ]; then
+        echo "Stopping redis-stack-server (PID: $REDIS_PID)..."
+        kill -TERM $REDIS_PID 2>/dev/null || true
+    fi
+    sleep 1
+    # Kill any stragglers
+    pkill -9 -f "python seclorum/web/app.py" 2>/dev/null || true
+    pkill -9 -f redis-stack-server 2>/dev/null || true
+    exit 0
+}
+
+# Trap Ctrl+C
+trap cleanup SIGINT
+
 # Kill any process on port 5000
 echo "Checking for processes on port 5000..."
 PIDS_5000=$(lsof -i :5000 -t || true)
@@ -97,21 +118,31 @@ else
     echo "Tests failed, skipping commit."
 fi
 
-# Cleanup only if --cleanup flag is provided
+# Cleanup if --cleanup flag is provided, otherwise wait
 if [ "$CLEANUP" = true ]; then
     echo "Stopping Seclorum app..."
-    pkill -9 -f "python seclorum/web/app.py" 2>/dev/null || true
+    APP_PIDS=$(ps aux | grep -v grep | grep "python seclorum/web/app.py" | awk '{print $2}' || true)
+    if [ -n "$APP_PIDS" ]; then
+        echo "Killing Flask PIDs: $APP_PIDS"
+        echo "$APP_PIDS" | xargs kill -9
+    fi
     echo "Stopping redis-stack-server..."
-    pkill -9 -f redis-stack-server 2>/dev/null || true
-    sleep 1
-    # Verify cleanup
+    REDIS_PIDS=$(ps aux | grep -v grep | grep redis-stack-server | awk '{print $2}' || true)
+    if [ -n "$REDIS_PIDS" ]; then
+        echo "Killing Redis PIDs: $REDIS_PIDS"
+        echo "$REDIS_PIDS" | xargs kill -9
+    fi
+    sleep 2
     if lsof -i :5000 > /dev/null || lsof -i :6379 > /dev/null; then
-        echo "Warning: Cleanup incomplete, ports still in use!"
+        echo "Error: Cleanup failed, ports still in use!"
+        echo "Port 5000: $(lsof -i :5000)"
+        echo "Port 6379: $(lsof -i :6379)"
     else
         echo "Cleanup complete."
     fi
 else
-    echo "Server running at http://127.0.0.1:5000. Use './tests/test_web_endpoints.sh --cleanup' to stop."
+    echo "Server running at http://127.0.0.1:5000. Press Ctrl+C to stop."
+    wait $APP_PID
 fi
 
 # Exit with status
