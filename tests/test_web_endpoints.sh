@@ -15,10 +15,10 @@ fi
 
 # Kill any process on port 5000
 echo "Checking for processes on port 5000..."
-PID=$(lsof -i :5000 -t || true)
-if [ -n "$PID" ]; then
-    echo "Killing process $PID on port 5000..."
-    kill -9 $PID
+PIDS_5000=$(lsof -i :5000 -t || true)
+if [ -n "$PIDS_5000" ]; then
+    echo "Killing processes on port 5000: $PIDS_5000..."
+    echo "$PIDS_5000" | xargs kill -9
     sleep 1
 else
     echo "No process found on port 5000."
@@ -33,10 +33,10 @@ fi
 
 # Kill any redis-stack-server on port 6379
 echo "Checking for redis-stack-server on port 6379..."
-REDIS_PID=$(lsof -i :6379 -t || true)
-if [ -n "$REDIS_PID" ]; then
-    echo "Killing redis-stack-server (PID: $REDIS_PID)..."
-    kill -9 $REDIS_PID
+REDIS_PIDS=$(lsof -i :6379 -t || true)
+if [ -n "$REDIS_PIDS" ]; then
+    echo "Killing redis-stack-server PIDs: $REDIS_PIDS..."
+    echo "$REDIS_PIDS" | xargs kill -9
     sleep 1
 fi
 
@@ -50,7 +50,7 @@ sleep 2
 if ! redis-cli ping | grep -q "PONG"; then
     echo "Error: redis-stack-server failed to start!"
     echo "$TIMESTAMP - test_web_endpoints.sh - FAILED: Redis failed to start" >> "$HISTORY_FILE"
-    kill -9 $REDIS_PID
+    kill -9 $REDIS_PID 2>/dev/null || true
     exit 1
 fi
 
@@ -99,13 +99,19 @@ fi
 
 # Cleanup only if --cleanup flag is provided
 if [ "$CLEANUP" = true ]; then
-    echo "Stopping Seclorum app (PID: $APP_PID)..."
-    kill -9 $APP_PID 2>/dev/null || true
-    echo "Stopping redis-stack-server (PID: $REDIS_PID)..."
-    kill -9 $REDIS_PID 2>/dev/null || true
-    echo "Cleanup complete."
+    echo "Stopping Seclorum app..."
+    pkill -9 -f "python seclorum/web/app.py" 2>/dev/null || true
+    echo "Stopping redis-stack-server..."
+    pkill -9 -f redis-stack-server 2>/dev/null || true
+    sleep 1
+    # Verify cleanup
+    if lsof -i :5000 > /dev/null || lsof -i :6379 > /dev/null; then
+        echo "Warning: Cleanup incomplete, ports still in use!"
+    else
+        echo "Cleanup complete."
+    fi
 else
-    echo "Server running at http://127.0.0.1:5000. Use 'kill -9 $APP_PID' or 'kill -9 $REDIS_PID' to stop manually."
+    echo "Server running at http://127.0.0.1:5000. Use './tests/test_web_endpoints.sh --cleanup' to stop."
 fi
 
 # Exit with status
