@@ -4,11 +4,11 @@
 HISTORY_FILE="tests/test_history.log"
 TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
 
-# Start Seclorum (includes Redis)
-echo "Starting Seclorum..."
-python tests/manage_seclorum.py start &
-SECLORUM_PID=$!
-sleep 3
+# Ensure Seclorum is running
+if ! curl -s http://127.0.0.1:5000/chat > /dev/null 2>&1; then
+    echo "Seclorum not running. Start it with 'python tests/manage_seclorum.py start' first."
+    exit 1
+fi
 
 # Test endpoints
 echo "Running tests..."
@@ -46,8 +46,6 @@ if [ "$TESTS_PASSED" = true ]; then
 else
     echo "Tests failed, skipping commit."
 fi
-
-echo "Server running at http://127.0.0.1:5000. Use 'python tests/manage_seclorum.py stop' to shut down."
 
 # Exit with status
 if [ "$TESTS_PASSED" = true ]; then

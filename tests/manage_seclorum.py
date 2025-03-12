@@ -24,7 +24,7 @@ def main():
     action = sys.argv[1] if len(sys.argv) > 1 else "start"
     
     if action == "start":
-        # Clean up any existing Redis
+        # Clean up any existing Redis once
         cleanup_existing_redis()
 
         # Start Redis
@@ -35,7 +35,7 @@ def main():
         if not os.system("redis-cli ping > /dev/null 2>&1"):
             print("Redis started successfully.")
             with open(REDIS_PID_FILE, "w") as f:
-                f.write(str(initial_pid))  # Save initial PID (we'll rely on fallback)
+                f.write(str(initial_pid))  # Save initial PID (fallback used)
         else:
             print("Error: Redis failed to start.")
             redis_process.terminate()
@@ -49,7 +49,7 @@ def main():
         with open(FLASK_PID_FILE, "w") as f:
             f.write(str(os.getpid()))
         try:
-            socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+            socketio.run(app, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)
         except KeyboardInterrupt:
             master_node.stop()
             os.remove(FLASK_PID_FILE)
