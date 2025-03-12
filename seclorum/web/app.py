@@ -8,19 +8,15 @@ app = Flask(__name__, template_folder="templates")
 app.config["SECRET_KEY"] = "secret!"
 socketio = SocketIO(app, message_queue='redis://')
 
-master_node = None
+master_node = MasterNode()
 
 def signal_handler(sig, frame):
     print("Shutting down...")
-    if master_node:
-        master_node.stop_ollama()
+    master_node.stop()
     sys.exit(0)
 
 @app.route("/chat", methods=["GET", "POST"])
 def chat():
-    global master_node
-    if master_node is None:
-        master_node = MasterNode()
     if request.method == "POST" and "task" in request.form:
         task_description = request.form["task"]
         if task_description:
@@ -36,9 +32,6 @@ def chat():
 
 @app.route("/dashboard")
 def dashboard():
-    global master_node
-    if master_node is None:
-        master_node = MasterNode()
     master_node.check_sessions()
     active_sessions = master_node.active_sessions
     tasks = master_node.tasks
@@ -47,9 +40,6 @@ def dashboard():
 
 @app.route("/delete_task/<int:task_id>", methods=["POST"])
 def delete_task(task_id):
-    global master_node
-    if master_node is None:
-        master_node = MasterNode()
     task_id_str = str(task_id)
     if task_id_str in master_node.tasks:
         del master_node.tasks[task_id_str]
@@ -63,9 +53,6 @@ def delete_task(task_id):
 
 @socketio.on("connect")
 def handle_connect(auth=None):
-    global master_node
-    if master_node is None:
-        master_node = MasterNode()
     for task_id, task in master_node.tasks.items():
         result = task.get("result", "")
         emit("task_update", {"task_id": task["task_id"], "description": task["description"], "status": task["status"], "result": result})
@@ -73,7 +60,7 @@ def handle_connect(auth=None):
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     try:
+        master_node.start()
         socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
     finally:
-        if master_node:
-            master_node.stop_ollama()
+        master_node.stop()

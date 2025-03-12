@@ -19,13 +19,24 @@ class Agent(ABC):
         self.fs_manager.save_file("changes.txt", f"{self.name}: {message}")
         self.log_update(f"Committed changes: {message}")
 
-    @abstractmethod
-    def process_task(self, task_id, description):
-        pass
-
     def save_tasks(self):
         with open(f"{self.name}_tasks.json", "w") as f:
             json.dump(self.tasks, f)
+
+    @abstractmethod
+    def process_task(self, task_id, description):
+        """Process a task with given ID and description."""
+        pass
+
+    @abstractmethod
+    def start(self):
+        """Start the agent's resources and processes."""
+        pass
+
+    @abstractmethod
+    def stop(self):
+        """Stop the agent's resources and processes."""
+        pass
 
 if __name__ == "__main__":
     # Abstract class, not instantiated directly

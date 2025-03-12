@@ -10,26 +10,34 @@ class MasterNode(Agent):
         self.nodes = {}
         self.sessions_file = "sessions.json"
         self.ollama_process = None
-        self.start_ollama()
-        if os.path.exists(self.sessions_file):
-            with open(self.sessions_file, "r") as f:
-                self.sessions = json.load(f)
-        else:
-            self.sessions = {}
-        self.load_tasks()
         self.active_sessions = {}
+        self.load_tasks()
 
-    def start_ollama(self):
-        try:
-            subprocess.check_call(["ollama", "ps"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        except subprocess.CalledProcessError:
-            print("Starting Ollama server...")
-            self.ollama_process = subprocess.Popen(["ollama", "serve"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            time.sleep(2)
-            print("Ollama started.")
+    def start(self):
+        """Start the agent's resources and processes."""
+        if not self.ollama_process or self.ollama_process.poll() is not None:
+            try:
+                subprocess.check_call(["ollama", "ps"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            except subprocess.CalledProcessError:
+                print("Starting Ollama server...")
+                self.ollama_process = subprocess.Popen(["ollama", "serve"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                time.sleep(2)
+                print("Ollama started.")
+        self.check_sessions()
+        self.log_update("MasterNode started")
 
-    def stop_ollama(self):
-        if self.ollama_process:
+    def stop(self):
+        """Stop the agent's resources and processes."""
+        for task_id, proc in list(self.active_sessions.items()):
+            if proc.poll() is None:
+                print(f"Terminating active session PID {proc.pid} for Task {task_id}")
+                proc.terminate()
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    del self.active_sessions[task_id]
+        if self.ollama_process and self.ollama_process.poll() is None:
             print("Stopping Ollama server...")
             self.ollama_process.terminate()
             try:
@@ -37,6 +45,8 @@ class MasterNode(Agent):
             except subprocess.TimeoutExpired:
                 self.ollama_process.kill()
             self.ollama_process = None
+        self.save_tasks()
+        self.log_update("MasterNode stopped")
 
     def load_tasks(self):
         if os.path.exists("MasterNode_tasks.json"):
@@ -46,8 +56,7 @@ class MasterNode(Agent):
             self.tasks = {}
 
     def save_tasks(self):
-        with open("MasterNode_tasks.json", "w") as f:
-            json.dump(self.tasks, f)
+        super().save_tasks()
 
     def add_insight(self, insight):
         self.log_update(f"Insight: {insight}")
@@ -109,19 +118,10 @@ class MasterNode(Agent):
             return status
         return "not found"
 
-    def __del__(self):
-        for task_id, proc in list(self.active_sessions.items()):
-            if proc.poll() is None:
-                print(f"Terminating active session PID {proc.pid} for Task {task_id}")
-                proc.terminate()
-                try:
-                    proc.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-        self.stop_ollama()
-
 if __name__ == "__main__":
     master = MasterNode()
+    master.start()
     master.add_insight("redis-server not found; installed redis-stack instead")
     master.assign_task(1, "Design chat interface", "WebUI")
     master.receive_update("WebUI", "Chat interface mockup complete")
+    master.stop()
