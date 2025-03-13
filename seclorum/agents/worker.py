@@ -11,9 +11,11 @@ class Worker(Agent):
         self.description = description
         self.node_name = node_name
         self.model = "deepseek-r1:8b" if description.startswith("[complex]") else "llama3.2:latest"
+        print(f"Worker_{task_id}: Initialized with {self.model}")
         self.log_update(f"Worker loaded from: {os.path.abspath(__file__)}")
 
     def start(self):
+        print(f"Worker_{self.task_id}: Starting")
         self.log_update(f"Worker started for Task {self.task_id}: {self.description} using {self.model}")
         self.process_task()
         self.stop()
@@ -23,7 +25,7 @@ class Worker(Agent):
         print(f"Worker completed Task {self.task_id}")
 
     def process_task(self):
-        print(f"Processing Task {self.task_id}: {self.description} with {self.model}")
+        print(f"Worker_{self.task_id}: Processing task")
         time.sleep(1)
         task_input = self.description.replace("[complex]", "").strip()
         
@@ -32,8 +34,8 @@ class Worker(Agent):
                 subprocess.check_call(["ollama", "ps"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 self.log_update(f"Ollama is running on attempt {attempt + 1}")
                 break
-            except subprocess.CalledProcessError:
-                self.log_update(f"Ollama not responding on attempt {attempt + 1}")
+            except subprocess.CalledProcessError as e:
+                self.log_update(f"Ollama not responding on attempt {attempt + 1}: {str(e)}")
                 time.sleep(2)
         else:
             result = "Failed: Ollama server not available after 3 attempts"
@@ -58,13 +60,18 @@ class Worker(Agent):
             result = f"Task timed out after 60s with {self.model}"
         except subprocess.CalledProcessError as e:
             result = f"Error processing task with Ollama ({self.model}): {e.output}"
+        except Exception as e:
+            result = f"Unexpected error: {str(e)}"
         self.log_update(f"Task {self.task_id} result: {result}")
         self.report_result(result)
 
     def report_result(self, result):
-        from seclorum.agents.master import MasterNode
-        master = MasterNode()
-        master.receive_update(self.node_name, f"Task {self.task_id} completed: {result}")
+        try:
+            from seclorum.agents.master import MasterNode
+            master = MasterNode()
+            master.receive_update(self.node_name, f"Task {self.task_id} completed: {result}")
+        except Exception as e:
+            print(f"Worker_{self.task_id}: Failed to report result: {str(e)}")
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
