@@ -32,7 +32,7 @@ class Worker(Agent):
         for attempt in range(3):
             try:
                 subprocess.check_call(["ollama", "ps"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                print(f"Ollama is running on attempt {attempt + 1}")
+                self.log_update(f"Ollama is running on attempt {attempt + 1}")
                 break
             except subprocess.CalledProcessError:
                 self.log_update(f"Ollama not responding on attempt {attempt + 1}")
