@@ -10,13 +10,30 @@
         .dark .panel { background: rgba(30, 41, 59, 0.9); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); }
         .glow::after { content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px; background: radial-gradient(circle, rgba(147, 197, 253, 0.2), transparent); z-index: -1; filter: blur(10px); }
         .dark .glow::after { background: radial-gradient(circle, rgba(59, 130, 246, 0.2), transparent); }
+        .task-panel { background: rgba(255, 255, 255, 0.95); }
+        .dark .task-panel { background: rgba(30, 41, 59, 0.95); }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 dark:from-slate-800 dark:to-slate-900 font-sans p-6 transition-colors duration-300">
     <div class="max-w-4xl mx-auto">
         <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-8 text-center">Dashboard</h1>
         <div class="panel p-6 glow">
-            <p class="text-gray-800 dark:text-gray-200">Tasks in progress: <span class="font-semibold">Coming soon...</span></p>
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Tasks</h2>
+            <div class="space-y-4 max-h-96 overflow-y-auto">
+                {% if tasks %}
+                    {% for task_id, task in tasks.items() %}
+                        <div class="task-panel p-4 rounded-lg">
+                            <p class="text-gray-800 dark:text-gray-200"><span class="font-semibold">Task {{ task.task_id }}:</span> {{ task.description }}</p>
+                            <p class="text-gray-600 dark:text-gray-400">Status: <span class="font-medium {% if task.status == 'completed' %}text-green-500 dark:text-green-400{% else %}text-yellow-500 dark:text-yellow-400{% endif %}">{{ task.status }}</span></p>
+                            {% if task.result %}
+                                <p class="text-gray-800 dark:text-gray-200 mt-2">Result: {{ task.result | replace('\n', '<br>') | safe }}</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-gray-600 dark:text-gray-400">No tasks yet.</p>
+                {% endif %}
+            </div>
             <p class="mt-4"><a href="/chat" class="text-blue-500 dark:text-blue-400 hover:underline">Back to Chat</a> | <a href="/settings" class="text-blue-500 dark:text-blue-400 hover:underline">Settings</a></p>
         </div>
     </div>

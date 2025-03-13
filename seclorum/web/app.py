@@ -1,20 +1,24 @@
 from flask import Flask, request, render_template, redirect, url_for
 from flask_socketio import SocketIO
 from seclorum.agents.master import MasterNode
+import logging
 
 app = Flask(__name__, template_folder="templates")
 app.master_node = None
 socketio = SocketIO(app)
+logging.basicConfig(filename='app.log', level=logging.DEBUG)
 
 @app.route("/chat", methods=["GET", "POST"])
 def chat():
     if app.master_node is None:
         app.master_node = MasterNode()
         app.master_node.start()
+        logging.debug("MasterNode initialized and started")
     if request.method == "POST" and "task" in request.form:
         task_description = request.form["task"]
         if task_description:
             task_id = len(app.master_node.tasks) + 1
+            logging.debug(f"Assigning task {task_id}: {task_description}")
             app.master_node.process_task(task_id, task_description)
             socketio.emit("task_update", {"task_id": task_id, "description": task_description, "status": "assigned", "result": ""})
             return redirect(url_for("chat"))
@@ -27,8 +31,10 @@ def settings():
 @app.route("/dashboard")
 def dashboard():
     if app.master_node is None:
+        logging.debug("MasterNode not initialized for dashboard")
         return "MasterNode not initialized", 500
-    return render_template("dashboard.html")
+    logging.debug(f"Rendering dashboard with tasks: {app.master_node.tasks}")
+    return render_template("dashboard.html", tasks=app.master_node.tasks)
 
 if __name__ == "__main__":
     socketio.run(app, host="127.0.0.1", port=5000, debug=True)
