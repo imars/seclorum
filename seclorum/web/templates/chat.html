@@ -27,13 +27,13 @@
                 </div>
             </div>
             <div class="panel p-4 glow" x-data="{ input: '' }">
-                <form @submit.prevent="if (input) { messages.push(input); fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'task=' + encodeURIComponent(input) }).then(res => res.text()).then(() => { tasks[input] = true; setTimeout(() => delete tasks[input], 5000); }); input = ''; $refs.history.scrollTop = 0; }">
+                <form @submit.prevent="if (input) { messages.push(input); localStorage.setItem('chatMessages', JSON.stringify(messages)); fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'task=' + encodeURIComponent(input) }).then(res => res.text()).then(() => { tasks[input] = true; setTimeout(() => delete tasks[input], 5000); }); input = ''; $refs.history.scrollTop = 0; }">
                     <input type="text" x-model="input" placeholder="Enter a task (e.g., Write a haiku)" class="w-full p-2 border rounded-lg bg-white/80 dark:bg-slate-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400">
                     <input type="submit" value="Send" class="mt-2 w-full p-2 bg-blue-400 dark:bg-blue-600 text-white rounded-lg hover:bg-blue-500 dark:hover:bg-blue-700">
                 </form>
             </div>
         </div>
-        <!-- Right Panel: Placeholder for Future Agents -->
+        <!-- Right Panel: Placeholder -->
         <div class="w-2/3 panel p-6 glow">
             <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Agent Output</h2>
             <p class="text-gray-600 dark:text-gray-400">Task results will appear here soon...</p>
@@ -45,6 +45,14 @@
             const darkMode = localStorage.getItem('darkMode') === 'true';
             document.documentElement.classList.toggle('dark', darkMode);
             Alpine.data('root').darkMode = darkMode;
+
+            // Load chat history from localStorage
+            const savedMessages = localStorage.getItem('chatMessages');
+            if (savedMessages) {
+                Alpine.data('root').messages = JSON.parse(savedMessages);
+            } else {
+                Alpine.data('root').messages = [];
+            }
         });
     </script>
 </body>

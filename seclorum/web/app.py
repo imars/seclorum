@@ -31,10 +31,19 @@ def settings():
 @app.route("/dashboard")
 def dashboard():
     if app.master_node is None:
-        logging.debug("MasterNode not initialized for dashboard")
-        return "MasterNode not initialized", 500
+        app.master_node = MasterNode()
+        app.master_node.start()
+        logging.debug("MasterNode initialized for dashboard")
     logging.debug(f"Rendering dashboard with tasks: {app.master_node.tasks}")
     return render_template("dashboard.html", tasks=app.master_node.tasks)
+
+@app.route("/delete_task/<task_id>", methods=["POST"])
+def delete_task(task_id):
+    if app.master_node and task_id in app.master_node.tasks:
+        del app.master_node.tasks[task_id]
+        app.master_node.save_tasks()
+        logging.debug(f"Deleted task {task_id}")
+    return redirect(url_for("dashboard"))
 
 if __name__ == "__main__":
     socketio.run(app, host="127.0.0.1", port=5000, debug=True)
