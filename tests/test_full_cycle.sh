@@ -18,6 +18,6 @@ sleep 15
 ./tests/test_web_endpoints.sh
 python tests/manage_seclorum.py stop
 echo "Logs:"
-echo "log.txt:"; tail -n 5 log.txt
-echo "worker_log.txt:"; tail -n 5 worker_log.txt
+echo "log.txt:"; cat log.txt
+echo "worker_log.txt:"; cat worker_log.txt
 echo "Test complete."
