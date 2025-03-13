@@ -33,12 +33,9 @@ def start_seclorum():
 
     flask_env = os.environ.copy()
     flask_env["FLASK_RUN_PORT"] = str(port)
-    flask_process = subprocess.Popen([sys.executable, "seclorum/web/app.py"], env=flask_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    time.sleep(2)  # Give Flask a moment to start
-    flask_out, flask_err = flask_process.communicate(timeout=5)
+    # Run app.py directly in the foreground to match manual run
+    flask_process = subprocess.Popen([sys.executable, "seclorum/web/app.py"], env=flask_env, stdout=sys.stdout, stderr=sys.stderr)
     print(f"Flask process started with PID: {flask_process.pid} on port {port}")
-    print(f"Flask stdout: {flask_out.decode()}")
-    print(f"Flask stderr: {flask_err.decode()}")
     with open("seclorum_flask.pid", "w") as f:
         f.write(str(flask_process.pid))
     with open("seclorum_redis.pid", "w") as f:
