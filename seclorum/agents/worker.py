@@ -2,7 +2,7 @@ import sys
 import time
 import subprocess
 import os
-from seclorum.agents.base import Agent  # Absolute import
+from seclorum.agents.base import Agent
 
 class Worker(Agent):
     def __init__(self, task_id, description, node_name):
@@ -12,16 +12,16 @@ class Worker(Agent):
         self.node_name = node_name
         self.model = "deepseek-r1:8b" if description.startswith("[complex]") else "llama3.2:latest"
         print(f"Worker_{task_id}: Initialized with {self.model}")
-        self.log_update(f"Worker loaded from: {os.path.abspath(__file__)}")
+        self.worker_log(f"Worker loaded from: {os.path.abspath(__file__)}")
 
     def start(self):
         print(f"Worker_{self.task_id}: Starting")
-        self.log_update(f"Worker started for Task {self.task_id}: {self.description} using {self.model}")
+        self.worker_log(f"Worker started for Task {self.task_id}: {self.description} using {self.model}")
         self.process_task()
         self.stop()
 
     def stop(self):
-        self.log_update(f"Worker stopped for Task {self.task_id}")
+        self.worker_log(f"Worker stopped for Task {self.task_id}")
         print(f"Worker completed Task {self.task_id}")
 
     def process_task(self):
@@ -32,14 +32,14 @@ class Worker(Agent):
         for attempt in range(3):
             try:
                 subprocess.check_call(["ollama", "ps"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                self.log_update(f"Ollama is running on attempt {attempt + 1}")
+                self.worker_log(f"Ollama is running on attempt {attempt + 1}")
                 break
             except subprocess.CalledProcessError as e:
-                self.log_update(f"Ollama not responding on attempt {attempt + 1}: {str(e)}")
+                self.worker_log(f"Ollama not responding on attempt {attempt + 1}: {str(e)}")
                 time.sleep(2)
         else:
             result = "Failed: Ollama server not available after 3 attempts"
-            self.log_update(f"Task {self.task_id} result: {result}")
+            self.worker_log(f"Task {self.task_id} result: {result}")
             self.report_result(result)
             return
 
@@ -62,16 +62,20 @@ class Worker(Agent):
             result = f"Error processing task with Ollama ({self.model}): {e.output}"
         except Exception as e:
             result = f"Unexpected error: {str(e)}"
-        self.log_update(f"Task {self.task_id} result: {result}")
+        self.worker_log(f"Task {self.task_id} result: {result}")
         self.report_result(result)
 
     def report_result(self, result):
         try:
-            from seclorum.agents.master import MasterNode  # Absolute import
+            from seclorum.agents.master import MasterNode
             master = MasterNode()
             master.receive_update(self.node_name, f"Task {self.task_id} completed: {result}")
         except Exception as e:
             print(f"Worker_{self.task_id}: Failed to report result: {str(e)}")
+
+    def worker_log(self, message):
+        with open("worker_log.txt", "a") as f:
+            f.write(f"{self.name}: {message}\n")
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:

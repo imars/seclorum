@@ -2,7 +2,7 @@ Starting test...
 ollama  22515  ian    3u  IPv4 0xcffbc16048f5540d      0t0  TCP localhost:11434 (LISTEN)
 Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
 No existing Redis on 6379.
-Initial Redis PID from Popen: 28680
+Initial Redis PID from Popen: 29378
 Redis started successfully.
 Connected to Redis at localhost:6379
 Seclorum started. Running Flask app on http://127.0.0.1:5000...
@@ -11,16 +11,16 @@ Seclorum started. Running Flask app on http://127.0.0.1:5000...
 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
  * Running on http://127.0.0.1:5000
 [33mPress CTRL+C to quit[0m
-127.0.0.1 - - [13/Mar/2025 04:18:42] "[32mPOST /chat HTTP/1.1[0m" 302 -
+127.0.0.1 - - [13/Mar/2025 04:33:46] "[32mPOST /chat HTTP/1.1[0m" 302 -
 <!doctype html>
 <html lang=en>
 <title>Redirecting...</title>
 <h1>Redirecting...</h1>
 <p>You should be redirected automatically to the target URL: <a href="/chat">/chat</a>. If not, click the link.
-127.0.0.1 - - [13/Mar/2025 04:18:57] "GET /chat HTTP/1.1" 200 -
+127.0.0.1 - - [13/Mar/2025 04:34:01] "GET /chat HTTP/1.1" 200 -
 Running tests...
-127.0.0.1 - - [13/Mar/2025 04:18:57] "GET /chat HTTP/1.1" 200 -
+127.0.0.1 - - [13/Mar/2025 04:34:01] "GET /chat HTTP/1.1" 200 -
 Test /chat: PASSED (HTTP 200)
-127.0.0.1 - - [13/Mar/2025 04:18:57] "GET /dashboard HTTP/1.1" 200 -
+127.0.0.1 - - [13/Mar/2025 04:34:01] "GET /dashboard HTTP/1.1" 200 -
 Test /dashboard: PASSED (HTTP 200)
 All tests passed, committing changes...
