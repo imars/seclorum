@@ -11,7 +11,8 @@ lsof -i :5000 && kill -9 $(lsof -i :5000 -t) 2>/dev/null
 python tests/manage_seclorum.py start &
 sleep 5
 redis-cli DEL MasterNode_tasks MasterNode_sessions >/dev/null
-python -c "from seclorum.agents.master import MasterNode; m = MasterNode(); m.start(); m.process_task(1, 'Write a haiku'); m.check_sessions()" &
+# Add task without starting MasterNode again
+python -c "from seclorum.agents.master import MasterNode; m = MasterNode(); m.process_task(1, 'Write a haiku'); m.check_sessions()" &
 sleep 10
 ./tests/test_web_endpoints.sh
 python tests/manage_seclorum.py stop
