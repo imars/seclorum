@@ -25,7 +25,6 @@ class MasterNode(Agent, RedisMixin):
     def stop(self):
         for task_id, proc in list(self.active_sessions.items()):
             if proc.poll() is None:
-                print(f"Terminating PID {proc.pid} for Task {task_id}")
                 proc.terminate()
                 try:
                     proc.wait(timeout=5)
@@ -55,7 +54,6 @@ class MasterNode(Agent, RedisMixin):
         self.nodes[node_name] = task
         self.save_tasks()
         self.log_update(f"Task {task_id} assigned to {node_name}")
-        print(f"Task {task_id} assigned to {node_name}")
         self.spawn_session(node_name, task_id, description)
 
     def process_task(self, task_id, description):
@@ -63,36 +61,29 @@ class MasterNode(Agent, RedisMixin):
 
     def receive_update(self, node_name, update):
         self.log_update(f"Received update from {node_name}: {update}")
-        print(f"DEBUG: Updating status for {node_name} with {update}")
         for task_id, task in self.tasks.items():
             if task.get("node_name") == node_name or (node_name in self.nodes and self.nodes[node_name]["task_id"] == int(task_id)):
                 self.tasks[task_id]["status"] = "completed"
                 self.tasks[task_id]["result"] = update.split(": ", 1)[-1] if ": " in update else update
                 self.save_tasks()
-                if str(task_id) in self.sessions:
-                    self.log_update(f"Session for Task {task_id} completed (PID: {self.sessions[str(task_id)]['pid']})")
-                print(f"DEBUG: Task {task_id} status set to completed")
                 break
-        else:
-            print(f"No task found for node {node_name}")
         self.commit_changes(f"Update from {node_name}")
 
     def spawn_session(self, node_name, task_id, description):
-        cmd = [sys.executable, "seclorum/agents/worker.py", str(task_id), description, node_name]
+        worker_path = os.path.join(os.path.dirname(__file__), "worker.py")
+        cmd = [sys.executable, worker_path, str(task_id), description, node_name]
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.sessions[str(task_id)] = {"pid": proc.pid, "node_name": node_name, "description": description}
         self.active_sessions[str(task_id)] = proc
         self.save_tasks()
         self.save_sessions()
         self.log_update(f"Spawned session for {node_name} on Task {task_id} (PID: {proc.pid})")
-        print(f"DEBUG: Spawned worker PID {proc.pid}")
 
     def check_sessions(self):
         completed = []
         for task_id, proc in list(self.active_sessions.items()):
             if proc.poll() is not None:
                 stdout, stderr = proc.communicate()
-                print(f"DEBUG: Worker PID {proc.pid} finished for Task {task_id}, stdout: {stdout.decode()}, stderr: {stderr.decode()}")
                 completed.append(task_id)
         for task_id in completed:
             del self.active_sessions[task_id]
@@ -102,9 +93,7 @@ class MasterNode(Agent, RedisMixin):
         self.load_tasks()
         task_id = str(task_id)
         if task_id in self.tasks:
-            status = self.tasks[task_id]["status"]
-            print(f"DEBUG: Status for Task {task_id} is {status}")
-            return status
+            return self.tasks[task_id]["status"]
         return "not found"
 
 if __name__ == "__main__":
