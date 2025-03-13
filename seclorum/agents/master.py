@@ -1,5 +1,6 @@
 import sys
 import os
+import importlib.util
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 from .base import Agent
 from .redis_mixin import RedisMixin
@@ -70,7 +71,7 @@ class MasterNode(Agent, RedisMixin):
         self.commit_changes(f"Update from {node_name}")
 
     def spawn_session(self, node_name, task_id, description):
-        worker_path = os.path.join(os.path.dirname(__file__), "worker.py")
+        worker_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "worker.py"))
         cmd = [sys.executable, worker_path, str(task_id), description, node_name]
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.sessions[str(task_id)] = {"pid": proc.pid, "node_name": node_name, "description": description}
