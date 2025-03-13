@@ -27,7 +27,7 @@ class Worker(Agent):
         print(f"Processing Task {self.task_id}: {self.description} with {self.model}")
         time.sleep(1)  # Simulate initial setup
         task_input = self.description.replace("[complex]", "").strip()
-        
+
         # Check if Ollama is available
         for attempt in range(3):
             try:
