@@ -236,3 +236,23 @@ INFO:werkzeug:[33mPress CTRL+C to quit[0m
 INFO:werkzeug: * Restarting with stat
 WARNING:werkzeug: * Debugger is active!
 INFO:werkzeug: * Debugger PIN: 126-870-694
+INFO:werkzeug: * Detected change in '/Users/ian/dev/projects/agents/local/seclorum/tests/manage_seclorum.py', reloading
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 126-870-694
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 126-870-694
+DEBUG:root:MasterNode initialized for dashboard
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'completed', 'result': "Softly falls the snow\nBlanketing winter's peaceful\nFrosty morning calm"}, '2': {'task_id': 2, 'description': 'Write a haiku', 'status': 'completed', 'result': 'Softly falls the snow\nBlanketing the winter scene\nPeaceful quiet night'}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 09:08:18] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 09:08:26] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'completed', 'result': "Softly falls the snow\nBlanketing winter's peaceful\nFrosty morning calm"}, '2': {'task_id': 2, 'description': 'Write a haiku', 'status': 'completed', 'result': 'Softly falls the snow\nBlanketing the winter scene\nPeaceful quiet night'}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 09:08:33] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 09:08:35] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'completed', 'result': "Softly falls the snow\nBlanketing winter's peaceful\nFrosty morning calm"}, '2': {'task_id': 2, 'description': 'Write a haiku', 'status': 'completed', 'result': 'Softly falls the snow\nBlanketing the winter scene\nPeaceful quiet night'}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 09:09:58] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 09:10:02] "GET /chat HTTP/1.1" 200 -
