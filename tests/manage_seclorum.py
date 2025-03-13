@@ -19,7 +19,9 @@ def start_seclorum():
         redis_process.terminate()
         return
 
-    flask_process = subprocess.Popen([sys.executable, "-m", "flask", "run", "--host=127.0.0.1", "--port=5000"], env=os.environ.copy())
+    # Run app.py directly instead of flask run
+    flask_process = subprocess.Popen([sys.executable, "seclorum/web/app.py"], env=os.environ.copy())
+    print(f"Flask process started with PID: {flask_process.pid}")
     with open("seclorum_flask.pid", "w") as f:
         f.write(str(flask_process.pid))
     with open("seclorum_redis.pid", "w") as f:
