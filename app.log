@@ -154,3 +154,20 @@ INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:56:38] "[32mPOST /delete_task/1 HTT
 DEBUG:root:Rendering dashboard with tasks: {}
 INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:56:38] "GET /dashboard HTTP/1.1" 200 -
 INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:56:40] "GET /chat HTTP/1.1" 200 -
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 126-870-694
+DEBUG:root:MasterNode initialized and started
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 08:04:05] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Assigning task 1: Write a haiku
+DEBUG:root:Task 1 emitted to SocketIO
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 08:04:24] "[32mPOST /chat HTTP/1.1[0m" 302 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 08:04:24] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 08:04:31] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 08:04:36] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 08:04:40] "GET /dashboard HTTP/1.1" 200 -
