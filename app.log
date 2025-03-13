@@ -1,0 +1,98 @@
+DEBUG:git.cmd:Popen(['git', 'init'], cwd=/Users/ian/dev/projects/agents/local/seclorum/project, stdin=None, shell=False, universal_newlines=False)
+DEBUG:git.util:Failed checking if running in CYGWIN due to: FileNotFoundError(2, 'No such file or directory')
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:20:09] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:20:13] "GET /dashboard HTTP/1.1" 200 -
+DEBUG:root:Assigning task 1: Write a haiku
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:20:34] "[32mPOST /chat HTTP/1.1[0m" 302 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:20:34] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:20:38] "GET /dashboard HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:20:47] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:20:49] "GET /settings HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:20:54] "GET /chat HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:21:37] "GET /chat HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:21:40] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Assigning task 2: Write a haiku
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:22:11] "[32mPOST /chat HTTP/1.1[0m" 302 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:22:11] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '2': {'task_id': 2, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:22:21] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:22:53] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '2': {'task_id': 2, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:22:59] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:23:02] "GET /chat HTTP/1.1" 200 -
+DEBUG:git.cmd:Popen(['git', 'init'], cwd=/Users/ian/dev/projects/agents/local/seclorum/project, stdin=None, shell=False, universal_newlines=False)
+DEBUG:git.util:Failed checking if running in CYGWIN due to: FileNotFoundError(2, 'No such file or directory')
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:28:30] "GET /chat HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:28:39] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Assigning task 1: Write a haiku
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:29:03] "[32mPOST /chat HTTP/1.1[0m" 302 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:29:03] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:29:06] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:29:09] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:29:16] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:29:18] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:30:13] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:30:15] "GET /settings HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:30:19] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:30:21] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:30:23] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:33:40] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:33:54] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:35:00] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:35:11] "GET /chat HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:42:04] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Assigning task 2: Write a haiku
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:42:31] "[32mPOST /chat HTTP/1.1[0m" 302 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:42:31] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '2': {'task_id': 2, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:42:35] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:42:40] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '2': {'task_id': 2, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:42:42] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:42:44] "[33mPOST /delete_task/1 HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:42:48] "[33mPOST /delete_task/2 HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:43:34] "[33mPOST /delete_task/1 HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:43:38] "[33mPOST /delete_task/2 HTTP/1.1[0m" 404 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '2': {'task_id': 2, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:55:03] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:55:08] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '2': {'task_id': 2, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:55:32] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:55:35] "GET /settings HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 06:55:38] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '2': {'task_id': 2, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:07:36] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:07:43] "GET /chat HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:26:28] "GET /chat HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:27:23] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Assigning task 3: Write a haiku
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:28:17] "[32mPOST /chat HTTP/1.1[0m" 302 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:28:17] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '2': {'task_id': 2, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '3': {'task_id': 3, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:28:19] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:28:23] "GET /chat HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:30:26] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '2': {'task_id': 2, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '3': {'task_id': 3, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:30:31] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:30:33] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Assigning task 4: Write a haiku
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:30:47] "[32mPOST /chat HTTP/1.1[0m" 302 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:30:47] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '2': {'task_id': 2, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '3': {'task_id': 3, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '4': {'task_id': 4, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:30:50] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:30:53] "GET /chat HTTP/1.1" 200 -

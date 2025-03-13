@@ -24,3 +24,32 @@ Test /chat: PASSED (HTTP 200)
 127.0.0.1 - - [13/Mar/2025 04:37:38] "GET /dashboard HTTP/1.1" 200 -
 Test /dashboard: PASSED (HTTP 200)
 All tests passed, committing changes...
+[master acda8bc] Automated commit: Tests passed in test_web_endpoints.sh
+ 5 files changed, 10 insertions(+), 9 deletions(-)
+To https://github.com/imars/seclorum.git
+   aab25f8..acda8bc  master -> master
+Script completed successfully.
+/Users/ian/.pyenv/versions/3.11.0/lib/python3.11/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+Sent shutdown signal to Flask (PID: 29604).
+Sent shutdown signal to Redis (PID: 29610).
+Killed Redis PIDs on port 6379: 29618
+./tests/test_full_cycle.sh: line 19: 29604 Terminated: 15          python tests/manage_seclorum.py start
+Logs:
+log.txt:
+MasterNode: MasterNode started
+MasterNode: Task 2 assigned to WebUI
+MasterNode: Spawned session for WebUI on Task 2 (PID: 29636)
+MasterNode: Received update from WebUI: Task 2 completed: Snowflakes gently fall
+Blanketing the winter scene
+Peaceful morning hush
+MasterNode: Committed changes: Update from WebUI
+worker_log.txt:
+Worker_2: Worker loaded from: /Users/ian/dev/projects/agents/local/seclorum/seclorum/agents/worker.py
+Worker_2: Worker started for Task 2: Write a haiku using llama3.2:latest
+Worker_2: Ollama is running on attempt 1
+Worker_2: Task 2 result: Snowflakes gently fall
+Blanketing the winter scene
+Peaceful morning hush
+Worker_2: Worker stopped for Task 2
+Test complete.
