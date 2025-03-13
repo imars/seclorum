@@ -224,3 +224,9 @@ INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 08:47:28] "[32mPOST /chat HTTP/1.1[0m
 INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 08:47:28] "GET /chat HTTP/1.1" 200 -
 DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'completed', 'result': "Softly falls the snow\nBlanketing winter's peaceful\nFrosty morning calm"}, '2': {'task_id': 2, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
 INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 08:47:30] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 126-870-694
