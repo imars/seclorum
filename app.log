@@ -96,3 +96,33 @@ INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:30:47] "GET /chat HTTP/1.1" 200 -
 DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '2': {'task_id': 2, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '3': {'task_id': 3, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '4': {'task_id': 4, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
 INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:30:50] "GET /dashboard HTTP/1.1" 200 -
 INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:30:53] "GET /chat HTTP/1.1" 200 -
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 126-870-694
+DEBUG:root:MasterNode initialized and started
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:47:28] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:47:33] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:47:36] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Assigning task 1: Write a haiku
+DEBUG:root:Task 1 emitted to SocketIO
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:47:48] "[32mPOST /chat HTTP/1.1[0m" 302 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:47:48] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:47:53] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:47:56] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:48:11] "GET /dashboard HTTP/1.1" 200 -
+DEBUG:root:Attempting to delete task 1. Current tasks: {'1': {'task_id': 1, 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}
+DEBUG:root:Deleted task 1
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:48:12] "[32mPOST /delete_task/1 HTTP/1.1[0m" 302 -
+DEBUG:root:Rendering dashboard with tasks: {}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:48:12] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:48:15] "GET /chat HTTP/1.1" 200 -
+DEBUG:root:Rendering dashboard with tasks: {}
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:48:59] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:49:22] "GET /settings HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [13/Mar/2025 07:49:24] "GET /chat HTTP/1.1" 200 -
