@@ -1,6 +1,7 @@
 import sys
 import time
 import subprocess
+import os
 from .base import Agent
 
 class Worker(Agent):
@@ -10,25 +11,22 @@ class Worker(Agent):
         self.description = description
         self.node_name = node_name
         self.model = "deepseek-r1:8b" if description.startswith("[complex]") else "llama3.2:latest"
+        self.log_update(f"Worker loaded from: {os.path.abspath(__file__)}")
 
     def start(self):
-        """Start the worker and process the task."""
         self.log_update(f"Worker started for Task {self.task_id}: {self.description} using {self.model}")
         self.process_task()
         self.stop()
 
     def stop(self):
-        """Stop the worker and log completion."""
         self.log_update(f"Worker stopped for Task {self.task_id}")
         print(f"Worker completed Task {self.task_id}")
 
     def process_task(self):
-        """Process the task using Ollama with the selected model."""
         print(f"Processing Task {self.task_id}: {self.description} with {self.model}")
-        time.sleep(1)  # Simulate initial setup
+        time.sleep(1)
         task_input = self.description.replace("[complex]", "").strip()
-
-        # Check if Ollama is available
+        
         for attempt in range(3):
             try:
                 subprocess.check_call(["ollama", "ps"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -43,7 +41,6 @@ class Worker(Agent):
             self.report_result(result)
             return
 
-        # Process with Ollama
         try:
             process = subprocess.Popen(
                 ["ollama", "run", self.model, f"Respond to this task: {task_input}"],
@@ -65,7 +62,6 @@ class Worker(Agent):
         self.report_result(result)
 
     def report_result(self, result):
-        """Send the result back to MasterNode."""
         from seclorum.agents.master import MasterNode
         master = MasterNode()
         master.receive_update(self.node_name, f"Task {self.task_id} completed: {result}")
