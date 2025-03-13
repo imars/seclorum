@@ -21,6 +21,7 @@ def chat():
             logging.debug(f"Assigning task {task_id}: {task_description}")
             app.master_node.process_task(task_id, task_description)
             socketio.emit("task_update", {"task_id": task_id, "description": task_description, "status": "assigned", "result": ""})
+            logging.debug(f"Task {task_id} emitted to SocketIO")
             return redirect(url_for("chat"))
     return render_template("chat.html")
 
@@ -39,12 +40,16 @@ def dashboard():
 
 @app.route("/delete_task/<task_id>", methods=["POST"])
 def delete_task(task_id):
-    if app.master_node and task_id in app.master_node.tasks:
-        del app.master_node.tasks[task_id]
-        app.master_node.save_tasks()
-        logging.debug(f"Deleted task {task_id}")
-        return redirect(url_for("dashboard"))
-    logging.debug(f"Task {task_id} not found for deletion")
+    if app.master_node:
+        logging.debug(f"Attempting to delete task {task_id}. Current tasks: {app.master_node.tasks}")
+        if task_id in app.master_node.tasks:
+            del app.master_node.tasks[task_id]
+            app.master_node.save_tasks()
+            logging.debug(f"Deleted task {task_id}")
+            return redirect(url_for("dashboard"))
+        logging.debug(f"Task {task_id} not found for deletion")
+    else:
+        logging.debug("MasterNode not initialized for delete")
     return redirect(url_for("dashboard"))
 
 if __name__ == "__main__":
