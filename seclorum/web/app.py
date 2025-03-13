@@ -43,6 +43,8 @@ def delete_task(task_id):
         del app.master_node.tasks[task_id]
         app.master_node.save_tasks()
         logging.debug(f"Deleted task {task_id}")
+        return redirect(url_for("dashboard"))
+    logging.debug(f"Task {task_id} not found for deletion")
     return redirect(url_for("dashboard"))
 
 if __name__ == "__main__":

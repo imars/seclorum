@@ -29,19 +29,28 @@ def stop_seclorum():
     try:
         with open("seclorum_flask.pid", "r") as f:
             flask_pid = int(f.read().strip())
-            print(f"Sent shutdown signal to Flask (PID: {flask_pid}).")
-            os.kill(flask_pid, signal.SIGTERM)
+            try:
+                os.kill(flask_pid, signal.SIGTERM)
+                print(f"Sent shutdown signal to Flask (PID: {flask_pid}).")
+                time.sleep(1)  # Give it a sec to shut down
+            except ProcessLookupError:
+                print(f"Flask PID {flask_pid} not found—already stopped.")
     except FileNotFoundError:
         print("No Flask PID file found.")
+    
     try:
         with open("seclorum_redis.pid", "r") as f:
             redis_pid = int(f.read().strip())
-            print(f"Sent shutdown signal to Redis (PID: {redis_pid}).")
-            os.kill(redis_pid, signal.SIGTERM)
-            redis_pids = subprocess.check_output(["lsof", "-i", ":6379", "-t"]).decode().strip().split()
-            for pid in redis_pids:
-                os.kill(int(pid), signal.SIGTERM)
-            print(f"Killed Redis PIDs on port 6379: {' '.join(redis_pids)}")
+            try:
+                os.kill(redis_pid, signal.SIGTERM)
+                print(f"Sent shutdown signal to Redis (PID: {redis_pid}).")
+                time.sleep(1)
+                redis_pids = subprocess.check_output(["lsof", "-i", ":6379", "-t"]).decode().strip().split()
+                for pid in redis_pids:
+                    os.kill(int(pid), signal.SIGTERM)
+                print(f"Killed Redis PIDs on port 6379: {' '.join(redis_pids)}")
+            except ProcessLookupError:
+                print(f"Redis PID {redis_pid} not found—already stopped.")
     except FileNotFoundError:
         print("No Redis PID file found.")
     except subprocess.CalledProcessError:
