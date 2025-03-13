@@ -2,7 +2,7 @@ import sys
 import time
 import subprocess
 import os
-from .base import Agent
+from seclorum.agents.base import Agent  # Absolute import
 
 class Worker(Agent):
     def __init__(self, task_id, description, node_name):
@@ -67,7 +67,7 @@ class Worker(Agent):
 
     def report_result(self, result):
         try:
-            from seclorum.agents.master import MasterNode
+            from seclorum.agents.master import MasterNode  # Absolute import
             master = MasterNode()
             master.receive_update(self.node_name, f"Task {self.task_id} completed: {result}")
         except Exception as e:
