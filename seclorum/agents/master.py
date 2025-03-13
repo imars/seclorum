@@ -1,9 +1,10 @@
 import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 from .base import Agent
 from .redis_mixin import RedisMixin
 import subprocess
 import json
-import os
 import time
 
 class MasterNode(Agent, RedisMixin):
@@ -17,16 +18,14 @@ class MasterNode(Agent, RedisMixin):
         self.load_sessions()
 
     def start(self):
-        """Start the agent's resources and processes."""
         self.connect_redis()
         self.check_sessions()
         self.log_update("MasterNode started")
 
     def stop(self):
-        """Stop the agent's resources and processes."""
         for task_id, proc in list(self.active_sessions.items()):
             if proc.poll() is None:
-                print(f"Terminating active session PID {proc.pid} for Task {task_id}")
+                print(f"Terminating PID {proc.pid} for Task {task_id}")
                 proc.terminate()
                 try:
                     proc.wait(timeout=5)
@@ -49,10 +48,6 @@ class MasterNode(Agent, RedisMixin):
 
     def save_sessions(self):
         self.store_data("MasterNode_sessions", self.sessions)
-
-    def add_insight(self, insight):
-        self.log_update(f"Insight: {insight}")
-        print(f"DEBUG: Recorded insight - {insight}")
 
     def assign_task(self, task_id, description, node_name):
         task = {"task_id": task_id, "description": description, "status": "assigned", "result": ""}
@@ -115,7 +110,6 @@ class MasterNode(Agent, RedisMixin):
 if __name__ == "__main__":
     master = MasterNode()
     master.start()
-    master.add_insight("redis-server not found; installed redis-stack instead")
     master.assign_task(1, "Design chat interface", "WebUI")
     master.receive_update("WebUI", "Chat interface mockup complete")
     master.stop()
