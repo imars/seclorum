@@ -9,7 +9,7 @@ class Worker(Agent):
         self.task_id = task_id
         self.description = description
         self.node_name = node_name
-        self.model = "deepseek-r1:8b" if description.startswith("[complex]") else "llama3.2"
+        self.model = "deepseek-r1:8b" if description.startswith("[complex]") else "llama3.2:latest"
 
     def start(self):
         """Start the worker and process the task."""
