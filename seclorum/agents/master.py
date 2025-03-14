@@ -13,7 +13,7 @@ class MasterNode(RedisMixin, LifecycleMixin):
     def __init__(self):
         RedisMixin.__init__(self, name="MasterNode")
         LifecycleMixin.__init__(self, name="MasterNode", pid_file="seclorum_master.pid")
-        self.redis_available = False  # Set default before load_tasks
+        self.redis_available = False
         self.tasks = self.load_tasks() or {}
         self.socketio = SocketIO()
         self.active_workers = {}
@@ -31,6 +31,7 @@ class MasterNode(RedisMixin, LifecycleMixin):
             self.redis_available = False
         self.running = True
         threading.Thread(target=self.poll_tasks, daemon=True).start()
+        self.logger.info("MasterNode started, checking stuck tasks")
         self.check_stuck_tasks()
         self.logger.info("MasterNode started and polling tasks")
 
@@ -101,6 +102,7 @@ class MasterNode(RedisMixin, LifecycleMixin):
             time.sleep(1)
 
     def check_stuck_tasks(self):
+        self.logger.info("Checking for stuck tasks")
         if not self.redis_available:
             self.logger.warning("Redis unavailable, checking stuck tasks in memory only")
             for task_id, task in list(self.tasks.items()):
