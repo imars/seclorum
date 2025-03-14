@@ -54,7 +54,7 @@ class MasterNode(RedisMixin, LifecycleMixin):
         self.tasks[task_id] = {"task_id": task_id, "description": description, "status": "assigned", "result": ""}
         self.save_tasks()
         self.logger.info(f"Task {task_id} assigned to WebUI: {description}")
-        self.socketio.emit("task_update", self.tasks[task_id], namespace='/')
+        self.socketio.emit("task_update", self.tasks[task_id])  # No namespace
         worker_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "worker.py"))
         if not os.path.exists(worker_path):
             self.logger.error(f"Worker script not found at {worker_path}")
@@ -86,6 +86,8 @@ class MasterNode(RedisMixin, LifecycleMixin):
     def poll_tasks(self):
         while self.running:
             if not self.redis_available:
+                self.logger.warning("Redis unavailable, polling skipped")
+                self.check_stuck_tasks()
                 time.sleep(1)
                 continue
             redis_tasks = self.retrieve_data("tasks") or {}
@@ -96,7 +98,7 @@ class MasterNode(RedisMixin, LifecycleMixin):
                     self.tasks[task_id] = task
                     self.save_tasks()
                     self.logger.info(f"Task {task_id} completed: {task['result']}")
-                    self.socketio.emit("task_update", task, namespace='/')
+                    self.socketio.emit("task_update", task)  # No namespace
                     if task_id in self.active_workers:
                         del self.active_workers[task_id]
             time.sleep(1)
@@ -104,34 +106,42 @@ class MasterNode(RedisMixin, LifecycleMixin):
     def check_stuck_tasks(self):
         self.logger.info("Checking for stuck tasks")
         if not self.redis_available:
-            self.logger.warning("Redis unavailable, checking stuck tasks in memory only")
+            self.logger.warning("Redis unavailable, checking stuck tasks in memory")
             for task_id, task in list(self.tasks.items()):
                 if task["status"] == "assigned" and task_id not in self.active_workers:
                     task["status"] = "failed"
                     task["result"] = "Worker failed to start (Redis unavailable)"
                     self.tasks[task_id] = task
                     self.logger.warning(f"Marked Task {task_id} as failed: Worker never started (Redis unavailable)")
-                    self.socketio.emit("task_update", task, namespace='/')
+                    self.socketio.emit("task_update", task)  # No namespace
             return
         redis_tasks = self.retrieve_data("tasks") or {}
         self.logger.debug(f"Checking stuck tasks. Current tasks: {self.tasks}, Redis tasks: {redis_tasks}")
         for task_id, task in list(self.tasks.items()):
-            if task["status"] == "assigned" and task_id not in self.active_workers and task_id not in redis_tasks:
+            if task["status"] == "assigned":  # Fail all assigned tasks
                 task["status"] = "failed"
-                task["result"] = "Worker failed to start"
+                task["result"] = "Worker failed to start or timed out"
                 self.tasks[task_id] = task
-                self.logger.warning(f"Marked Task {task_id} as failed: Worker never started")
+                self.logger.warning(f"Marked Task {task_id} as failed: Worker never started or timed out")
                 self.save_tasks()
-                self.socketio.emit("task_update", task, namespace='/')
+                self.socketio.emit("task_update", task)  # No namespace
 
     def save_tasks(self):
         if self.redis_available:
-            self.store_data("tasks", self.tasks)
+            try:
+                self.store_data("tasks", self.tasks)
+            except Exception as e:
+                self.logger.error(f"Failed to save tasks to Redis: {str(e)}")
+                self.redis_available = False
         else:
             self.logger.warning("Redis unavailable, tasks not saved")
 
     def load_tasks(self):
         if self.redis_available:
-            return self.retrieve_data("tasks")
+            try:
+                return self.retrieve_data("tasks")
+            except Exception as e:
+                self.logger.error(f"Failed to load tasks from Redis: {str(e)}")
+                self.redis_available = False
         self.logger.warning("Redis unavailable, loading empty tasks")
         return {}
