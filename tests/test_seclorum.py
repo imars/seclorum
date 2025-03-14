@@ -58,10 +58,9 @@ class TestSeclorum:
 
     def stop_processes(self):
         logger.info("Stopping app and Redis...")
-        # Send a final request to trigger check_stuck_tasks
         try:
             requests.get(f"{self.base_url}/chat", timeout=2)
-            time.sleep(2)  # Give it a moment to process
+            time.sleep(2)
         except requests.ConnectionError:
             logger.warning("Could not trigger final check_stuck_tasks")
         if self.app_proc:
@@ -111,7 +110,7 @@ class TestSeclorum:
         if response.status_code not in [200, 302]:
             logger.error(f"Task submission failed: {response.text[:200]}...")
             return None
-        return None  # ID set via task_update
+        return None
 
     def check_dashboard(self):
         logger.info("Checking dashboard...")
@@ -141,6 +140,7 @@ class TestSeclorum:
             time.sleep(45)
 
             self.check_dashboard()
+            time.sleep(2)  # Catch late updates
             for task, task_id in self.task_ids.items():
                 if task_id in self.task_results:
                     result = self.task_results[task_id]
