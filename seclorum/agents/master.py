@@ -51,10 +51,10 @@ class MasterNode(RedisMixin, LifecycleMixin):
 
     def process_task(self, task_id, description):
         task_id = str(task_id)
-        self.tasks[task_id] = {"task_id": task_id, "description": description, "status": "assigned", "result": ""}
+        self.tasks[task_id] = {"task_id": task_id, "description": description, "status": "assigned", "result": "", "created_at": time.time()}
         self.save_tasks()
         self.logger.info(f"Task {task_id} assigned to WebUI: {description}")
-        self.socketio.emit("task_update", self.tasks[task_id])  # No namespace
+        self.socketio.emit("task_update", self.tasks[task_id])
         worker_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "worker.py"))
         if not os.path.exists(worker_path):
             self.logger.error(f"Worker script not found at {worker_path}")
@@ -98,33 +98,34 @@ class MasterNode(RedisMixin, LifecycleMixin):
                     self.tasks[task_id] = task
                     self.save_tasks()
                     self.logger.info(f"Task {task_id} completed: {task['result']}")
-                    self.socketio.emit("task_update", task)  # No namespace
+                    self.socketio.emit("task_update", task)
                     if task_id in self.active_workers:
                         del self.active_workers[task_id]
             time.sleep(1)
 
     def check_stuck_tasks(self):
         self.logger.info("Checking for stuck tasks")
+        current_time = time.time()
         if not self.redis_available:
             self.logger.warning("Redis unavailable, checking stuck tasks in memory")
             for task_id, task in list(self.tasks.items()):
-                if task["status"] == "assigned" and task_id not in self.active_workers:
+                if task["status"] == "assigned" and (current_time - task["created_at"] > 15):  # 15s grace period
                     task["status"] = "failed"
                     task["result"] = "Worker failed to start (Redis unavailable)"
                     self.tasks[task_id] = task
                     self.logger.warning(f"Marked Task {task_id} as failed: Worker never started (Redis unavailable)")
-                    self.socketio.emit("task_update", task)  # No namespace
+                    self.socketio.emit("task_update", task)
             return
         redis_tasks = self.retrieve_data("tasks") or {}
         self.logger.debug(f"Checking stuck tasks. Current tasks: {self.tasks}, Redis tasks: {redis_tasks}")
         for task_id, task in list(self.tasks.items()):
-            if task["status"] == "assigned":  # Fail all assigned tasks
+            if task["status"] == "assigned" and (current_time - task["created_at"] > 15):  # 15s grace period
                 task["status"] = "failed"
                 task["result"] = "Worker failed to start or timed out"
                 self.tasks[task_id] = task
                 self.logger.warning(f"Marked Task {task_id} as failed: Worker never started or timed out")
                 self.save_tasks()
-                self.socketio.emit("task_update", task)  # No namespace
+                self.socketio.emit("task_update", task)
 
     def save_tasks(self):
         if self.redis_available:
