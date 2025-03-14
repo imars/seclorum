@@ -12,7 +12,8 @@ logging.basicConfig(
     filename=log_path,
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    filemode='a'
+    filemode='a',
+    force=True  # Ensure fresh logger
 )
 
 class Worker(Agent, LifecycleMixin, RedisMixin):

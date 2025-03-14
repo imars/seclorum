@@ -23,6 +23,7 @@ class MasterNode(RedisMixin):
         super().start()
         self.running = True
         threading.Thread(target=self.poll_tasks, daemon=True).start()
+        self.logger.info("MasterNode started and polling tasks")
 
     def stop(self):
         """Stop the MasterNode and its workers."""
@@ -35,13 +36,16 @@ class MasterNode(RedisMixin):
                 self.logger.info(f"Worker for Task {task_id} (PID: {pid}) already stopped")
         self.active_workers.clear()
         super().stop()
+        self.logger.info("MasterNode stopped")
 
     def process_task(self, task_id, description):
-        self.tasks[str(task_id)] = {"task_id": task_id, "description": description, "status": "assigned", "result": ""}
+        task_id = str(task_id)
+        self.tasks[task_id] = {"task_id": task_id, "description": description, "status": "assigned", "result": ""}
         self.save_tasks()
         self.logger.info(f"Task {task_id} assigned to WebUI")
+        self.socketio.emit("task_update", self.tasks[task_id], namespace='/')  # Emit assigned state
         worker_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "worker.py"))
-        cmd = [os.sys.executable, worker_path, str(task_id), description, "WebUI"]
+        cmd = [os.sys.executable, worker_path, task_id, description, "WebUI"]
         self.logger.debug(f"Spawning worker with command: {' '.join(cmd)}")
         try:
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=os.environ.copy())
@@ -52,8 +56,9 @@ class MasterNode(RedisMixin):
 
     def poll_tasks(self):
         while self.running:
-            tasks = self.retrieve_data("tasks") or {}
-            for task_id, task in tasks.items():
+            redis_tasks = self.retrieve_data("tasks") or {}
+            for task_id, task in redis_tasks.items():
+                task_id = str(task_id)
                 if task["status"] == "completed" and (task_id not in self.tasks or self.tasks[task_id]["status"] != "completed"):
                     self.tasks[task_id] = task
                     self.save_tasks()
