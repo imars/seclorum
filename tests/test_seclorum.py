@@ -16,6 +16,7 @@ class TestSeclorum:
         self.app_proc = None
         self.sio = socketio.Client()
         self.task_results = {}
+        self.task_ids = {}
         self.project_root = "/Users/ian/dev/projects/agents/local/seclorum"
 
     def start_redis(self):
@@ -85,6 +86,10 @@ class TestSeclorum:
         def task_update(data):
             logger.info(f"Task update received: {data}")
             task_id = data["task_id"]
+            if data["status"] == "assigned" and task_id not in self.task_ids.values():
+                for task, tid in self.task_ids.items():
+                    if not tid and data["description"] == task:
+                        self.task_ids[task] = task_id
             self.task_results[task_id] = data
 
         self.sio.connect(self.base_url)
@@ -97,11 +102,10 @@ class TestSeclorum:
             data={"task": task_description},
             headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
-        if response.status_code not in [200, 302]:  # Accept 200 or 302
+        if response.status_code not in [200, 302]:
             logger.error(f"Task submission failed: {response.text[:200]}...")
             return None
-        task_id = str(int(time.time() * 1000))
-        return task_id
+        return None  # ID set via task_update
 
     def check_dashboard(self):
         logger.info("Checking dashboard...")
@@ -123,21 +127,20 @@ class TestSeclorum:
                 "Sing a song",
                 "Old task to fail"
             ]
-            task_ids = {}
+            self.task_ids = {task: None for task in tasks}
             for task in tasks:
-                task_id = self.submit_task(task)
-                if task_id:
-                    task_ids[task] = task_id
+                self.submit_task(task)
+                time.sleep(1)  # Space out submissions
 
-            time.sleep(30)  # Wait longer for completions
+            time.sleep(45)  # Wait for all completions
 
             self.check_dashboard()
-            for task, task_id in task_ids.items():
+            for task, task_id in self.task_ids.items():
                 if task_id in self.task_results:
                     result = self.task_results[task_id]
                     logger.info(f"Task '{task}' (ID: {task_id}) status: {result['status']}, result: {result['result']}")
                 else:
-                    logger.warning(f"Task '{task}' (ID: {task_id}) not completed or failed silently")
+                    logger.warning(f"Task '{task}' (ID: {task_id or 'unknown'}) not completed or failed silently")
 
         except Exception as e:
             logger.error(f"Test failed: {str(e)}")

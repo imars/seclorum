@@ -109,7 +109,7 @@ class MasterNode(RedisMixin, LifecycleMixin):
         if not self.redis_available:
             self.logger.warning("Redis unavailable, checking stuck tasks in memory")
             for task_id, task in list(self.tasks.items()):
-                if task["status"] == "assigned" and (current_time - task["created_at"] > 15):  # 15s grace period
+                if task["status"] == "assigned" and (current_time - task["created_at"] > 30):  # 30s grace period
                     task["status"] = "failed"
                     task["result"] = "Worker failed to start (Redis unavailable)"
                     self.tasks[task_id] = task
@@ -119,7 +119,7 @@ class MasterNode(RedisMixin, LifecycleMixin):
         redis_tasks = self.retrieve_data("tasks") or {}
         self.logger.debug(f"Checking stuck tasks. Current tasks: {self.tasks}, Redis tasks: {redis_tasks}")
         for task_id, task in list(self.tasks.items()):
-            if task["status"] == "assigned" and (current_time - task["created_at"] > 15):  # 15s grace period
+            if task["status"] == "assigned" and (current_time - task["created_at"] > 30):  # 30s grace period
                 task["status"] = "failed"
                 task["result"] = "Worker failed to start or timed out"
                 self.tasks[task_id] = task
