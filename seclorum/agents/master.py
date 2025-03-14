@@ -40,9 +40,12 @@ class MasterNode(RedisMixin):
         task_id = str(task_id)
         self.tasks[task_id] = {"task_id": task_id, "description": description, "status": "assigned", "result": ""}
         self.save_tasks()
-        self.logger.info(f"Task {task_id} assigned to WebUI")
+        self.logger.info(f"Task {task_id} assigned to WebUI: {description}")
         self.socketio.emit("task_update", self.tasks[task_id], namespace='/')
         worker_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "worker.py"))
+        if not os.path.exists(worker_path):
+            self.logger.error(f"Worker script not found at {worker_path}")
+            return
         cmd = [os.sys.executable, worker_path, task_id, description, "WebUI"]
         self.logger.debug(f"Spawning worker with command: {' '.join(cmd)}")
         try:
@@ -52,11 +55,10 @@ class MasterNode(RedisMixin):
                 stderr=subprocess.PIPE,
                 text=True,
                 env=os.environ.copy(),
-                cwd=os.path.dirname(worker_path)  # Ensure correct working dir
+                cwd=os.path.dirname(worker_path)
             )
             self.active_workers[task_id] = process.pid
             self.logger.info(f"Spawned session for WebUI on Task {task_id} (PID: {process.pid})")
-            # Check if worker starts
             stdout, stderr = process.communicate(timeout=10)
             if process.returncode is not None:
                 self.logger.error(f"Worker for Task {task_id} exited early with code {process.returncode}")
@@ -64,7 +66,7 @@ class MasterNode(RedisMixin):
                 self.logger.error(f"Worker stderr: {stderr}")
                 del self.active_workers[task_id]
         except subprocess.TimeoutExpired:
-            self.logger.info(f"Worker for Task {task_id} running normally after 10s")
+            self.logger.info(f"Worker for Task {task_id} still running after 10s")
         except Exception as e:
             self.logger.error(f"Failed to spawn worker for Task {task_id}: {str(e)}")
 

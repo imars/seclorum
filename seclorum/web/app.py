@@ -33,7 +33,6 @@ def chat():
         if task_description:
             task_id = str(len(master.tasks) + 1)
             master.process_task(task_id, task_description)
-            socketio.emit("task_update", {"task_id": task_id, "description": task_description, "status": "assigned", "result": ""})
             return redirect(url_for("chat"))
     return render_template("chat.html", tasks=master.tasks)
 
