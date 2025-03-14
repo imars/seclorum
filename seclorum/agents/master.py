@@ -4,13 +4,16 @@ import pickle
 import signal
 from flask_socketio import SocketIO
 from seclorum.agents.redis_mixin import RedisMixin
+from seclorum.agents.lifecycle import LifecycleMixin
 import logging
 import threading
 import time
 
-class MasterNode(RedisMixin):
+class MasterNode(RedisMixin, LifecycleMixin):
     def __init__(self):
-        super().__init__(name="MasterNode", pid_file="seclorum_master.pid")
+        RedisMixin.__init__(self, name="MasterNode")
+        LifecycleMixin.__init__(self, name="MasterNode", pid_file="seclorum_master.pid")
+        self.redis_available = False  # Set default before load_tasks
         self.tasks = self.load_tasks() or {}
         self.socketio = SocketIO()
         self.active_workers = {}
@@ -19,9 +22,16 @@ class MasterNode(RedisMixin):
         self.running = False
 
     def start(self):
-        super().start()
+        LifecycleMixin.start(self)
+        try:
+            self.connect_redis()
+            self.redis_available = True
+        except Exception as e:
+            self.logger.error(f"Redis unavailable at startup: {str(e)}. Running without Redis.")
+            self.redis_available = False
         self.running = True
         threading.Thread(target=self.poll_tasks, daemon=True).start()
+        self.check_stuck_tasks()
         self.logger.info("MasterNode started and polling tasks")
 
     def stop(self):
@@ -33,7 +43,9 @@ class MasterNode(RedisMixin):
             except ProcessLookupError:
                 self.logger.info(f"Worker for Task {task_id} (PID: {pid}) already stopped")
         self.active_workers.clear()
-        super().stop()
+        if self.redis_available:
+            self.disconnect_redis()
+        LifecycleMixin.stop(self)
         self.logger.info("MasterNode stopped")
 
     def process_task(self, task_id, description):
@@ -72,6 +84,9 @@ class MasterNode(RedisMixin):
 
     def poll_tasks(self):
         while self.running:
+            if not self.redis_available:
+                time.sleep(1)
+                continue
             redis_tasks = self.retrieve_data("tasks") or {}
             self.logger.debug(f"Polling Redis tasks: {redis_tasks}")
             for task_id, task in redis_tasks.items():
@@ -85,8 +100,36 @@ class MasterNode(RedisMixin):
                         del self.active_workers[task_id]
             time.sleep(1)
 
+    def check_stuck_tasks(self):
+        if not self.redis_available:
+            self.logger.warning("Redis unavailable, checking stuck tasks in memory only")
+            for task_id, task in list(self.tasks.items()):
+                if task["status"] == "assigned" and task_id not in self.active_workers:
+                    task["status"] = "failed"
+                    task["result"] = "Worker failed to start (Redis unavailable)"
+                    self.tasks[task_id] = task
+                    self.logger.warning(f"Marked Task {task_id} as failed: Worker never started (Redis unavailable)")
+                    self.socketio.emit("task_update", task, namespace='/')
+            return
+        redis_tasks = self.retrieve_data("tasks") or {}
+        self.logger.debug(f"Checking stuck tasks. Current tasks: {self.tasks}, Redis tasks: {redis_tasks}")
+        for task_id, task in list(self.tasks.items()):
+            if task["status"] == "assigned" and task_id not in self.active_workers and task_id not in redis_tasks:
+                task["status"] = "failed"
+                task["result"] = "Worker failed to start"
+                self.tasks[task_id] = task
+                self.logger.warning(f"Marked Task {task_id} as failed: Worker never started")
+                self.save_tasks()
+                self.socketio.emit("task_update", task, namespace='/')
+
     def save_tasks(self):
-        self.store_data("tasks", self.tasks)
+        if self.redis_available:
+            self.store_data("tasks", self.tasks)
+        else:
+            self.logger.warning("Redis unavailable, tasks not saved")
 
     def load_tasks(self):
-        return self.retrieve_data("tasks")
+        if self.redis_available:
+            return self.retrieve_data("tasks")
+        self.logger.warning("Redis unavailable, loading empty tasks")
+        return {}
