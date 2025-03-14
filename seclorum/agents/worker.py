@@ -13,7 +13,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     filemode='a',
-    force=True  # Ensure fresh logger
+    force=True
 )
 
 class Worker(Agent, LifecycleMixin, RedisMixin):
@@ -106,7 +106,7 @@ class Worker(Agent, LifecycleMixin, RedisMixin):
             tasks = self.retrieve_data("tasks") or {}
             tasks[self.task_id] = {"task_id": self.task_id, "description": self.description, "status": "completed", "result": result}
             self.store_data("tasks", tasks)
-            self.logger.info(f"Updated task {self.task_id} in Redis: {result}")
+            self.logger.info(f"Updated task {self.task_id} in Redis: {tasks[self.task_id]}")
             self.commit_changes(f"Task {self.task_id} result: {result}")
         except Exception as e:
             self.logger.error(f"Failed to report result: {str(e)}")
