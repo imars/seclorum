@@ -58,6 +58,12 @@ class TestSeclorum:
 
     def stop_processes(self):
         logger.info("Stopping app and Redis...")
+        # Send a final request to trigger check_stuck_tasks
+        try:
+            requests.get(f"{self.base_url}/chat", timeout=2)
+            time.sleep(2)  # Give it a moment to process
+        except requests.ConnectionError:
+            logger.warning("Could not trigger final check_stuck_tasks")
         if self.app_proc:
             env = os.environ.copy()
             env["PYTHONPATH"] = self.project_root
@@ -130,9 +136,9 @@ class TestSeclorum:
             self.task_ids = {task: None for task in tasks}
             for task in tasks:
                 self.submit_task(task)
-                time.sleep(1)  # Space out submissions
+                time.sleep(1)
 
-            time.sleep(45)  # Wait for all completions
+            time.sleep(45)
 
             self.check_dashboard()
             for task, task_id in self.task_ids.items():
