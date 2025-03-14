@@ -1,72 +1,84 @@
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html>
 <head>
-    <meta charset="UTF-8">
     <title>Seclorum Chat</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-    <style>
-        .panel { background: rgba(255, 255, 255, 0.7); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border-radius: 0.5rem; transition: all 0.3s ease; }
-        .dark .panel { background: rgba(30, 41, 59, 0.7); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); }
-        .active-task { background: rgba(255, 255, 255, 0.95); }
-        .dark .active-task { background: rgba(30, 41, 59, 0.95); }
-        .glow::after { content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px; background: radial-gradient(circle, rgba(147, 197, 253, 0.2), transparent); z-index: -1; filter: blur(10px); }
-        .dark .glow::after { background: radial-gradient(circle, rgba(59, 130, 246, 0.2), transparent); }
-    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 dark:from-slate-800 dark:to-slate-900 font-sans p-6 transition-colors duration-300">
-    <div class="max-w-5xl mx-auto flex space-x-6" x-data="appData">
-        <!-- Left Panel: Chat & History -->
-        <div class="w-1/3 flex flex-col space-y-4">
-            <div class="panel p-4 glow h-96 flex flex-col">
-                <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Chat History</h2>
-                <div class="flex-1 overflow-y-auto flex flex-col-reverse" x-ref="history">
-                    <template x-for="(msg, index) in messages.slice().reverse()" :key="index">
-                        <div :class="tasks[msg] ? 'panel mb-2 p-3 active-task bg-blue-50 dark:bg-blue-900' : 'panel mb-2 p-3'" x-text="msg"></div>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4" x-data="{ tasks: {{ tasks | tojson }}, history: ['Write a haiku', 'What’s 2+2?', 'Tell a joke'], newTask: '' }">
+        <h1 class="text-2xl font-bold mb-4">Seclorum Chat</h1>
+        
+        <!-- Chat Input with History -->
+        <form action="/chat" method="POST" class="mb-4">
+            <div class="relative">
+                <input 
+                    type="text" 
+                    name="task" 
+                    x-model="newTask" 
+                    @keydown.enter.prevent="submitTask()" 
+                    @input="filterHistory()" 
+                    list="task-history" 
+                    class="w-full p-2 border rounded" 
+                    placeholder="Enter your task..."
+                >
+                <datalist id="task-history">
+                    <template x-for="item in history" :key="item">
+                        <option x-text="item"></option>
                     </template>
-                </div>
+                </datalist>
             </div>
-            <div class="panel p-4 glow" x-data="{ input: '' }">
-                <form @submit.prevent="if (input) { messages.push(input); saveMessages(); fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'task=' + encodeURIComponent(input) }).then(res => res.text()).then(() => { tasks[input] = true; setTimeout(() => { delete tasks[input]; saveMessages(); }, 5000); }); input = ''; $refs.history.scrollTop = 0; }">
-                    <input type="text" x-model="input" placeholder="Enter a task (e.g., Write a haiku)" class="w-full p-2 border rounded-lg bg-white/80 dark:bg-slate-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400">
-                    <input type="submit" value="Send" class="mt-2 w-full p-2 bg-blue-400 dark:bg-blue-600 text-white rounded-lg hover:bg-blue-500 dark:hover:bg-blue-700">
-                </form>
-            </div>
-        </div>
-        <!-- Right Panel: Placeholder -->
-        <div class="w-2/3 panel p-6 glow">
-            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Agent Output</h2>
-            <p class="text-gray-600 dark:text-gray-400">Task results will appear here soon...</p>
-        </div>
-    </div>
-    <p class="mt-6 text-center"><a href="/settings" class="text-blue-500 dark:text-blue-400 hover:underline">Settings</a> | <a href="/dashboard" class="text-blue-500 dark:text-blue-400 hover:underline">Dashboard</a></p>
-    <script>
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('appData', () => ({
-                darkMode: localStorage.getItem('darkMode') === 'true',
-                messages: JSON.parse(localStorage.getItem('chatMessages') || '[]'),
-                tasks: {},
-                init() {
-                    console.log('Alpine init messages:', this.messages);
-                    document.documentElement.classList.toggle('dark', this.darkMode);
-                    this.$watch('messages', () => this.saveMessages());
-                },
-                saveMessages() {
-                    localStorage.setItem('chatMessages', JSON.stringify(this.messages));
-                    console.log('Saved messages:', this.messages);
-                }
-            }));
-        });
+            <button type="submit" class="mt-2 bg-blue-500 text-white p-2 rounded">Submit Task</button>
+        </form>
 
-        document.addEventListener('DOMContentLoaded', () => {
-            window.addEventListener('click', () => {
-                const root = Alpine.$data(document.querySelector('[x-data="appData"]'));
-                if (root) {
-                    root.darkMode = localStorage.getItem('darkMode') === 'true';
-                    document.documentElement.classList.toggle('dark', root.darkMode);
-                }
+        <!-- Task History -->
+        <div class="mb-4">
+            <h2 class="text-xl font-semibold">Task History</h2>
+            <ul class="list-disc pl-5">
+                <template x-for="(task, id) in tasks" :key="id">
+                    <li x-text="task.description + ' - ' + task.status"></li>
+                </template>
+            </ul>
+        </div>
+
+        <!-- Agent Output -->
+        <div>
+            <h2 class="text-xl font-semibold">Agent Output</h2>
+            <div x-ref="output" class="bg-white p-4 rounded shadow"></div>
+        </div>
+
+        <script>
+            document.addEventListener('alpine:init', () => {
+                Alpine.data('chat', () => ({
+                    submitTask() {
+                        if (this.newTask) {
+                            this.history = [this.newTask, ...this.history.slice(0, 9)]; // Keep last 10
+                            this.$el.querySelector('form').submit();
+                        }
+                    },
+                    filterHistory() {
+                        // Optional: Filter history based on input (not implemented here)
+                    }
+                }));
             });
-        });
-    </script>
+
+            const socket = io.connect('http://' + document.domain + ':' + location.port);
+            socket.on('connect', () => {
+                console.log('SocketIO connected');
+            });
+            socket.on('debug', (data) => {
+                console.log('Debug:', data);
+            });
+            socket.on('task_update', (data) => {
+                console.log('Task update:', data);
+                const output = document.querySelector('[x-ref="output"]');
+                if (data.status === 'completed') {
+                    output.innerHTML += `<p><strong>Task ${data.task_id}:</strong> ${data.result}</p>`;
+                }
+                Alpine.store('chat').tasks[data.task_id] = data;
+            });
+        </script>
+    </div>
 </body>
 </html>

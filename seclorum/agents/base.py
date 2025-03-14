@@ -2,6 +2,17 @@ from abc import ABC, abstractmethod
 import json
 import os
 from seclorum.core.filesystem import FileSystemManager
+import logging
+
+# Configure logging for log.txt with timestamps
+log_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'log.txt'))
+logging.basicConfig(
+    filename=log_path,
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s',
+    filemode='a'
+)
+logger = logging.getLogger("Agent")
 
 class Agent(ABC):
     def __init__(self, name, repo_path="project"):
@@ -11,11 +22,9 @@ class Agent(ABC):
         self.fs_manager = FileSystemManager(repo_path)
 
     def log_update(self, message):
-        with open("log.txt", "a") as f:
-            f.write(f"{self.name}: {message}\n")
+        logger.info(f"{self.name}: {message}")
 
     def commit_changes(self, message):
-        # Use FileSystemManager to commit changes
         self.fs_manager.save_file("changes.txt", f"{self.name}: {message}")
         self.log_update(f"Committed changes: {message}")
 
@@ -39,5 +48,4 @@ class Agent(ABC):
         pass
 
 if __name__ == "__main__":
-    # Abstract class, not instantiated directly
     pass
