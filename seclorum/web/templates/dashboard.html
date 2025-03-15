@@ -23,15 +23,20 @@
                 {% if tasks %}
                     {% for task_id, task in tasks.items() %}
                         <div class="task-panel p-4 rounded-lg flex justify-between items-start">
-                            <div>
+                            <div class="w-full">
                                 <p class="text-gray-800 dark:text-gray-200"><span class="font-semibold">Task {{ task.task_id }}:</span> {{ task.description }}</p>
-                                <p class="text-gray-600 dark:text-gray-400">Status: <span class="font-medium {% if task.status == 'completed' %}text-green-500 dark:text-green-400{% else %}text-yellow-500 dark:text-yellow-400{% endif %}">{{ task.status }}</span></p>
+                                <p class="text-gray-600 dark:text-gray-400">Status: <span class="font-medium {% if task.status == 'completed' %}text-green-500 dark:text-green-400{% elif task.status == 'failed' %}text-red-500 dark:text-red-400{% else %}text-yellow-500 dark:text-yellow-400{% endif %}">{{ task.status }}</span></p>
+                                {% if task.status == 'assigned' %}
+                                    <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mt-2">
+                                        <div class="bg-blue-600 h-2.5 rounded-full" style="width: 50%"></div>
+                                    </div>
+                                {% endif %}
                                 {% if task.result %}
                                     <p class="text-gray-800 dark:text-gray-200 mt-2">Result: {{ task.result | replace('\n', '<br>') | safe }}</p>
                                 {% endif %}
                             </div>
                             <form method="post" action="/delete_task/{{ task_id }}">
-                                <button type="submit" class="p-2 bg-red-400 dark:bg-red-600 text-white rounded-lg hover:bg-red-500 dark:hover:bg-red-700">Delete</button>
+                                <button type="submit" class="p-2 bg-red-400 dark:bg-red-600 text-white rounded-lg hover:bg-red-500 dark:hover:bg-red-700 opacity-75">Delete</button>
                             </form>
                         </div>
                     {% endfor %}
