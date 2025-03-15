@@ -14,11 +14,12 @@
         .glow::after { content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px; background: radial-gradient(circle, rgba(147, 197, 253, 0.2), transparent); z-index: -1; filter: blur(10px); }
         .dark .glow::after { background: radial-gradient(circle, rgba(59, 130, 246, 0.2), transparent); }
         .agent-output { max-height: 200px; overflow-y: auto; }
+        textarea { resize: none; overflow: hidden; min-height: 2.5rem; }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 dark:from-slate-800 dark:to-slate-900 font-sans p-6 transition-colors duration-300">
     <div class="max-w-5xl mx-auto flex space-x-6" x-data="appData">
-        <div class="w-1/3 flex flex-col space-y-4">
+        <div class="w-5/12 flex flex-col space-y-4">
             <div class="panel p-4 glow h-96 flex flex-col">
                 <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Chat History</h2>
                 <div class="flex-1 overflow-y-auto flex flex-col-reverse" x-ref="history">
@@ -30,27 +31,27 @@
             <div class="panel p-4 glow" x-data="{ input: '', mode: '{{ mode }}', history: ['Write a haiku', 'What’s 2+2?', 'Tell a joke'] }">
                 <form @submit.prevent="submitInput(input)">
                     <div class="relative flex space-x-2">
-                        <input
-                            type="text"
+                        <textarea
                             x-model="input"
                             list="task-history"
                             :placeholder="mode === 'task' ? 'Enter a task (e.g., Write a haiku)' : 'Chat with agent'"
                             class="w-full p-2 border rounded-lg bg-white/80 dark:bg-slate-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        >
+                            @input="adjustHeight($event.target)"
+                        ></textarea>
                         <datalist id="task-history">
                             <template x-for="item in history" :key="item">
                                 <option x-text="item"></option>
                             </template>
                         </datalist>
                         <button type="button" @click="mode = mode === 'task' ? 'agent' : 'task'; window.location.href = '/chat?mode=' + mode" class="p-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500">
-                            <span x-text="mode === 'task' ? 'Agent' : 'Task'"></span>
+                            <span x-text="mode === 'task' ? 'Task' : 'Agent'"></span>
                         </button>
                     </div>
-                    <input type="submit" value="Send" class="mt-2 w-full p-2 bg-blue-400 dark:bg-blue-600 text-white rounded-lg hover:bg-blue-500 dark:hover:bg-blue-700 opacity-75">
+                    <input type="submit" value="Send" class="mt-2 w-full p-2 bg-blue-900 dark:bg-blue-800 text-white rounded-lg hover:bg-blue-800 dark:hover:bg-blue-700 opacity-75">
                 </form>
             </div>
         </div>
-        <div class="w-2/3 panel p-6 glow" x-data="{ selectedAgent: null }">
+        <div class="w-7/12 panel p-6 glow" x-data="{ selectedAgent: null }">
             <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Agents</h2>
             <div class="space-y-4">
                 <template x-for="(agent, id) in agents" :key="id">
@@ -79,7 +80,9 @@
                     if (data.status === 'assigned') {
                         this.agents[data.task_id] = { id: data.task_id, output: 'Pending...' };
                     } else if (data.status === 'completed' || data.status === 'failed') {
-                        this.agents[data.task_id].output = data.result;
+                        this.agents[data.task_id
+
+].output = data.result;
                     }
                 });
             },
@@ -94,6 +97,10 @@
                         Alpine.$data(this.$root.querySelector('div[x-data*=\"input\"]')).input = '';
                     });
                 }
+            },
+            adjustHeight(el) {
+                el.style.height = 'auto';
+                el.style.height = `${el.scrollHeight}px`;
             }
         }));
     });
