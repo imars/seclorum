@@ -62,7 +62,6 @@ class MasterNode(RedisMixin, LifecycleMixin):
         self.tasks[task_id] = {"task_id": task_id, "description": description, "status": "assigned", "result": ""}
         self.save_tasks()
         logger.info(f"Task {task_id} assigned to WebUI: {description}")
-        self.memory.save(prompt=f"Task {task_id}: {description}")
         if self.socketio.server:
             self.socketio.emit("task_update", self.tasks[task_id], namespace='/')
         worker_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "worker.py"))
@@ -83,7 +82,6 @@ class MasterNode(RedisMixin, LifecycleMixin):
             )
             self.active_workers[task_id] = process.pid
             logger.info(f"Spawned session for WebUI on Task {task_id} (PID: {process.pid})")
-            self.memory.save(response=f"Spawned worker for Task {task_id} (PID: {process.pid})")
             stdout, stderr = process.communicate(timeout=10)
             if process.returncode == 0:
                 logger.info(f"Worker for Task {task_id} completed normally (PID: {process.pid})")
@@ -101,7 +99,6 @@ class MasterNode(RedisMixin, LifecycleMixin):
                     self.socketio.emit("task_update", self.tasks[task_id], namespace='/')
         except subprocess.TimeoutExpired:
             logger.info(f"Worker for Task {task_id} still running after 10s")
-            self.memory.save(response=f"Worker for Task {task_id} still running after 10s")
         except Exception as e:
             logger.error(f"Failed to spawn worker for Task {task_id}: {str(e)}")
             self.memory.save(response=f"Failed to spawn worker for Task {task_id}: {str(e)}")
@@ -120,7 +117,6 @@ class MasterNode(RedisMixin, LifecycleMixin):
                         os.kill(pid, 0)
                     except ProcessLookupError:
                         logger.info(f"Worker for Task {task_id} (PID: {pid}) completed or crashed")
-                        self.memory.save(response=f"Task {task_id} assumed completed (no Redis)")
                         self.tasks[task_id]["status"] = "completed"
                         self.tasks[task_id]["result"] = "Completed (no Redis confirmation)"
                         del self.active_workers[task_id]
@@ -135,7 +131,8 @@ class MasterNode(RedisMixin, LifecycleMixin):
                     self.tasks[task_id] = task
                     self.save_tasks()
                     logger.info(f"Task {task_id} {task['status']}: {task['result']}")
-                    self.memory.save(response=f"Task {task_id} {task['status']}: {task['result']}")
+                    if task["status"] == "failed":
+                        self.memory.save(response=f"Task {task_id} {task['status']}: {task['result']}")
                     self.socketio.emit("task_update", task, namespace='/')
                     if task_id in self.active_workers:
                         del self.active_workers[task_id]

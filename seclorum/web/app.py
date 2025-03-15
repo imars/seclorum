@@ -17,6 +17,45 @@ handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
+# Simulated local LLMs (replace with real models, e.g., transformers)
+def quick_llm(prompt):
+    """Simulate a fast, lightweight LLM (e.g., TinyLLaMA)."""
+    if "morning" in prompt.lower():
+        return "Good morning! How’s your day starting?"
+    elif "what's" in prompt.lower():
+        return "Just the usual—code, coffee, and chaos. You?"
+    else:
+        return None  # Escalate if no simple match
+
+def deepseek_r1_8b(prompt):
+    """Simulate DeepSeek-R1:8b for complex prompts."""
+    if "haiku" in prompt.lower():
+        return "Soft winds whisper low\nBlossoms fade in twilight’s glow\nTime drifts ever on"
+    elif "analyze" in prompt.lower():
+        return "I’d analyze that, but I need more context—tell me more!"
+    else:
+        return "I’m DeepSeek-R1:8b. Complex query detected: " + prompt
+
+def assess_complexity(prompt):
+    """Quick LLM assesses prompt complexity."""
+    words = prompt.split()
+    complexity_score = len(words)
+    if "haiku" in prompt.lower() or "analyze" in prompt.lower() or complexity_score > 5:
+        return "complex"
+    return "simple"
+
+def get_agent_response(prompt):
+    """Seclorum decides which LLM to use."""
+    logger.info(f"Assessing complexity of prompt: {prompt}")
+    complexity = assess_complexity(prompt)
+    if complexity == "simple":
+        response = quick_llm(prompt)
+        if response:
+            logger.info("Quick LLM handled prompt")
+            return response
+    logger.info("Escalating to DeepSeek-R1:8b")
+    return deepseek_r1_8b(prompt)
+
 def get_master_node():
     if 'session_id' not in session:
         session['session_id'] = str(uuid.uuid4())
@@ -45,18 +84,18 @@ def chat():
         if not input_text:
             logger.warning("Empty input received")
             return redirect(url_for('chat', mode=mode))
-        if mode == 'task':
+        if mode == 'task' or "haiku" in input_text.lower():
             task_id = str(int(time.time() * 1000))
             logger.info(f"Processing task {task_id}: {input_text}")
             master.process_task(task_id, input_text)
             return redirect(url_for('chat', mode=mode))
         else:
-            response = f"Hello! You said: {input_text}"  # Placeholder for real agent logic
             logger.info(f"Saving agent message: {input_text}")
+            response = get_agent_response(input_text)
             master.memory.save(prompt=input_text, response=response)
             socketio.emit('chat_update', {'prompt': input_text, 'response': response}, namespace='/')
             logger.info(f"Emitted chat_update: {{'prompt': '{input_text}', 'response': '{response}'}}")
-            return '', 204  # No content, let SocketIO update UI
+            return '', 204
     conversation_history = master.memory.load_conversation_history()
     logger.info(f"Rendering chat with history: {conversation_history[:50]}...")
     return render_template('chat.html', mode=mode, conversation_history=conversation_history, agents=master.tasks, tasks=master.tasks)
