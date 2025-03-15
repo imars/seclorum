@@ -29,9 +29,10 @@
                 </div>
             </div>
             <div class="panel p-4 glow" x-data="{ input: '', mode: '{{ mode }}', history: ['Write a haiku', 'What’s 2+2?', 'Tell a joke'] }">
-                <form @submit.prevent="submitInput(input)">
+                <form @submit.prevent="submitInput(input)" method="POST" action="/chat?mode={{ mode }}">
                     <div class="relative flex space-x-2">
                         <textarea
+                            name="input"
                             x-model="input"
                             list="task-history"
                             :placeholder="mode === 'task' ? 'Enter a task (e.g., Write a haiku)' : 'Chat with agent'"
@@ -57,7 +58,7 @@
                 <template x-for="(agent, id) in agents" :key="id">
                     <div class="panel p-3 agent-output" :class="{ 'active-agent': selectedAgent === id }" @click="selectedAgent = id">
                         <strong>Agent {{ id }}:</strong>
-                        <div x-text="agent.output.replace(/\n/g, '<br>')" class="text-gray-600 dark:text-gray-400"></div>
+                        <div x-text="agent.result ? agent.result.replace(/\n/g, '<br>') : agent.output.replace(/\n/g, '<br>')" class="text-gray-600 dark:text-gray-400"></div>
                     </div>
                 </template>
             </div>
@@ -68,7 +69,7 @@
     document.addEventListener('alpine:init', () => {
         Alpine.data('appData', () => ({
             darkMode: localStorage.getItem('darkMode') === 'true',
-            conversationHistory: {{ conversation_history|tojson|safe }}.split('\n'),
+            conversationHistory: {{ conversation_history|tojson|safe }}.split('\n').filter(line => line.trim()),
             agents: {{ agents|tojson|safe }},
             tasks: {{ tasks|tojson|safe }},
             init() {
@@ -78,24 +79,39 @@
                 socket.on('task_update', (data) => {
                     console.log('Task update:', data);
                     if (data.status === 'assigned') {
-                        this.agents[data.task_id] = { id: data.task_id, output: 'Pending...' };
+                        this.agents[data.task_id] = { output: 'Pending...' };
                     } else if (data.status === 'completed' || data.status === 'failed') {
-                        this.agents[data.task_id
-
-].output = data.result;
+                        this.agents[data.task_id] = data;
                     }
+                });
+                socket.on('chat_update', (data) => {
+                    console.log('Chat update received:', data);
+                    this.conversationHistory.push(`User: ${data.prompt}`);
+                    this.conversationHistory.push(`Agent: ${data.response}`);
+                    this.$refs History.scrollTop = 0;
+                });
+                socket.on('reset_storage', () => {
+                    console.log('Resetting local storage');
+                    localStorage.clear();
+                    this.agents = {};
+                    this.conversationHistory = [];
+                    this.tasks = {};
                 });
             },
             submitInput(input) {
-                if (input) {
+                if (input.trim()) {
                     fetch('/chat?mode={{ mode }}', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: 'input=' + encodeURIComponent(input)
-                    }).then(() => {
-                        this.$refs.history.scrollTop = 0;
-                        Alpine.$data(this.$root.querySelector('div[x-data*=\"input\"]')).input = '';
-                    });
+                    }).then(response => {
+                        if (response.ok) {
+                            this.input = '';
+                            if ('{{ mode }}' === 'task') {
+                                window.location.reload();  // Reload for tasks
+                            }
+                        }
+                    }).catch(error => console.error('Submit error:', error));
                 }
             },
             adjustHeight(el) {

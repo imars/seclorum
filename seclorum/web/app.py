@@ -1,103 +1,86 @@
-from flask import Flask, request, render_template, redirect, url_for
+import os
+from flask import Flask, render_template, request, redirect, url_for, session
 from flask_socketio import SocketIO
-from seclorum.agents.master import MasterNode
 import logging
-import sys
-import signal
-import time
+from seclorum.agents.master import MasterNode
 import uuid
+import time
 
-app = Flask(__name__, template_folder="templates")
-socketio = SocketIO(app)
-app.master_node = None
-logging.basicConfig(filename='app.log', level=logging.DEBUG)
-logger = logging.getLogger("App")
+app = Flask(__name__)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "secret_key_for_development")
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-def get_master_node(session_id=None):
-    global app
-    if app.master_node is None:
-        session_id = session_id or str(uuid.uuid4())
+logger = logging.getLogger("Seclorum")
+log_file = os.getenv("SECLORUM_LOG_FILE", "app.log")
+handler = logging.FileHandler(log_file, mode='a')
+handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+
+def get_master_node():
+    if 'session_id' not in session:
+        session['session_id'] = str(uuid.uuid4())
+    session_id = session['session_id']
+    if not hasattr(app, 'master_node') or app.master_node.session_id != session_id:
         logger.info(f"Initializing MasterNode with session {session_id}")
         app.master_node = MasterNode(session_id=session_id)
         app.master_node.socketio = socketio
+        app.master_node.start()
+        logger.info(f"MasterNode started, emitting debug")
+        socketio.emit('debug', {'msg': f"MasterNode started with session {session_id}"}, namespace='/')
     return app.master_node
 
-def run_app():
-    logger.info("Starting Flask app")
-    master = get_master_node()
-    master.start()
-    logger.info("MasterNode started, emitting debug")
-    socketio.emit("debug", {"message": "Server started"}, namespace='/')
-    socketio.run(app, host="127.0.0.1", port=5000, debug=True, use_reloader=False)
+@app.route('/')
+def index():
+    return redirect(url_for('chat'))
 
-@app.route("/chat", methods=["GET", "POST"])
+@app.route('/chat', methods=['GET', 'POST'])
 def chat():
     logger.info("Handling /chat request")
     master = get_master_node()
-    if not master.is_running():
-        logger.info("MasterNode not running, starting")
-        master.start()
-    master.check_stuck_tasks()
-    mode = request.args.get("mode", "task")  # Default to task mode
-    if request.method == "POST" and "input" in request.form:
-        user_input = request.form["input"]
-        if user_input:
+    mode = request.args.get('mode', 'task')
+    if request.method == 'POST':
+        input_text = request.form.get('input', '').strip()
+        logger.info(f"Received POST input: {input_text} in mode {mode}")
+        if not input_text:
+            logger.warning("Empty input received")
+            return redirect(url_for('chat', mode=mode))
+        if mode == 'task':
             task_id = str(int(time.time() * 1000))
-            if mode == "task":
-                logger.info(f"Processing task {task_id}: {user_input}")
-                master.process_task(task_id, user_input)
-            else:  # agent mode
-                logger.info(f"Sending prompt to agent: {user_input}")
-                master.memory.save(prompt=user_input)
-                # TODO: Implement agent response logic
-                master.memory.save(response=f"Echo from agent: {user_input}")
-            return redirect(url_for("chat", mode=mode))
-    if master.redis_available:
-        master.tasks = master.load_tasks() or {}
-    agents = {task_id: {"id": task_id, "output": task.get("result", "Pending...")} for task_id, task in master.tasks.items()}
-    return render_template("chat.html", 
-                         tasks=master.tasks, 
-                         agents=agents,
-                         conversation_history=master.memory.get_summary(),
-                         mode=mode)
+            logger.info(f"Processing task {task_id}: {input_text}")
+            master.process_task(task_id, input_text)
+            return redirect(url_for('chat', mode=mode))
+        else:
+            response = f"Hello! You said: {input_text}"  # Placeholder for real agent logic
+            logger.info(f"Saving agent message: {input_text}")
+            master.memory.save(prompt=input_text, response=response)
+            socketio.emit('chat_update', {'prompt': input_text, 'response': response}, namespace='/')
+            logger.info(f"Emitted chat_update: {{'prompt': '{input_text}', 'response': '{response}'}}")
+            return '', 204  # No content, let SocketIO update UI
+    conversation_history = master.memory.load_conversation_history()
+    logger.info(f"Rendering chat with history: {conversation_history[:50]}...")
+    return render_template('chat.html', mode=mode, conversation_history=conversation_history, agents=master.tasks, tasks=master.tasks)
 
-@app.route("/settings")
-def settings():
-    return render_template("settings.html")
-
-@app.route("/dashboard")
+@app.route('/dashboard')
 def dashboard():
     master = get_master_node()
-    if not master.is_running():
-        master.start()
-    if master.redis_available:
-        master.tasks = master.load_tasks() or {}
-    return render_template("dashboard.html", tasks=master.tasks)
+    return render_template('dashboard.html', tasks=master.tasks)
 
-@app.route("/delete_task/<task_id>", methods=["POST"])
+@app.route('/settings')
+def settings():
+    return render_template('settings.html')
+
+@app.route('/delete_task/<task_id>', methods=['POST'])
 def delete_task(task_id):
     master = get_master_node()
     if task_id in master.tasks:
         del master.tasks[task_id]
         master.save_tasks()
-        return redirect(url_for("dashboard"))
-    return redirect(url_for("dashboard"))
+    return redirect(url_for('dashboard'))
 
-def shutdown_handler(signum, frame):
-    logger.info("Received shutdown signal")
-    master = get_master_node()
-    master.stop()
-    sys.exit(0)
+def run_app():
+    logger.info("Starting Flask app")
+    socketio.run(app, host="127.0.0.1", port=5000, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)
 
 if __name__ == "__main__":
-    signal.signal(signal.SIGTERM, shutdown_handler)
-    signal.signal(signal.SIGINT, shutdown_handler)
-    if len(sys.argv) > 1 and sys.argv[1] == "stop":
-        master = get_master_node()
-        if master.is_running():
-            master.stop()
-            logger.info("MasterNode stopped via CLI")
-        else:
-            logger.info("MasterNode is not running")
-    else:
-        run_app()
+    run_app()
