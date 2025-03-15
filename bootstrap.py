@@ -18,19 +18,26 @@ def format_conversation(log):
     summary = "* Conversation: {} prompts, {} responses\n".format(len(prompts), len(responses))
     summary += "Recent Prompts:\n"
     for p in recent_prompts:
-        summary += "* {}: {}\n".format(p['timestamp'], p['text'])
+        summary += "* {}: {}\n".format(p["timestamp"], p["text"])
     summary += "Recent Responses:\n"
     for r in recent_responses:
-        summary += "* {}: {}\n".format(r['timestamp'], r['text'])
+        summary += "* {}: {}\n".format(r["timestamp"], r["text"])
     return summary.rstrip()
 
-def commit_handoff(previous_session_id, new_session_id):
+def commit_handoff(previous_session_id, new_session_id, no_git=False):
     commit_msg = "Agent handoff from session {} to {} on {}".format(
         previous_session_id, new_session_id, datetime.now().isoformat()
     )
-    subprocess.run(["git", "add", "."], check=True)
-    subprocess.run(["git", "commit", "-m", commit_msg], check=True)
-    print("Committed handoff: {}".format(commit_msg))
+    if not no_git:
+        subprocess.run(["git", "add", "."], check=True)
+        result = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True)
+        if result.stdout.strip():
+            subprocess.run(["git", "commit", "-m", commit_msg], check=True)
+        else:
+            subprocess.run(["git", "commit", "--allow-empty", "-m", commit_msg], check=True)
+        print("Committed handoff: {}".format(commit_msg))
+    else:
+        print("Git operations skipped (--no-git enabled): {}".format(commit_msg))
 
 def load_config(config_file="bootstrap_config.json"):
     default_config = {
@@ -149,10 +156,11 @@ if __name__ == "__main__":
     parser.add_argument("--previous-session", type=str, default="1900257132001517690", help="Previous chat session ID")
     parser.add_argument("--new-session", type=str, default="1900718979536052318", help="New chat session ID")
     parser.add_argument("--preamble", action="store_true", help="Output preamble only")
+    parser.add_argument("--no-git", action="store_true", help="Skip Git operations (for testing)")
     args = parser.parse_args()
 
     if not args.preamble:
-        commit_handoff(args.previous_session, args.new_session)
+        commit_handoff(args.previous_session, args.new_session, args.no_git)
 
     prompt = generate_prompt(args.previous_session, args.new_session, args.preamble)
     with open("bootstrap_prompt.txt", "w") as f:
