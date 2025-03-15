@@ -9,10 +9,11 @@
     <style>
         .panel { background: rgba(255, 255, 255, 0.7); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border-radius: 0.5rem; transition: all 0.3s ease; }
         .dark .panel { background: rgba(30, 41, 59, 0.7); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); }
-        .active-task { background: rgba(255, 255, 255, 0.95); }
-        .dark .active-task { background: rgba(30, 41, 59, 0.95); }
+        .active-agent { background: rgba(255, 255, 255, 0.95); }
+        .dark .active-agent { background: rgba(30, 41, 59, 0.95); }
         .glow::after { content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px; background: radial-gradient(circle, rgba(147, 197, 253, 0.2), transparent); z-index: -1; filter: blur(10px); }
         .dark .glow::after { background: radial-gradient(circle, rgba(59, 130, 246, 0.2), transparent); }
+        .agent-output { max-height: 200px; overflow-y: auto; }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 dark:from-slate-800 dark:to-slate-900 font-sans p-6 transition-colors duration-300">
@@ -21,19 +22,19 @@
             <div class="panel p-4 glow h-96 flex flex-col">
                 <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Chat History</h2>
                 <div class="flex-1 overflow-y-auto flex flex-col-reverse" x-ref="history">
-                    <template x-for="(msg, index) in messages.slice().reverse()" :key="index">
-                        <div :class="tasks[msg.task_id] ? 'panel mb-2 p-3 active-task bg-blue-50 dark:bg-blue-900' : 'panel mb-2 p-3'" x-text="msg.description"></div>
+                    <template x-for="(entry, index) in conversationHistory.slice().reverse()" :key="index">
+                        <div class="panel mb-2 p-3" x-text="entry"></div>
                     </template>
                 </div>
             </div>
-            <div class="panel p-4 glow" x-data="{ input: '', history: ['Write a haiku', 'What’s 2+2?', 'Tell a joke'] }">
-                <form @submit.prevent="submitTask(input)">
-                    <div class="relative">
+            <div class="panel p-4 glow" x-data="{ input: '', mode: '{{ mode }}', history: ['Write a haiku', 'What’s 2+2?', 'Tell a joke'] }">
+                <form @submit.prevent="submitInput(input)">
+                    <div class="relative flex space-x-2">
                         <input
                             type="text"
                             x-model="input"
                             list="task-history"
-                            placeholder="Enter a task (e.g., Write a haiku)"
+                            :placeholder="mode === 'task' ? 'Enter a task (e.g., Write a haiku)' : 'Chat with agent'"
                             class="w-full p-2 border rounded-lg bg-white/80 dark:bg-slate-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
                         >
                         <datalist id="task-history">
@@ -41,14 +42,24 @@
                                 <option x-text="item"></option>
                             </template>
                         </datalist>
+                        <button type="button" @click="mode = mode === 'task' ? 'agent' : 'task'; window.location.href = '/chat?mode=' + mode" class="p-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500">
+                            <span x-text="mode === 'task' ? 'Agent' : 'Task'"></span>
+                        </button>
                     </div>
-                    <input type="submit" value="Send" class="mt-2 w-full p-2 bg-blue-400 dark:bg-blue-600 text-white rounded-lg hover:bg-blue-500 dark:hover:bg-blue-700">
+                    <input type="submit" value="Send" class="mt-2 w-full p-2 bg-blue-400 dark:bg-blue-600 text-white rounded-lg hover:bg-blue-500 dark:hover:bg-blue-700 opacity-75">
                 </form>
             </div>
         </div>
-        <div class="w-2/3 panel p-6 glow" x-data="{ output: localStorage.getItem('agentOutput') || '' }">
-            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Agent Output</h2>
-            <div x-html="output" class="text-gray-600 dark:text-gray-400 min-h-[100px]"></div>
+        <div class="w-2/3 panel p-6 glow" x-data="{ selectedAgent: null }">
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Agents</h2>
+            <div class="space-y-4">
+                <template x-for="(agent, id) in agents" :key="id">
+                    <div class="panel p-3 agent-output" :class="{ 'active-agent': selectedAgent === id }" @click="selectedAgent = id">
+                        <strong>Agent {{ id }}:</strong>
+                        <div x-text="agent.output.replace(/\n/g, '<br>')" class="text-gray-600 dark:text-gray-400"></div>
+                    </div>
+                </template>
+            </div>
         </div>
     </div>
     <p class="mt-6 text-center"><a href="/settings" class="text-blue-500 dark:text-blue-400 hover:underline">Settings</a> | <a href="/dashboard" class="text-blue-500 dark:text-blue-400 hover:underline">Dashboard</a></p>
@@ -56,81 +67,32 @@
     document.addEventListener('alpine:init', () => {
         Alpine.data('appData', () => ({
             darkMode: localStorage.getItem('darkMode') === 'true',
-            messages: [],
-            tasks: {},
+            conversationHistory: {{ conversation_history|tojson|safe }}.split('\n'),
+            agents: {{ agents|tojson|safe }},
+            tasks: {{ tasks|tojson|safe }},
             init() {
-                console.log('Alpine init');
                 document.documentElement.classList.toggle('dark', this.darkMode);
-                this.loadMessages();
-                this.$watch('messages', () => this.saveMessages());
                 const socket = io('http://127.0.0.1:5000');
-                socket.on('connect', () => {
-                    console.log('SocketIO connected');
-                    this.loadMessages();
-                });
+                socket.on('connect', () => console.log('SocketIO connected'));
                 socket.on('task_update', (data) => {
                     console.log('Task update:', data);
-                    const outputDiv = Alpine.$data(document.querySelector('[x-data*=\"output\"]'));
                     if (data.status === 'assigned') {
-                        outputDiv.output += `<p><strong>Task ${data.task_id}:</strong> Pending...</p>`;
-                        this.messages = this.messages.filter(m => m.task_id !== data.task_id);
-                        this.messages.push(data);
-                        this.tasks[data.task_id] = true;
-                    } else if (data.status === 'completed') {
-                        outputDiv.output = outputDiv.output.replace(
-                            `<p><strong>Task ${data.task_id}:</strong> Pending...</p>`,
-                            `<p><strong>Task ${data.task_id}:</strong> ${data.result.replace(/\n/g, '<br>')}</p>`
-                        );
-                        this.updateMessage(data);
-                        delete this.tasks[data.task_id];
-                    } else if (data.status === 'failed') {
-                        outputDiv.output = outputDiv.output.replace(
-                            `<p><strong>Task ${data.task_id}:</strong> Pending...</p>`,
-                            `<p><strong>Task ${data.task_id} (Failed):</strong> ${data.result}</p>`
-                        );
-                        this.updateMessage(data);
-                        delete this.tasks[data.task_id];
+                        this.agents[data.task_id] = { id: data.task_id, output: 'Pending...' };
+                    } else if (data.status === 'completed' || data.status === 'failed') {
+                        this.agents[data.task_id].output = data.result;
                     }
-                    this.saveMessages();
-                    localStorage.setItem('agentOutput', outputDiv.output);
                 });
             },
-            loadMessages() {
-                fetch('/chat', { method: 'GET' })
-                    .then(res => res.text())
-                    .then(() => {
-                        const tasks = {{ tasks|tojson }};
-                        this.messages = Object.values(tasks).map(task => ({
-                            task_id: task.task_id,
-                            description: task.description
-                        }));
-                        console.log('Loaded messages from server:', this.messages);
-                        this.saveMessages();
-                    });
-            },
-            updateMessage(data) {
-                const index = this.messages.findIndex(m => m.task_id === data.task_id);
-                if (index !== -1) {
-                    this.messages[index] = data;
-                } else {
-                    this.messages.push(data);
-                }
-            },
-            saveMessages() {
-                localStorage.setItem('chatMessages', JSON.stringify(this.messages));
-                console.log('Saved messages:', this.messages);
-            },
-            submitTask(input) {
+            submitInput(input) {
                 if (input) {
-                    fetch('/chat', {
+                    fetch('/chat?mode={{ mode }}', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: 'task=' + encodeURIComponent(input)
-                    }).then(res => res.text()).then(() => {
-                        setTimeout(() => { delete this.tasks[input]; this.saveMessages(); }, 5000);
+                        body: 'input=' + encodeURIComponent(input)
+                    }).then(() => {
+                        this.$refs.history.scrollTop = 0;
+                        Alpine.$data(this.$root.querySelector('div[x-data*=\"input\"]')).input = '';
                     });
-                    this.$refs.history.scrollTop = 0;
-                    Alpine.$data(this.$root.querySelector('div[x-data*=\"input\"]')).input = '';
                 }
             }
         }));

@@ -5,6 +5,7 @@ import logging
 import sys
 import signal
 import time
+import uuid
 
 app = Flask(__name__, template_folder="templates")
 socketio = SocketIO(app)
@@ -12,11 +13,12 @@ app.master_node = None
 logging.basicConfig(filename='app.log', level=logging.DEBUG)
 logger = logging.getLogger("App")
 
-def get_master_node():
+def get_master_node(session_id=None):
     global app
     if app.master_node is None:
-        logger.info("Initializing MasterNode")
-        app.master_node = MasterNode()
+        session_id = session_id or str(uuid.uuid4())
+        logger.info(f"Initializing MasterNode with session {session_id}")
+        app.master_node = MasterNode(session_id=session_id)
         app.master_node.socketio = socketio
     return app.master_node
 
@@ -36,16 +38,28 @@ def chat():
         logger.info("MasterNode not running, starting")
         master.start()
     master.check_stuck_tasks()
-    if request.method == "POST" and "task" in request.form:
-        task_description = request.form["task"]
-        if task_description:
+    mode = request.args.get("mode", "task")  # Default to task mode
+    if request.method == "POST" and "input" in request.form:
+        user_input = request.form["input"]
+        if user_input:
             task_id = str(int(time.time() * 1000))
-            logger.info(f"Processing task {task_id}: {task_description}")
-            master.process_task(task_id, task_description)
-            return redirect(url_for("chat"))
+            if mode == "task":
+                logger.info(f"Processing task {task_id}: {user_input}")
+                master.process_task(task_id, user_input)
+            else:  # agent mode
+                logger.info(f"Sending prompt to agent: {user_input}")
+                master.memory.save(prompt=user_input)
+                # TODO: Implement agent response logic
+                master.memory.save(response=f"Echo from agent: {user_input}")
+            return redirect(url_for("chat", mode=mode))
     if master.redis_available:
         master.tasks = master.load_tasks() or {}
-    return render_template("chat.html", tasks=master.tasks, messages=list(master.tasks.keys()) if master.tasks else [])
+    agents = {task_id: {"id": task_id, "output": task.get("result", "Pending...")} for task_id, task in master.tasks.items()}
+    return render_template("chat.html", 
+                         tasks=master.tasks, 
+                         agents=agents,
+                         conversation_history=master.memory.get_summary(),
+                         mode=mode)
 
 @app.route("/settings")
 def settings():
