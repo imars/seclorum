@@ -1,0 +1,877 @@
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+INFO:MasterNode:MasterNode initialized with session default_session
+2025-03-15 15:31:44,395 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-15 15:31:44,395 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-15 15:31:44,410 - Started Redis with PID 10078
+2025-03-15 15:31:44,410 - Started Redis with PID 10078
+INFO:MasterNode:MasterNode started with PID 10074
+INFO:MasterNode:Connected to Redis
+INFO:MasterNode:Redis connected successfully
+DEBUG:MasterNode:Checking stuck tasks. Current tasks: {}, Redis tasks: {'1742051947752': {'task_id': '1742051947752', 'description': 'Write a haiku', 'status': 'failed', 'result': 'Worker crashed'}}
+INFO:MasterNode:MasterNode started and polling tasks
+2025-03-15 15:31:45,427 - MasterNode started with PID 10074
+2025-03-15 15:31:45,427 - MasterNode started with PID 10074
+2025-03-15 15:31:45,432 - Flask app started with PID 10079
+2025-03-15 15:31:45,432 - Flask app started with PID 10079
+2025-03-15 15:31:46,168 - Starting Flask app
+2025-03-15 15:31:57,912 - Handling /chat request
+2025-03-15 15:31:57,912 - Initializing MasterNode with session 11a6514e-6319-4b73-b163-1a6dc16a26a4
+2025-03-15 15:31:57,927 - MasterNode started, emitting debug
+2025-03-15 15:32:00,629 - Handling /chat request
+2025-03-15 15:32:00,629 - Initializing MasterNode with session 634382f1-fb48-4929-b59c-ba7a02e7be15
+2025-03-15 15:32:00,637 - MasterNode started, emitting debug
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+INFO:MasterNode:MasterNode initialized with session default_session
+2025-03-15 15:45:00,581 - Stopping MasterNode, Flask app, and Redis via CLI
+2025-03-15 15:45:00,581 - Stopping MasterNode, Flask app, and Redis via CLI
+WARNING:MasterNode:MasterNode is not running
+INFO:MasterNode:MasterNode stopped
+2025-03-15 15:45:00,582 - MasterNode stopped via CLI
+2025-03-15 15:45:00,582 - MasterNode stopped via CLI
+2025-03-15 15:45:00,583 - Flask app stopped with PID 10079
+2025-03-15 15:45:00,583 - Flask app stopped with PID 10079
+2025-03-15 15:45:00,589 - Redis stopped with PID 10078
+2025-03-15 15:45:00,589 - Redis stopped with PID 10078
+2025-03-15 15:46:26,476 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+2025-03-15 15:46:26,476 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+INFO:MasterNode:MasterNode initialized with session default_session
+2025-03-15 15:46:26,476 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-15 15:46:26,476 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-15 15:46:26,500 - Started Redis with PID 10514
+2025-03-15 15:46:26,500 - Started Redis with PID 10514
+INFO:MasterNode:MasterNode started with PID 10510
+INFO:MasterNode:Connected to Redis
+INFO:MasterNode:Redis connected successfully
+DEBUG:MasterNode:Checking stuck tasks. Current tasks: {}, Redis tasks: {'1742051947752': {'task_id': '1742051947752', 'description': 'Write a haiku', 'status': 'failed', 'result': 'Worker crashed'}}
+INFO:MasterNode:MasterNode started and polling tasks
+2025-03-15 15:46:27,519 - Saved conversation entry for session default_session: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 15:46:27,519 - Saved conversation entry for session default_session: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 15:46:27,519 - MasterNode started with PID 10510
+2025-03-15 15:46:27,519 - MasterNode started with PID 10510
+2025-03-15 15:46:27,524 - Flask app started with PID 10515
+2025-03-15 15:46:27,524 - Flask app started with PID 10515
+2025-03-15 15:46:28,333 - Starting Flask app
+2025-03-15 15:47:01,840 - Handling /chat request
+2025-03-15 15:47:01,841 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-15 15:47:01,841 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-15 15:47:01,850 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 15:47:01,850 - MasterNode started, emitting debug
+2025-03-15 15:47:01,851 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 1 entries
+2025-03-15 15:47:06,102 - Handling /chat request
+2025-03-15 15:47:06,102 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 1 entries
+2025-03-15 15:47:32,848 - Handling /chat request
+2025-03-15 15:47:32,850 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 1 entries
+2025-03-15 15:48:22,956 - Handling /chat request
+2025-03-15 15:48:30,388 - Handling /chat request
+2025-03-15 15:48:30,390 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 1 entries
+2025-03-15 15:48:45,430 - Handling /chat request
+2025-03-15 15:48:47,334 - Handling /chat request
+2025-03-15 15:48:49,305 - Handling /chat request
+2025-03-15 15:48:50,698 - Handling /chat request
+2025-03-15 15:48:51,458 - Handling /chat request
+2025-03-15 15:48:51,458 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 1 entries
+2025-03-15 15:48:56,755 - Handling /chat request
+2025-03-15 15:48:56,756 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 1 entries
+2025-03-15 15:49:10,663 - Handling /chat request
+2025-03-15 15:49:36,260 - Handling /chat request
+2025-03-15 15:49:36,260 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 1 entries
+2025-03-15 15:49:51,849 - Handling /chat request
+2025-03-15 15:49:51,850 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'prompt': 'Good morning, Seclorum!', 'response': 'Agent response to: Good morning, Seclorum!'}
+2025-03-15 15:49:51,858 - Handling /chat request
+2025-03-15 15:49:51,858 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 3 entries
+2025-03-15 15:49:54,489 - Handling /chat request
+2025-03-15 15:49:54,490 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'prompt': 'Good morning, Seclorum!', 'response': 'Agent response to: Good morning, Seclorum!'}
+2025-03-15 15:49:54,494 - Handling /chat request
+2025-03-15 15:49:54,494 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 5 entries
+2025-03-15 15:49:56,382 - Handling /chat request
+2025-03-15 15:49:56,384 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'prompt': 'Good morning, Seclorum!', 'response': 'Agent response to: Good morning, Seclorum!'}
+2025-03-15 15:49:56,389 - Handling /chat request
+2025-03-15 15:49:56,389 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 7 entries
+2025-03-15 15:49:56,928 - Handling /chat request
+2025-03-15 15:49:56,929 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'prompt': 'Good morning, Seclorum!', 'response': 'Agent response to: Good morning, Seclorum!'}
+2025-03-15 15:49:56,933 - Handling /chat request
+2025-03-15 15:49:56,933 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 9 entries
+2025-03-15 15:49:57,210 - Handling /chat request
+2025-03-15 15:49:57,211 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'prompt': 'Good morning, Seclorum!', 'response': 'Agent response to: Good morning, Seclorum!'}
+2025-03-15 15:49:57,215 - Handling /chat request
+2025-03-15 15:49:57,215 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 11 entries
+2025-03-15 15:58:12,568 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+2025-03-15 15:58:12,568 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+INFO:MasterNode:MasterNode initialized with session default_session
+2025-03-15 15:58:12,569 - Stopping MasterNode, Flask app, and Redis via CLI
+2025-03-15 15:58:12,569 - Stopping MasterNode, Flask app, and Redis via CLI
+WARNING:MasterNode:MasterNode is not running
+INFO:MasterNode:MasterNode stopped
+2025-03-15 15:58:12,570 - Saved conversation entry for session default_session: {'response': 'MasterNode stopped'}
+2025-03-15 15:58:12,570 - Saved conversation entry for session default_session: {'response': 'MasterNode stopped'}
+2025-03-15 15:58:12,570 - MasterNode stopped via CLI
+2025-03-15 15:58:12,570 - MasterNode stopped via CLI
+2025-03-15 15:58:12,570 - Flask app stopped with PID 10515
+2025-03-15 15:58:12,570 - Flask app stopped with PID 10515
+2025-03-15 15:58:12,571 - Redis stopped with PID 10514
+2025-03-15 15:58:12,571 - Redis stopped with PID 10514
+2025-03-15 15:59:17,765 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+2025-03-15 15:59:17,765 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+INFO:MasterNode:MasterNode initialized with session default_session
+2025-03-15 15:59:17,765 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-15 15:59:17,765 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-15 15:59:17,785 - Started Redis with PID 11241
+2025-03-15 15:59:17,785 - Started Redis with PID 11241
+INFO:MasterNode:MasterNode started with PID 11237
+INFO:MasterNode:Connected to Redis
+INFO:MasterNode:Redis connected successfully
+DEBUG:MasterNode:Checking stuck tasks. Current tasks: {}, Redis tasks: {'1742051947752': {'task_id': '1742051947752', 'description': 'Write a haiku', 'status': 'failed', 'result': 'Worker crashed'}}
+INFO:MasterNode:MasterNode started and polling tasks
+2025-03-15 15:59:18,795 - Saved conversation entry for session default_session: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 15:59:18,795 - Saved conversation entry for session default_session: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 15:59:18,796 - MasterNode started with PID 11237
+2025-03-15 15:59:18,796 - MasterNode started with PID 11237
+2025-03-15 15:59:18,799 - Flask app started with PID 11242
+2025-03-15 15:59:18,799 - Flask app started with PID 11242
+2025-03-15 15:59:19,504 - Starting Flask app
+2025-03-15 15:59:33,447 - Handling /chat request
+2025-03-15 15:59:33,447 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-15 15:59:33,448 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-15 15:59:33,456 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 15:59:33,456 - MasterNode started, emitting debug
+2025-03-15 15:59:33,457 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 12 entries
+2025-03-15 15:59:33,457 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:00:18,677 - Handling /chat request
+2025-03-15 16:00:18,678 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 12 entries
+2025-03-15 16:00:18,678 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:00:21,869 - Handling /chat request
+2025-03-15 16:00:21,875 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 12 entries
+2025-03-15 16:00:21,875 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:00:31,527 - Handling /chat request
+2025-03-15 16:00:31,528 - Received POST input: Hello in mode agent
+2025-03-15 16:00:31,528 - Saving agent message: Hello
+2025-03-15 16:00:31,529 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'prompt': 'Hello', 'response': 'Agent response to: Hello'}
+2025-03-15 16:00:31,546 - Handling /chat request
+2025-03-15 16:00:31,547 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 14 entries
+2025-03-15 16:00:31,547 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:00:31,577 - Handling /chat request
+2025-03-15 16:00:31,578 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 14 entries
+2025-03-15 16:00:31,579 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:00:40,248 - Handling /chat request
+2025-03-15 16:00:40,250 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 14 entries
+2025-03-15 16:00:40,250 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:00:51,825 - Handling /chat request
+2025-03-15 16:00:51,825 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 14 entries
+2025-03-15 16:00:51,826 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:00:53,026 - Handling /chat request
+2025-03-15 16:00:53,028 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 14 entries
+2025-03-15 16:00:53,029 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:00:58,460 - Handling /chat request
+2025-03-15 16:00:58,461 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 14 entries
+2025-03-15 16:00:58,461 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:03:10,638 - Handling /chat request
+2025-03-15 16:03:10,639 - Received POST input: Write a haiku in mode task
+2025-03-15 16:03:10,639 - Processing task 1742054590639: Write a haiku
+2025-03-15 16:03:10,641 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'prompt': 'Task 1742054590639: Write a haiku'}
+2025-03-15 16:03:10,724 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'response': 'Spawned worker for Task 1742054590639 (PID: 11353)'}
+2025-03-15 16:03:14,514 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'response': 'Task 1742054590639 completed: Soft winds whisper low\nBlossoms fade in twilight’s glow\nTime drifts ever on'}
+2025-03-15 16:03:14,529 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'response': 'Worker for Task 1742054590639 failed: '}
+2025-03-15 16:03:14,530 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'response': "Failed to spawn worker for Task 1742054590639: '1742054590639'"}
+2025-03-15 16:03:15,470 - Handling /chat request
+2025-03-15 16:03:15,470 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 22 entries
+2025-03-15 16:03:15,470 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:03:22,129 - Handling /chat request
+2025-03-15 16:03:22,129 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 22 entries
+2025-03-15 16:03:22,130 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:18:42,280 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+2025-03-15 16:18:42,280 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+INFO:MasterNode:MasterNode initialized with session default_session
+2025-03-15 16:18:42,281 - Stopping MasterNode, Flask app, and Redis via CLI
+2025-03-15 16:18:42,281 - Stopping MasterNode, Flask app, and Redis via CLI
+WARNING:MasterNode:MasterNode is not running
+INFO:MasterNode:MasterNode stopped
+2025-03-15 16:18:42,281 - Saved conversation entry for session default_session: {'response': 'MasterNode stopped'}
+2025-03-15 16:18:42,281 - Saved conversation entry for session default_session: {'response': 'MasterNode stopped'}
+2025-03-15 16:18:42,281 - MasterNode stopped via CLI
+2025-03-15 16:18:42,281 - MasterNode stopped via CLI
+2025-03-15 16:18:42,282 - Flask app stopped with PID 11242
+2025-03-15 16:18:42,282 - Flask app stopped with PID 11242
+2025-03-15 16:18:42,282 - Redis stopped with PID 11241
+2025-03-15 16:18:42,282 - Redis stopped with PID 11241
+2025-03-15 16:21:02,109 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+2025-03-15 16:21:02,109 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+2025-03-15 16:21:02,109 - MasterNode initialized with session default_session
+2025-03-15 16:21:02,109 - MasterNode initialized with session default_session
+2025-03-15 16:21:02,109 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-15 16:21:02,109 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-15 16:21:02,124 - Started Redis with PID 12417
+2025-03-15 16:21:02,124 - Started Redis with PID 12417
+INFO:MasterNode:MasterNode started with PID 12413
+INFO:MasterNode:Connected to Redis
+2025-03-15 16:21:03,134 - Redis connected successfully
+2025-03-15 16:21:03,134 - Redis connected successfully
+DEBUG:MasterNode:Checking stuck tasks. Current tasks: {}, Redis tasks: {'1742054590639': {'task_id': '1742054590639', 'description': 'Write a haiku', 'status': 'failed', 'result': "'1742054590639'", 'created_at': 1742054594.408653}}
+2025-03-15 16:21:03,136 - MasterNode started and polling tasks
+2025-03-15 16:21:03,136 - MasterNode started and polling tasks
+2025-03-15 16:21:03,138 - Saved conversation entry for session default_session: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 16:21:03,138 - Saved conversation entry for session default_session: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 16:21:03,139 - MasterNode started with PID 12413
+2025-03-15 16:21:03,139 - MasterNode started with PID 12413
+2025-03-15 16:21:03,146 - Flask app started with PID 12418
+2025-03-15 16:21:03,146 - Flask app started with PID 12418
+2025-03-15 16:21:03,832 - Starting Flask app
+2025-03-15 16:21:15,269 - Handling /chat request
+2025-03-15 16:21:15,269 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-15 16:21:15,270 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-15 16:21:15,270 - MasterNode initialized with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-15 16:21:15,273 - Redis connected successfully
+2025-03-15 16:21:15,275 - Task 1742054590639 failed: '1742054590639'
+2025-03-15 16:21:15,276 - MasterNode started and polling tasks
+2025-03-15 16:21:15,277 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'response': "Task 1742054590639 failed: '1742054590639'"}
+2025-03-15 16:21:15,278 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 16:21:15,278 - MasterNode started, emitting debug
+2025-03-15 16:21:15,288 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 24 entries
+2025-03-15 16:21:15,289 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:21:32,357 - Handling /chat request
+2025-03-15 16:21:32,357 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 24 entries
+2025-03-15 16:21:32,357 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:21:50,448 - Handling /chat request
+2025-03-15 16:21:50,449 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 24 entries
+2025-03-15 16:21:50,449 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:22:06,121 - Handling /chat request
+2025-03-15 16:22:06,122 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 24 entries
+2025-03-15 16:22:06,122 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:22:52,589 - Handling /chat request
+2025-03-15 16:22:52,589 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 24 entries
+2025-03-15 16:22:52,589 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:26:39,268 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+2025-03-15 16:26:39,268 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+2025-03-15 16:26:39,268 - MasterNode initialized with session default_session
+2025-03-15 16:26:39,268 - MasterNode initialized with session default_session
+2025-03-15 16:26:39,268 - Stopping MasterNode, Flask app, and Redis via CLI
+2025-03-15 16:26:39,268 - Stopping MasterNode, Flask app, and Redis via CLI
+WARNING:MasterNode:MasterNode is not running
+2025-03-15 16:26:39,268 - MasterNode stopped
+2025-03-15 16:26:39,268 - MasterNode stopped
+2025-03-15 16:26:39,269 - Saved conversation entry for session default_session: {'response': 'MasterNode stopped'}
+2025-03-15 16:26:39,269 - Saved conversation entry for session default_session: {'response': 'MasterNode stopped'}
+2025-03-15 16:26:39,269 - MasterNode stopped via CLI
+2025-03-15 16:26:39,269 - MasterNode stopped via CLI
+2025-03-15 16:26:39,269 - Flask app stopped with PID 12418
+2025-03-15 16:26:39,269 - Flask app stopped with PID 12418
+2025-03-15 16:26:39,270 - Redis stopped with PID 12417
+2025-03-15 16:26:39,270 - Redis stopped with PID 12417
+2025-03-15 16:31:52,373 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+2025-03-15 16:31:52,373 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+2025-03-15 16:31:52,374 - MasterNode initialized with session default_session
+2025-03-15 16:31:52,374 - MasterNode initialized with session default_session
+2025-03-15 16:31:52,374 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-15 16:31:52,374 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-15 16:31:52,393 - Started Redis with PID 13262
+2025-03-15 16:31:52,393 - Started Redis with PID 13262
+INFO:MasterNode:MasterNode started with PID 13258
+INFO:MasterNode:Connected to Redis
+2025-03-15 16:31:53,406 - Redis connected successfully
+2025-03-15 16:31:53,406 - Redis connected successfully
+DEBUG:MasterNode:Checking stuck tasks. Current tasks: {}, Redis tasks: {'1742054590639': {'task_id': '1742054590639', 'description': 'Write a haiku', 'status': 'failed', 'result': "'1742054590639'", 'created_at': 1742054594.408653}}
+2025-03-15 16:31:53,407 - MasterNode started and polling tasks
+2025-03-15 16:31:53,407 - MasterNode started and polling tasks
+2025-03-15 16:31:53,407 - Saved conversation entry for session default_session: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 16:31:53,407 - Saved conversation entry for session default_session: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 16:31:53,408 - MasterNode started with PID 13258
+2025-03-15 16:31:53,408 - MasterNode started with PID 13258
+2025-03-15 16:31:53,413 - Flask app started with PID 13264
+2025-03-15 16:31:53,413 - Flask app started with PID 13264
+2025-03-15 16:31:54,159 - Starting Flask app
+2025-03-15 16:32:20,134 - Handling /chat request
+2025-03-15 16:32:20,134 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-15 16:32:20,135 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-15 16:32:20,135 - MasterNode initialized with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-15 16:32:20,151 - Redis connected successfully
+2025-03-15 16:32:20,167 - Task 1742054590639 failed: '1742054590639'
+2025-03-15 16:32:20,171 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'response': "Task 1742054590639 failed: '1742054590639'"}
+2025-03-15 16:32:20,186 - MasterNode started and polling tasks
+2025-03-15 16:32:20,187 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 16:32:20,188 - MasterNode started, emitting debug
+2025-03-15 16:32:20,189 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 26 entries
+2025-03-15 16:32:20,189 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:32:27,116 - Handling /chat request
+2025-03-15 16:32:27,117 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 26 entries
+2025-03-15 16:32:27,118 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:32:36,237 - Handling /chat request
+2025-03-15 16:32:36,238 - Received POST input: Hello! in mode agent
+2025-03-15 16:32:36,238 - Saving agent message: Hello!
+2025-03-15 16:32:36,239 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'prompt': 'Hello!', 'response': 'Hello! You said: Hello!'}
+2025-03-15 16:32:36,239 - Emitted chat_update: {'prompt': 'Hello!', 'response': 'Hello! You said: Hello!'}
+2025-03-15 16:32:45,595 - Handling /chat request
+2025-03-15 16:32:45,596 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 28 entries
+2025-03-15 16:32:45,596 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:33:02,425 - Handling /chat request
+2025-03-15 16:33:02,428 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 28 entries
+2025-03-15 16:33:02,428 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:33:13,575 - Handling /chat request
+2025-03-15 16:33:13,577 - Received POST input: Write a haiku in mode agent
+2025-03-15 16:33:13,577 - Saving agent message: Write a haiku
+2025-03-15 16:33:13,577 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'prompt': 'Write a haiku', 'response': 'Hello! You said: Write a haiku'}
+2025-03-15 16:33:13,578 - Emitted chat_update: {'prompt': 'Write a haiku', 'response': 'Hello! You said: Write a haiku'}
+2025-03-15 16:33:19,219 - Handling /chat request
+2025-03-15 16:33:19,220 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 30 entries
+2025-03-15 16:33:19,220 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:33:27,457 - Handling /chat request
+2025-03-15 16:33:27,458 - Received POST input: Write a haiku in mode task
+2025-03-15 16:33:27,458 - Processing task 1742056407458: Write a haiku
+2025-03-15 16:33:27,459 - Task 1742056407458 assigned to WebUI: Write a haiku
+2025-03-15 16:33:27,461 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'prompt': 'Task 1742056407458: Write a haiku'}
+2025-03-15 16:33:27,474 - Spawned session for WebUI on Task 1742056407458 (PID: 13307)
+2025-03-15 16:33:27,477 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'response': 'Spawned worker for Task 1742056407458 (PID: 13307)'}
+2025-03-15 16:33:31,284 - Worker for Task 1742056407458 completed normally (PID: 13307)
+2025-03-15 16:33:31,513 - Task 1742056407458 completed: Soft winds whisper low
+Blossoms fade in twilight’s glow
+Time drifts ever on
+2025-03-15 16:33:31,514 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'response': 'Task 1742056407458 completed: Soft winds whisper low\nBlossoms fade in twilight’s glow\nTime drifts ever on'}
+2025-03-15 16:34:00,888 - Handling /chat request
+2025-03-15 16:34:00,890 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 36 entries
+2025-03-15 16:34:00,890 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:34:13,001 - Handling /chat request
+2025-03-15 16:34:13,001 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 36 entries
+2025-03-15 16:34:13,002 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:34:55,047 - Handling /chat request
+2025-03-15 16:34:55,047 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 36 entries
+2025-03-15 16:34:55,048 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:35:10,622 - Handling /chat request
+2025-03-15 16:35:10,623 - Received POST input: Good morning, Seclorum! in mode agent
+2025-03-15 16:35:10,623 - Saving agent message: Good morning, Seclorum!
+2025-03-15 16:35:10,624 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'prompt': 'Good morning, Seclorum!', 'response': 'Hello! You said: Good morning, Seclorum!'}
+2025-03-15 16:35:10,624 - Emitted chat_update: {'prompt': 'Good morning, Seclorum!', 'response': 'Hello! You said: Good morning, Seclorum!'}
+2025-03-15 16:35:31,212 - Handling /chat request
+2025-03-15 16:35:31,213 - Received POST input: What's happening today? in mode agent
+2025-03-15 16:35:31,213 - Saving agent message: What's happening today?
+2025-03-15 16:35:31,216 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'prompt': "What's happening today?", 'response': "Hello! You said: What's happening today?"}
+2025-03-15 16:35:31,216 - Emitted chat_update: {'prompt': 'What's happening today?', 'response': 'Hello! You said: What's happening today?'}
+2025-03-15 16:44:36,516 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+2025-03-15 16:44:36,516 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+2025-03-15 16:44:36,517 - MasterNode initialized with session default_session
+2025-03-15 16:44:36,517 - MasterNode initialized with session default_session
+2025-03-15 16:44:36,517 - Stopping MasterNode, Flask app, and Redis via CLI
+2025-03-15 16:44:36,517 - Stopping MasterNode, Flask app, and Redis via CLI
+WARNING:MasterNode:MasterNode is not running
+2025-03-15 16:44:36,517 - MasterNode stopped
+2025-03-15 16:44:36,517 - MasterNode stopped
+2025-03-15 16:44:36,517 - Saved conversation entry for session default_session: {'response': 'MasterNode stopped'}
+2025-03-15 16:44:36,517 - Saved conversation entry for session default_session: {'response': 'MasterNode stopped'}
+2025-03-15 16:44:36,518 - MasterNode stopped via CLI
+2025-03-15 16:44:36,518 - MasterNode stopped via CLI
+2025-03-15 16:44:36,518 - Flask app stopped with PID 13264
+2025-03-15 16:44:36,518 - Flask app stopped with PID 13264
+2025-03-15 16:44:36,518 - Redis stopped with PID 13262
+2025-03-15 16:44:36,518 - Redis stopped with PID 13262
+2025-03-15 16:45:51,607 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+2025-03-15 16:45:51,607 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+2025-03-15 16:45:51,607 - MasterNode initialized with session default_session
+2025-03-15 16:45:51,607 - MasterNode initialized with session default_session
+2025-03-15 16:45:51,607 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-15 16:45:51,607 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-15 16:45:51,623 - Started Redis with PID 13961
+2025-03-15 16:45:51,623 - Started Redis with PID 13961
+INFO:MasterNode:MasterNode started with PID 13957
+INFO:MasterNode:Connected to Redis
+2025-03-15 16:45:52,636 - Redis connected successfully
+2025-03-15 16:45:52,636 - Redis connected successfully
+DEBUG:MasterNode:Checking stuck tasks. Current tasks: {}, Redis tasks: {'1742054590639': {'task_id': '1742054590639', 'description': 'Write a haiku', 'status': 'failed', 'result': "'1742054590639'", 'created_at': 1742054594.408653}, '1742056407458': {'task_id': '1742056407458', 'description': 'Write a haiku', 'status': 'completed', 'result': 'Soft winds whisper low\nBlossoms fade in twilight’s glow\nTime drifts ever on', 'created_at': 1742056411.167286}}
+2025-03-15 16:45:52,638 - MasterNode started and polling tasks
+2025-03-15 16:45:52,638 - MasterNode started and polling tasks
+2025-03-15 16:45:52,641 - Saved conversation entry for session default_session: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 16:45:52,641 - Saved conversation entry for session default_session: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 16:45:52,641 - MasterNode started with PID 13957
+2025-03-15 16:45:52,641 - MasterNode started with PID 13957
+2025-03-15 16:45:52,647 - Flask app started with PID 13962
+2025-03-15 16:45:52,647 - Flask app started with PID 13962
+2025-03-15 16:45:53,391 - Starting Flask app
+2025-03-15 16:46:02,620 - Handling /chat request
+2025-03-15 16:46:02,620 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-15 16:46:02,621 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-15 16:46:02,621 - MasterNode initialized with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-15 16:46:02,630 - Redis connected successfully
+2025-03-15 16:46:02,632 - Task 1742054590639 failed: '1742054590639'
+2025-03-15 16:46:02,633 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'response': "Task 1742054590639 failed: '1742054590639'"}
+2025-03-15 16:46:02,634 - Task 1742056407458 completed: Soft winds whisper low
+Blossoms fade in twilight’s glow
+Time drifts ever on
+2025-03-15 16:46:02,634 - MasterNode started and polling tasks
+2025-03-15 16:46:02,635 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 16:46:02,635 - MasterNode started, emitting debug
+2025-03-15 16:46:02,636 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 42 entries
+2025-03-15 16:46:02,636 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:46:11,520 - Handling /chat request
+2025-03-15 16:46:11,521 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 42 entries
+2025-03-15 16:46:11,521 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:46:36,865 - Handling /chat request
+2025-03-15 16:46:36,866 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 42 entries
+2025-03-15 16:46:36,866 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:46:52,767 - Handling /chat request
+2025-03-15 16:46:52,768 - Received POST input: Good morning, Seclorum! in mode agent
+2025-03-15 16:46:52,768 - Saving agent message: Good morning, Seclorum!
+2025-03-15 16:46:52,770 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'prompt': 'Good morning, Seclorum!', 'response': 'Good morning! How can I assist you today?'}
+2025-03-15 16:46:52,770 - Emitted chat_update: {'prompt': 'Good morning, Seclorum!', 'response': 'Good morning! How can I assist you today?'}
+2025-03-15 16:47:08,727 - Handling /chat request
+2025-03-15 16:47:08,727 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 44 entries
+2025-03-15 16:47:08,727 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:47:14,798 - Handling /chat request
+2025-03-15 16:47:14,798 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 44 entries
+2025-03-15 16:47:14,798 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:47:23,011 - Handling /chat request
+2025-03-15 16:47:23,012 - Received POST input: Write a haiku in mode agent
+2025-03-15 16:47:23,012 - Processing task 1742057243012: Write a haiku
+2025-03-15 16:47:23,012 - Task 1742057243012 assigned to WebUI: Write a haiku
+2025-03-15 16:47:23,013 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'prompt': 'Task 1742057243012: Write a haiku'}
+2025-03-15 16:47:23,031 - Spawned session for WebUI on Task 1742057243012 (PID: 13991)
+2025-03-15 16:47:23,033 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'response': 'Spawned worker for Task 1742057243012 (PID: 13991)'}
+2025-03-15 16:47:26,798 - Worker for Task 1742057243012 completed normally (PID: 13991)
+2025-03-15 16:47:26,804 - Handling /chat request
+2025-03-15 16:47:26,804 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 49 entries
+2025-03-15 16:47:26,804 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 16:47:27,106 - Task 1742057243012 completed: Soft winds whisper low
+Blossoms fade in twilight’s glow
+Time drifts ever on
+2025-03-15 17:06:05,985 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+2025-03-15 17:06:05,985 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+2025-03-15 17:06:05,985 - MasterNode initialized with session default_session
+2025-03-15 17:06:05,985 - MasterNode initialized with session default_session
+2025-03-15 17:06:05,986 - Stopping MasterNode, Flask app, and Redis via CLI
+2025-03-15 17:06:05,986 - Stopping MasterNode, Flask app, and Redis via CLI
+WARNING:MasterNode:MasterNode is not running
+2025-03-15 17:06:05,987 - MasterNode stopped
+2025-03-15 17:06:05,987 - MasterNode stopped
+2025-03-15 17:06:05,987 - Saved conversation entry for session default_session: {'response': 'MasterNode stopped'}
+2025-03-15 17:06:05,987 - Saved conversation entry for session default_session: {'response': 'MasterNode stopped'}
+2025-03-15 17:06:05,988 - MasterNode stopped via CLI
+2025-03-15 17:06:05,988 - MasterNode stopped via CLI
+2025-03-15 17:06:05,988 - Flask app stopped with PID 13962
+2025-03-15 17:06:05,988 - Flask app stopped with PID 13962
+2025-03-15 17:06:05,989 - Redis stopped with PID 13961
+2025-03-15 17:06:05,989 - Redis stopped with PID 13961
+2025-03-15 17:11:31,107 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+2025-03-15 17:11:31,107 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+2025-03-15 17:11:31,107 - MasterNode initialized with session default_session
+2025-03-15 17:11:31,107 - MasterNode initialized with session default_session
+2025-03-15 17:11:31,108 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-15 17:11:31,108 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-15 17:11:31,126 - Started Redis with PID 15311
+2025-03-15 17:11:31,126 - Started Redis with PID 15311
+INFO:MasterNode:MasterNode started with PID 15306
+INFO:MasterNode:Connected to Redis
+2025-03-15 17:11:32,140 - Redis connected successfully
+2025-03-15 17:11:32,140 - Redis connected successfully
+DEBUG:MasterNode:Checking stuck tasks. Current tasks: {}, Redis tasks: {'1742054590639': {'task_id': '1742054590639', 'description': 'Write a haiku', 'status': 'failed', 'result': "'1742054590639'", 'created_at': 1742054594.408653}, '1742056407458': {'task_id': '1742056407458', 'description': 'Write a haiku', 'status': 'completed', 'result': 'Soft winds whisper low\nBlossoms fade in twilight’s glow\nTime drifts ever on', 'created_at': 1742056411.167286}, '1742057243012': {'task_id': '1742057243012', 'description': 'Write a haiku', 'status': 'completed', 'result': 'Soft winds whisper low\nBlossoms fade in twilight’s glow\nTime drifts ever on', 'created_at': 1742057246.702046}}
+2025-03-15 17:11:32,141 - MasterNode started and polling tasks
+2025-03-15 17:11:32,141 - MasterNode started and polling tasks
+2025-03-15 17:11:32,142 - Saved conversation entry for session default_session: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 17:11:32,142 - Saved conversation entry for session default_session: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 17:11:32,143 - MasterNode started with PID 15306
+2025-03-15 17:11:32,143 - MasterNode started with PID 15306
+2025-03-15 17:11:32,148 - Flask app started with PID 15312
+2025-03-15 17:11:32,148 - Flask app started with PID 15312
+2025-03-15 17:11:32,851 - Starting Flask app
+2025-03-15 17:11:46,830 - Handling /chat request
+2025-03-15 17:11:46,830 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-15 17:11:46,830 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-15 17:11:46,830 - MasterNode initialized with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-15 17:11:46,840 - Redis connected successfully
+2025-03-15 17:11:46,843 - Task 1742054590639 failed: '1742054590639'
+2025-03-15 17:11:46,845 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'response': "Task 1742054590639 failed: '1742054590639'"}
+2025-03-15 17:11:46,846 - Task 1742056407458 completed: Soft winds whisper low
+Blossoms fade in twilight’s glow
+Time drifts ever on
+2025-03-15 17:11:46,847 - MasterNode started and polling tasks
+2025-03-15 17:11:46,848 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'response': 'MasterNode started and polling tasks'}
+2025-03-15 17:11:46,848 - Task 1742057243012 completed: Soft winds whisper low
+Blossoms fade in twilight’s glow
+Time drifts ever on
+2025-03-15 17:11:46,849 - MasterNode started, emitting debug
+2025-03-15 17:11:46,849 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 51 entries
+2025-03-15 17:11:46,849 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 17:11:50,996 - Handling /chat request
+2025-03-15 17:11:50,997 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 51 entries
+2025-03-15 17:11:50,997 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 17:12:17,076 - Handling /chat request
+2025-03-15 17:12:17,079 - Received POST input: Good morning, Seclorum! in mode agent
+2025-03-15 17:12:17,079 - Saving agent message: Good morning, Seclorum!
+2025-03-15 17:12:17,079 - Assessing complexity of prompt: Good morning, Seclorum!
+2025-03-15 17:12:17,079 - Quick LLM handled prompt
+2025-03-15 17:12:17,082 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'prompt': 'Good morning, Seclorum!', 'response': 'Good morning! How’s your day starting?'}
+2025-03-15 17:12:17,082 - Emitted chat_update: {'prompt': 'Good morning, Seclorum!', 'response': 'Good morning! How’s your day starting?'}
+2025-03-15 17:12:26,857 - Handling /chat request
+2025-03-15 17:12:26,858 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 53 entries
+2025-03-15 17:12:26,858 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 17:12:55,365 - Handling /chat request
+2025-03-15 17:12:55,366 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 53 entries
+2025-03-15 17:12:55,367 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 17:13:11,706 - Handling /chat request
+2025-03-15 17:13:11,706 - Received POST input: What’s the meaning of life in 42 words? in mode agent
+2025-03-15 17:13:11,706 - Saving agent message: What’s the meaning of life in 42 words?
+2025-03-15 17:13:11,706 - Assessing complexity of prompt: What’s the meaning of life in 42 words?
+2025-03-15 17:13:11,706 - Escalating to DeepSeek-R1:8b
+2025-03-15 17:13:11,707 - Saved conversation entry for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: {'prompt': 'What’s the meaning of life in 42 words?', 'response': 'I’m DeepSeek-R1:8b. Complex query detected: What’s the meaning of life in 42 words?'}
+2025-03-15 17:13:11,707 - Emitted chat_update: {'prompt': 'What’s the meaning of life in 42 words?', 'response': 'I’m DeepSeek-R1:8b. Complex query detected: What’s the meaning of life in 42 words?'}
+2025-03-15 17:13:51,732 - Handling /chat request
+2025-03-15 17:13:51,734 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 55 entries
+2025-03-15 17:13:51,734 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 17:14:45,734 - Handling /chat request
+2025-03-15 17:14:45,735 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 55 entries
+2025-03-15 17:14:45,735 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 17:14:49,938 - Handling /chat request
+2025-03-15 17:14:49,938 - Received POST input: Write a haiku in mode agent
+2025-03-15 17:14:49,938 - Processing task 1742058889938: Write a haiku
+2025-03-15 17:14:49,939 - Task 1742058889938 assigned to WebUI: Write a haiku
+2025-03-15 17:14:49,955 - Spawned session for WebUI on Task 1742058889938 (PID: 15379)
+2025-03-15 17:14:53,840 - Worker for Task 1742058889938 completed normally (PID: 15379)
+2025-03-15 17:14:53,847 - Handling /chat request
+2025-03-15 17:14:53,848 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 58 entries
+2025-03-15 17:14:53,848 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 17:14:53,913 - Task 1742058889938 completed: Soft winds whisper low
+Blossoms fade in twilight’s glow
+Time drifts ever on
+2025-03-15 17:15:15,357 - Handling /chat request
+2025-03-15 17:15:15,358 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 58 entries
+2025-03-15 17:15:15,359 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 17:15:28,683 - Handling /chat request
+2025-03-15 17:15:28,684 - Received POST input: Write a haiku in mode task
+2025-03-15 17:15:28,684 - Processing task 1742058928684: Write a haiku
+2025-03-15 17:15:28,684 - Task 1742058928684 assigned to WebUI: Write a haiku
+2025-03-15 17:15:28,698 - Spawned session for WebUI on Task 1742058928684 (PID: 15393)
+2025-03-15 17:15:32,541 - Worker for Task 1742058928684 completed normally (PID: 15393)
+2025-03-15 17:15:33,143 - Task 1742058928684 completed: Soft winds whisper low
+Blossoms fade in twilight’s glow
+Time drifts ever on
+2025-03-15 17:15:46,845 - Handling /chat request
+2025-03-15 17:15:46,848 - Loaded conversation history for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe: 61 entries
+2025-03-15 17:15:46,849 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 17:16:46,304 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+2025-03-15 17:16:46,304 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversation_default_session.json
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+2025-03-15 17:16:46,305 - MasterNode initialized with session default_session
+2025-03-15 17:16:46,305 - MasterNode initialized with session default_session
+2025-03-15 17:16:46,305 - Stopping MasterNode, Flask app, and Redis via CLI
+2025-03-15 17:16:46,305 - Stopping MasterNode, Flask app, and Redis via CLI
+WARNING:MasterNode:MasterNode is not running
+2025-03-15 17:16:46,305 - MasterNode stopped
+2025-03-15 17:16:46,305 - MasterNode stopped
+2025-03-15 17:16:46,305 - Saved conversation entry for session default_session: {'response': 'MasterNode stopped'}
+2025-03-15 17:16:46,305 - Saved conversation entry for session default_session: {'response': 'MasterNode stopped'}
+2025-03-15 17:16:46,305 - MasterNode stopped via CLI
+2025-03-15 17:16:46,305 - MasterNode stopped via CLI
+2025-03-15 17:16:46,306 - Flask app stopped with PID 15312
+2025-03-15 17:16:46,306 - Flask app stopped with PID 15312
+2025-03-15 17:16:46,306 - Redis stopped with PID 15311
+2025-03-15 17:16:46,306 - Redis stopped with PID 15311
+DEBUG:urllib3.util.retry:Converted retries value: 2 -> Retry(total=2, connect=None, read=None, redirect=None, status=None)
+INFO:chromadb.telemetry.product.posthog:Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+DEBUG:chromadb.config:Starting component System
+DEBUG:chromadb.config:Starting component Posthog
+DEBUG:chromadb.config:Starting component OpenTelemetryClient
+DEBUG:chromadb.config:Starting component SqliteDB
+DEBUG:chromadb.config:Starting component SimpleQuotaEnforcer
+DEBUG:chromadb.config:Starting component SimpleRateLimitEnforcer
+DEBUG:chromadb.config:Starting component LocalSegmentManager
+DEBUG:chromadb.config:Starting component LocalExecutor
+DEBUG:chromadb.config:Starting component SegmentAPI
+INFO:sentence_transformers.SentenceTransformer:Use pytorch device_name: cpu
+INFO:sentence_transformers.SentenceTransformer:Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): huggingface.co:443
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+DEBUG:filelock:Attempting to acquire lock 5171825360 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/952a9b81c0bfd99800fabf352f69c7ccd46c5e43.lock
+DEBUG:filelock:Lock 5171825360 acquired on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/952a9b81c0bfd99800fabf352f69c7ccd46c5e43.lock
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): us.i.posthog.com:443
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 349
+DEBUG:filelock:Attempting to release lock 5171825360 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/952a9b81c0bfd99800fabf352f69c7ccd46c5e43.lock
+DEBUG:filelock:Lock 5171825360 released on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/952a9b81c0bfd99800fabf352f69c7ccd46c5e43.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+DEBUG:filelock:Attempting to acquire lock 5171737552 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/fd1b291129c607e5d49799f87cb219b27f98acdf.lock
+DEBUG:filelock:Lock 5171737552 acquired on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/fd1b291129c607e5d49799f87cb219b27f98acdf.lock
+DEBUG:urllib3.connectionpool:https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 116
+DEBUG:filelock:Attempting to release lock 5171737552 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/fd1b291129c607e5d49799f87cb219b27f98acdf.lock
+DEBUG:filelock:Lock 5171737552 released on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/fd1b291129c607e5d49799f87cb219b27f98acdf.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
+DEBUG:filelock:Attempting to acquire lock 5173196688 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/58d4a9a45664eb9e12de9549c548c09b6134c17f.lock
+DEBUG:filelock:Lock 5173196688 acquired on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/58d4a9a45664eb9e12de9549c548c09b6134c17f.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 10454
+DEBUG:filelock:Attempting to release lock 5173196688 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/58d4a9a45664eb9e12de9549c548c09b6134c17f.lock
+DEBUG:filelock:Lock 5173196688 released on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/58d4a9a45664eb9e12de9549c548c09b6134c17f.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+DEBUG:filelock:Attempting to acquire lock 5171942928 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/59d594003bf59880a884c574bf88ef7555bb0202.lock
+DEBUG:filelock:Lock 5171942928 acquired on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/59d594003bf59880a884c574bf88ef7555bb0202.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 53
+DEBUG:filelock:Attempting to release lock 5171942928 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/59d594003bf59880a884c574bf88ef7555bb0202.lock
+DEBUG:filelock:Lock 5171942928 released on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/59d594003bf59880a884c574bf88ef7555bb0202.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
+DEBUG:filelock:Attempting to acquire lock 5171738832 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/72b987fd805cfa2b58c4c8c952b274a11bfd5a00.lock
+DEBUG:filelock:Lock 5171738832 acquired on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/72b987fd805cfa2b58c4c8c952b274a11bfd5a00.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 612
+DEBUG:filelock:Attempting to release lock 5171738832 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/72b987fd805cfa2b58c4c8c952b274a11bfd5a00.lock
+DEBUG:filelock:Lock 5171738832 released on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/72b987fd805cfa2b58c4c8c952b274a11bfd5a00.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/model.safetensors HTTP/1.1" 302 0
+DEBUG:filelock:Attempting to acquire lock 5173347152 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db.lock
+DEBUG:filelock:Lock 5173347152 acquired on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db.lock
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): cdn-lfs.hf.co:443
+DEBUG:urllib3.connectionpool:https://cdn-lfs.hf.co:443 "GET /sentence-transformers/all-MiniLM-L6-v2/53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db?response-content-disposition=inline%3B+filename*%3DUTF-8%27%27model.safetensors%3B+filename%3D%22model.safetensors%22%3B&Expires=1742064640&Policy=eyJTdGF0ZW1lbnQiOlt7IkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc0MjA2NDY0MH19LCJSZXNvdXJjZSI6Imh0dHBzOi8vY2RuLWxmcy5oZi5jby9zZW50ZW5jZS10cmFuc2Zvcm1lcnMvYWxsLU1pbmlMTS1MNi12Mi81M2FhNTExNzJkMTQyYzg5ZDkwMTJjY2UxNWFlNGQ2Y2MwY2E2ODk1ODk1MTE0Mzc5Y2FjYjRmYWIxMjhkOWRiP3Jlc3BvbnNlLWNvbnRlbnQtZGlzcG9zaXRpb249KiJ9XX0_&Signature=lSxs~EYlwab~aXJyGoCTMH7fVSZInbM3dKk04BfYqPUVy~yw-ePQ1jhhDs9BuhiFTZnVszQR1dDto4~lNfJZD~gRIgRP2Aa-RVHiNdi9bAFQ1n1j7csIdl~~I8KjXI~I3rbgyEAVqJYa5GhpqLdZwaUL2cAdt96w9fZjyXFtRNjkeJXoWXg2ddL7Ixb4brWFZBpm0Y793Zl8eUgId12fOlFVyUciXNNidYUWkntYY5t2HtfdUNt5TXFLhQ5OFibDLwEh9PSVyqHgFKuvD7LAoFU0EqpWNYrr4MOBJ9XAR29lF2N2YuRQH6Dv0m5Jb8VsnBI5cW6LZXlW0VOXBprfQQ__&Key-Pair-Id=K3RPWS32NSSJCE HTTP/1.1" 200 90868376
+DEBUG:filelock:Attempting to release lock 5173347152 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db.lock
+DEBUG:filelock:Lock 5173347152 released on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+DEBUG:filelock:Attempting to acquire lock 5211527376 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/c79f2b6a0cea6f4b564fed1938984bace9d30ff0.lock
+DEBUG:filelock:Lock 5211527376 acquired on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/c79f2b6a0cea6f4b564fed1938984bace9d30ff0.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 350
+DEBUG:filelock:Attempting to release lock 5211527376 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/c79f2b6a0cea6f4b564fed1938984bace9d30ff0.lock
+DEBUG:filelock:Lock 5211527376 released on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/c79f2b6a0cea6f4b564fed1938984bace9d30ff0.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/vocab.txt HTTP/1.1" 200 0
+DEBUG:filelock:Attempting to acquire lock 5212009488 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/fb140275c155a9c7c5a3b3e0e77a9e839594a938.lock
+DEBUG:filelock:Lock 5212009488 acquired on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/fb140275c155a9c7c5a3b3e0e77a9e839594a938.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /sentence-transformers/all-MiniLM-L6-v2/resolve/main/vocab.txt HTTP/1.1" 200 231508
+DEBUG:filelock:Attempting to release lock 5212009488 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/fb140275c155a9c7c5a3b3e0e77a9e839594a938.lock
+DEBUG:filelock:Lock 5212009488 released on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/fb140275c155a9c7c5a3b3e0e77a9e839594a938.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer.json HTTP/1.1" 200 0
+DEBUG:filelock:Attempting to acquire lock 5171729872 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/cb202bfe2e3c98645018a6d12f182a434c9d3e02.lock
+DEBUG:filelock:Lock 5171729872 acquired on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/cb202bfe2e3c98645018a6d12f182a434c9d3e02.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer.json HTTP/1.1" 200 466247
+DEBUG:filelock:Attempting to release lock 5171729872 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/cb202bfe2e3c98645018a6d12f182a434c9d3e02.lock
+DEBUG:filelock:Lock 5171729872 released on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/cb202bfe2e3c98645018a6d12f182a434c9d3e02.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/added_tokens.json HTTP/1.1" 404 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/special_tokens_map.json HTTP/1.1" 200 0
+DEBUG:filelock:Attempting to acquire lock 5023495312 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/e7b0375001f109a6b8873d756ad4f7bbb15fbaa5.lock
+DEBUG:filelock:Lock 5023495312 acquired on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/e7b0375001f109a6b8873d756ad4f7bbb15fbaa5.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /sentence-transformers/all-MiniLM-L6-v2/resolve/main/special_tokens_map.json HTTP/1.1" 200 112
+DEBUG:filelock:Attempting to release lock 5023495312 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/e7b0375001f109a6b8873d756ad4f7bbb15fbaa5.lock
+DEBUG:filelock:Lock 5023495312 released on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/e7b0375001f109a6b8873d756ad4f7bbb15fbaa5.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/chat_template.jinja HTTP/1.1" 404 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6771
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): huggingface.co:443
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/1_Pooling/config.json HTTP/1.1" 200 0
+DEBUG:filelock:Attempting to acquire lock 5173261008 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/d1514c3162bbe87b343f565fadc62e6c06f04f03.lock
+DEBUG:filelock:Lock 5173261008 acquired on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/d1514c3162bbe87b343f565fadc62e6c06f04f03.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /sentence-transformers/all-MiniLM-L6-v2/resolve/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/1_Pooling/config.json HTTP/1.1" 200 190
+DEBUG:filelock:Attempting to release lock 5173261008 on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/d1514c3162bbe87b343f565fadc62e6c06f04f03.lock
+DEBUG:filelock:Lock 5173261008 released on /Users/ian/.cache/huggingface/hub/.locks/models--sentence-transformers--all-MiniLM-L6-v2/d1514c3162bbe87b343f565fadc62e6c06f04f03.lock
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6771
+2025-03-15 18:07:44,460 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+2025-03-15 18:07:44,460 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+DEBUG:urllib3.connectionpool:https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+DEBUG:urllib3.util.retry:Converted retries value: 2 -> Retry(total=2, connect=None, read=None, redirect=None, status=None)
+INFO:chromadb.telemetry.product.posthog:Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+DEBUG:chromadb.config:Starting component System
+DEBUG:chromadb.config:Starting component Posthog
+DEBUG:chromadb.config:Starting component OpenTelemetryClient
+DEBUG:chromadb.config:Starting component SqliteDB
+DEBUG:chromadb.config:Starting component SimpleQuotaEnforcer
+DEBUG:chromadb.config:Starting component SimpleRateLimitEnforcer
+DEBUG:chromadb.config:Starting component LocalSegmentManager
+DEBUG:chromadb.config:Starting component LocalExecutor
+DEBUG:chromadb.config:Starting component SegmentAPI
+DEBUG:chromadb.api.segment:Collection conversations already exists, returning existing collection.
+INFO:sentence_transformers.SentenceTransformer:Use pytorch device_name: cpu
+INFO:sentence_transformers.SentenceTransformer:Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): huggingface.co:443
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): us.i.posthog.com:443
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6771
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6771
+2025-03-15 18:09:17,026 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+2025-03-15 18:09:17,026 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+DEBUG:urllib3.connectionpool:https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+DEBUG:urllib3.util.retry:Converted retries value: 2 -> Retry(total=2, connect=None, read=None, redirect=None, status=None)
+INFO:chromadb.telemetry.product.posthog:Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+DEBUG:chromadb.config:Starting component System
+DEBUG:chromadb.config:Starting component Posthog
+DEBUG:chromadb.config:Starting component OpenTelemetryClient
+DEBUG:chromadb.config:Starting component SqliteDB
+DEBUG:chromadb.config:Starting component SimpleQuotaEnforcer
+DEBUG:chromadb.config:Starting component SimpleRateLimitEnforcer
+DEBUG:chromadb.config:Starting component LocalSegmentManager
+DEBUG:chromadb.config:Starting component LocalExecutor
+DEBUG:chromadb.config:Starting component SegmentAPI
+DEBUG:chromadb.api.segment:Collection conversations already exists, returning existing collection.
+INFO:sentence_transformers.SentenceTransformer:Use pytorch device_name: cpu
+INFO:sentence_transformers.SentenceTransformer:Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): huggingface.co:443
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): us.i.posthog.com:443
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6771
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6771
+2025-03-15 18:11:19,401 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+2025-03-15 18:11:19,401 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+DEBUG:urllib3.connectionpool:https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+DEBUG:chromadb.config:Starting component PersistentLocalHnswSegment
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+2025-03-15 18:11:20,463 - MasterNode initialized with session default_session
+2025-03-15 18:11:20,463 - MasterNode initialized with session default_session
+2025-03-15 18:11:20,464 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-15 18:11:20,464 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-15 18:11:20,527 - Started Redis with PID 17205
+2025-03-15 18:11:20,527 - Started Redis with PID 17205
+DEBUG:urllib3.connectionpool:https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+INFO:MasterNode:MasterNode started with PID 17198
+INFO:MasterNode:Connected to Redis
+2025-03-15 18:11:21,539 - Redis connected successfully
+2025-03-15 18:11:21,539 - Redis connected successfully
+DEBUG:MasterNode:Checking stuck tasks. Current tasks: {}, Redis tasks: {'1742054590639': {'task_id': '1742054590639', 'description': 'Write a haiku', 'status': 'failed', 'result': "'1742054590639'", 'created_at': 1742054594.408653}, '1742056407458': {'task_id': '1742056407458', 'description': 'Write a haiku', 'status': 'completed', 'result': 'Soft winds whisper low\nBlossoms fade in twilight’s glow\nTime drifts ever on', 'created_at': 1742056411.167286}, '1742057243012': {'task_id': '1742057243012', 'description': 'Write a haiku', 'status': 'completed', 'result': 'Soft winds whisper low\nBlossoms fade in twilight’s glow\nTime drifts ever on', 'created_at': 1742057246.702046}, '1742058889938': {'task_id': '1742058889938', 'description': 'Write a haiku', 'status': 'completed', 'result': 'Soft winds whisper low\nBlossoms fade in twilight’s glow\nTime drifts ever on', 'created_at': 1742058893.723943}, '1742058928684': {'task_id': '1742058928684', 'description': 'Write a haiku', 'status': 'completed', 'result': 'Soft winds whisper low\nBlossoms fade in twilight’s glow\nTime drifts ever on', 'created_at': 1742058932.411198}}
+2025-03-15 18:11:21,540 - MasterNode started and polling tasks
+2025-03-15 18:11:21,540 - MasterNode started and polling tasks
+2025-03-15 18:11:21,572 - MasterNode started with PID 17198
+2025-03-15 18:11:21,572 - MasterNode started with PID 17198
+2025-03-15 18:11:21,587 - Flask app started with PID 17206
+2025-03-15 18:11:21,587 - Flask app started with PID 17206
+2025-03-15 18:11:25,512 - Starting Flask app
+2025-03-15 18:11:36,761 - Handling /chat request
+2025-03-15 18:11:36,761 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-15 18:11:40,676 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-15 18:11:42,931 - MasterNode initialized with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-15 18:11:42,934 - Redis connected successfully
+2025-03-15 18:11:42,935 - Task 1742054590639 failed: '1742054590639'
+2025-03-15 18:11:42,935 - MasterNode started and polling tasks
+2025-03-15 18:11:42,980 - MasterNode started, emitting debug
+2025-03-15 18:11:42,982 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 18:11:43,116 - Task 1742056407458 completed: Soft winds whisper low
+Blossoms fade in twilight’s glow
+Time drifts ever on
+2025-03-15 18:11:43,117 - Task 1742057243012 completed: Soft winds whisper low
+Blossoms fade in twilight’s glow
+Time drifts ever on
+2025-03-15 18:11:43,117 - Task 1742058889938 completed: Soft winds whisper low
+Blossoms fade in twilight’s glow
+Time drifts ever on
+2025-03-15 18:11:43,118 - Task 1742058928684 completed: Soft winds whisper low
+Blossoms fade in twilight’s glow
+Time drifts ever on
+2025-03-15 18:12:05,688 - Handling /chat request
+2025-03-15 18:12:05,689 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 18:12:20,249 - Handling /chat request
+2025-03-15 18:12:20,253 - Received POST input: Good morning! in mode agent
+2025-03-15 18:12:20,253 - Saving agent message: Good morning!
+2025-03-15 18:12:20,253 - Assessing prompt: Good morning!
+2025-03-15 18:12:20,278 - Complexity: simple, Memory context: No relevant history...
+2025-03-15 18:12:20,278 - Quick LLM handled prompt
+2025-03-15 18:12:20,311 - Emitted chat_update: {'prompt': 'Good morning!', 'response': 'Good morning! How’s your day? (Memory: No relevant history)'}
+2025-03-15 18:12:39,483 - Handling /chat request
+2025-03-15 18:12:39,486 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 18:13:02,256 - Handling /chat request
+2025-03-15 18:13:02,257 - Received POST input: Write a haiku in mode task
+2025-03-15 18:13:02,257 - Processing task 1742062382257: Write a haiku
+2025-03-15 18:13:02,257 - Task 1742062382257 assigned to WebUI: Write a haiku
+2025-03-15 18:13:02,283 - Spawned session for WebUI on Task 1742062382257 (PID: 17239)
+2025-03-15 18:13:10,909 - Handling /chat request
+2025-03-15 18:13:10,935 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-15 18:13:12,318 - Worker for Task 1742062382257 still running after 10s
+2025-03-15 18:13:13,577 - Task 1742062382257 completed: Soft winds whisper low
+Blossoms fade in twilight’s glow
+Time drifts ever on
+DEBUG:urllib3.util.retry:Converted retries value: 2 -> Retry(total=2, connect=None, read=None, redirect=None, status=None)
+INFO:chromadb.telemetry.product.posthog:Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+DEBUG:chromadb.config:Starting component System
+DEBUG:chromadb.config:Starting component Posthog
+DEBUG:chromadb.config:Starting component OpenTelemetryClient
+DEBUG:chromadb.config:Starting component SqliteDB
+DEBUG:chromadb.config:Starting component SimpleQuotaEnforcer
+DEBUG:chromadb.config:Starting component SimpleRateLimitEnforcer
+DEBUG:chromadb.config:Starting component LocalSegmentManager
+DEBUG:chromadb.config:Starting component LocalExecutor
+DEBUG:chromadb.config:Starting component SegmentAPI
+DEBUG:chromadb.api.segment:Collection conversations already exists, returning existing collection.
+INFO:sentence_transformers.SentenceTransformer:Use pytorch device_name: cpu
+INFO:sentence_transformers.SentenceTransformer:Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): us.i.posthog.com:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): huggingface.co:443
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (2): huggingface.co:443
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6771
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6771
+2025-03-15 18:20:21,594 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+2025-03-15 18:20:21,594 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+2025-03-15 18:20:21,618 - MasterNode initialized with session default_session
+2025-03-15 18:20:21,618 - MasterNode initialized with session default_session
+2025-03-15 18:20:21,619 - Stopping MasterNode, Flask app, and Redis via CLI
+2025-03-15 18:20:21,619 - Stopping MasterNode, Flask app, and Redis via CLI
+WARNING:MasterNode:MasterNode is not running
+2025-03-15 18:20:21,619 - MasterNode stopped
+2025-03-15 18:20:21,619 - MasterNode stopped
+DEBUG:chromadb.config:Starting component PersistentLocalHnswSegment
+2025-03-15 18:20:22,454 - MasterNode stopped via CLI
+2025-03-15 18:20:22,454 - MasterNode stopped via CLI
+2025-03-15 18:20:22,454 - Flask app stopped with PID 17206
+2025-03-15 18:20:22,454 - Flask app stopped with PID 17206
+2025-03-15 18:20:22,455 - Redis stopped with PID 17205
+2025-03-15 18:20:22,455 - Redis stopped with PID 17205
+DEBUG:urllib3.connectionpool:https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15

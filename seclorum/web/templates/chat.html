@@ -76,6 +76,7 @@
                 document.documentElement.classList.toggle('dark', this.darkMode);
                 const socket = io('http://127.0.0.1:5000');
                 socket.on('connect', () => console.log('SocketIO connected'));
+                socket.on('disconnect', () => console.log('SocketIO disconnected'));
                 socket.on('task_update', (data) => {
                     console.log('Task update:', data);
                     if (data.status === 'assigned') {
@@ -85,10 +86,10 @@
                     }
                 });
                 socket.on('chat_update', (data) => {
-                    console.log('Chat update received:', data);
+                    console.log('Chat update:', data);
                     this.conversationHistory.push(`User: ${data.prompt}`);
                     this.conversationHistory.push(`Agent: ${data.response}`);
-                    this.$refs History.scrollTop = 0;
+                    this.$refs.history.scrollTop = 0;
                 });
                 socket.on('reset_storage', () => {
                     console.log('Resetting local storage');
@@ -100,18 +101,27 @@
             },
             submitInput(input) {
                 if (input.trim()) {
+                    console.log('Submitting:', input, 'Mode:', '{{ mode }}');
                     fetch('/chat?mode={{ mode }}', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: 'input=' + encodeURIComponent(input)
                     }).then(response => {
+                        console.log('Fetch response:', response.status);
                         if (response.ok) {
                             this.input = '';
                             if ('{{ mode }}' === 'task') {
-                                window.location.reload();  // Reload for tasks
+                                console.log('Reloading for task mode');
+                                window.location.reload();
+                            } else {
+                                console.log('Agent mode, waiting for SocketIO');
                             }
+                        } else {
+                            console.error('Fetch failed:', response.status);
                         }
-                    }).catch(error => console.error('Submit error:', error));
+                    }).catch(error => console.error('Fetch error:', error));
+                } else {
+                    console.log('Empty input, skipping submit');
                 }
             },
             adjustHeight(el) {

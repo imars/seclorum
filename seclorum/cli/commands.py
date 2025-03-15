@@ -9,9 +9,14 @@ import subprocess
 from flask_socketio import SocketIO
 import time
 
-# Centralized logging
-logging.basicConfig(filename='app.log', level=logging.INFO, format='%(asctime)s - %(message)s')
-logger = logging.getLogger("CLI")
+# Global logger setup
+logging.getLogger().handlers.clear()  # Clear any default handlers
+logger = logging.getLogger("Seclorum")
+logger.setLevel(logging.INFO)
+handler = logging.FileHandler('app.log', mode='a')  # Append mode
+handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+logger.addHandler(handler)
+logger.propagate = False  # Prevent duplicate logging
 
 def main():
     master = MasterNode()
@@ -33,7 +38,9 @@ def main():
             try:
                 master.start()
                 logger.info("MasterNode started with PID %s", os.getpid())
-                flask_process = subprocess.Popen([sys.executable, "seclorum/web/app.py"])
+                flask_env = os.environ.copy()
+                flask_env["SECLORUM_LOG_FILE"] = "app.log"  # Pass log file to Flask
+                flask_process = subprocess.Popen([sys.executable, "seclorum/web/app.py"], env=flask_env)
                 with open(flask_pid_file, 'w') as f:
                     f.write(str(flask_process.pid))
                 logger.info("Flask app started with PID %s", flask_process.pid)
@@ -108,7 +115,6 @@ def main():
                 else:
                     open(log_file, 'a').close()
                     logger.info(f"Created and cleared {log_file}")
-            # Clear browser local storage with temporary Flask instance
             try:
                 socketio = SocketIO(flask_app)
                 with flask_app.app_context():

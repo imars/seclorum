@@ -17,44 +17,45 @@ handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
-# Simulated local LLMs (replace with real models, e.g., transformers)
-def quick_llm(prompt):
-    """Simulate a fast, lightweight LLM (e.g., TinyLLaMA)."""
+# Simulated local LLMs
+def quick_llm(prompt, context=""):
     if "morning" in prompt.lower():
-        return "Good morning! How’s your day starting?"
+        return f"Good morning! How’s your day? (Memory: {context})"
     elif "what's" in prompt.lower():
-        return "Just the usual—code, coffee, and chaos. You?"
+        return f"Code and coffee here. You? (Memory: {context})"
     else:
-        return None  # Escalate if no simple match
+        return None
 
-def deepseek_r1_8b(prompt):
-    """Simulate DeepSeek-R1:8b for complex prompts."""
+def deepseek_r1_8b(prompt, context=""):
     if "haiku" in prompt.lower():
         return "Soft winds whisper low\nBlossoms fade in twilight’s glow\nTime drifts ever on"
     elif "analyze" in prompt.lower():
-        return "I’d analyze that, but I need more context—tell me more!"
+        return f"Analyzing with memory: {context}"
     else:
-        return "I’m DeepSeek-R1:8b. Complex query detected: " + prompt
+        return f"DeepSeek-R1:8b here. Query: {prompt}. Memory: {context}"
 
-def assess_complexity(prompt):
-    """Quick LLM assesses prompt complexity."""
+def assess_complexity(prompt, memory_context):
     words = prompt.split()
     complexity_score = len(words)
-    if "haiku" in prompt.lower() or "analyze" in prompt.lower() or complexity_score > 5:
+    has_context = any(m["similarity"] > 0.8 for m in memory_context)
+    if "haiku" in prompt.lower() or "analyze" in prompt.lower() or complexity_score > 5 or has_context:
         return "complex"
     return "simple"
 
-def get_agent_response(prompt):
-    """Seclorum decides which LLM to use."""
-    logger.info(f"Assessing complexity of prompt: {prompt}")
-    complexity = assess_complexity(prompt)
+def get_agent_response(master, prompt):
+    logger.info(f"Assessing prompt: {prompt}")
+    # Query vector memory
+    memory_context = master.memory.query_memory(prompt)
+    context = " ".join([m["text"] for m in memory_context]) if memory_context else "No relevant history"
+    complexity = assess_complexity(prompt, memory_context)
+    logger.info(f"Complexity: {complexity}, Memory context: {context[:50]}...")
     if complexity == "simple":
-        response = quick_llm(prompt)
+        response = quick_llm(prompt, context)
         if response:
             logger.info("Quick LLM handled prompt")
             return response
     logger.info("Escalating to DeepSeek-R1:8b")
-    return deepseek_r1_8b(prompt)
+    return deepseek_r1_8b(prompt, context)
 
 def get_master_node():
     if 'session_id' not in session:
@@ -91,7 +92,7 @@ def chat():
             return redirect(url_for('chat', mode=mode))
         else:
             logger.info(f"Saving agent message: {input_text}")
-            response = get_agent_response(input_text)
+            response = get_agent_response(master, input_text)
             master.memory.save(prompt=input_text, response=response)
             socketio.emit('chat_update', {'prompt': input_text, 'response': response}, namespace='/')
             logger.info(f"Emitted chat_update: {{'prompt': '{input_text}', 'response': '{response}'}}")
