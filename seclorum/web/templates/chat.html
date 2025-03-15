@@ -22,7 +22,7 @@
                 <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Chat History</h2>
                 <div class="flex-1 overflow-y-auto flex flex-col-reverse" x-ref="history">
                     <template x-for="(msg, index) in messages.slice().reverse()" :key="index">
-                        <div :class="tasks[msg] ? 'panel mb-2 p-3 active-task bg-blue-50 dark:bg-blue-900' : 'panel mb-2 p-3'" x-text="msg"></div>
+                        <div :class="tasks[msg.task_id] ? 'panel mb-2 p-3 active-task bg-blue-50 dark:bg-blue-900' : 'panel mb-2 p-3'" x-text="msg.description"></div>
                     </template>
                 </div>
             </div>
@@ -56,32 +56,65 @@
     document.addEventListener('alpine:init', () => {
         Alpine.data('appData', () => ({
             darkMode: localStorage.getItem('darkMode') === 'true',
-            messages: JSON.parse(localStorage.getItem('chatMessages') || '[]'),
+            messages: [],
             tasks: {},
             init() {
-                console.log('Alpine init messages:', this.messages);
+                console.log('Alpine init');
                 document.documentElement.classList.toggle('dark', this.darkMode);
+                this.loadMessages();
                 this.$watch('messages', () => this.saveMessages());
                 const socket = io('http://127.0.0.1:5000');
-                socket.on('connect', () => console.log('SocketIO connected'));
+                socket.on('connect', () => {
+                    console.log('SocketIO connected');
+                    this.loadMessages();
+                });
                 socket.on('task_update', (data) => {
                     console.log('Task update:', data);
                     const outputDiv = Alpine.$data(document.querySelector('[x-data*=\"output\"]'));
                     if (data.status === 'assigned') {
                         outputDiv.output += `<p><strong>Task ${data.task_id}:</strong> Pending...</p>`;
+                        this.messages = this.messages.filter(m => m.task_id !== data.task_id);
+                        this.messages.push(data);
+                        this.tasks[data.task_id] = true;
                     } else if (data.status === 'completed') {
                         outputDiv.output = outputDiv.output.replace(
                             `<p><strong>Task ${data.task_id}:</strong> Pending...</p>`,
                             `<p><strong>Task ${data.task_id}:</strong> ${data.result.replace(/\n/g, '<br>')}</p>`
                         );
+                        this.updateMessage(data);
+                        delete this.tasks[data.task_id];
                     } else if (data.status === 'failed') {
                         outputDiv.output = outputDiv.output.replace(
                             `<p><strong>Task ${data.task_id}:</strong> Pending...</p>`,
                             `<p><strong>Task ${data.task_id} (Failed):</strong> ${data.result}</p>`
                         );
+                        this.updateMessage(data);
+                        delete this.tasks[data.task_id];
                     }
+                    this.saveMessages();
                     localStorage.setItem('agentOutput', outputDiv.output);
                 });
+            },
+            loadMessages() {
+                fetch('/chat', { method: 'GET' })
+                    .then(res => res.text())
+                    .then(() => {
+                        const tasks = {{ tasks|tojson }};
+                        this.messages = Object.values(tasks).map(task => ({
+                            task_id: task.task_id,
+                            description: task.description
+                        }));
+                        console.log('Loaded messages from server:', this.messages);
+                        this.saveMessages();
+                    });
+            },
+            updateMessage(data) {
+                const index = this.messages.findIndex(m => m.task_id === data.task_id);
+                if (index !== -1) {
+                    this.messages[index] = data;
+                } else {
+                    this.messages.push(data);
+                }
             },
             saveMessages() {
                 localStorage.setItem('chatMessages', JSON.stringify(this.messages));
@@ -89,9 +122,6 @@
             },
             submitTask(input) {
                 if (input) {
-                    this.messages.push(input);
-                    this.tasks[input] = true;
-                    this.saveMessages();
                     fetch('/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
