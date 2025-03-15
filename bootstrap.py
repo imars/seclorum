@@ -5,17 +5,47 @@ import subprocess
 from datetime import datetime
 
 def load_conversation_log(log_file):
-    if os.path.exists(log_file):
-        with open(log_file, "r") as f:
-            return json.load(f)
-    return {"prompts": [], "responses": []}
+    """Load or initialize the conversation log."""
+    if not os.path.exists(log_file):
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        # Initialize empty log
+        default_log = {"prompts": [], "responses": [], "sessions": []}
+        with open(log_file, "w") as f:
+            json.dump(default_log, f, indent=4)
+        return default_log
+    with open(log_file, "r") as f:
+        return json.load(f)
+
+def save_conversation_log(log_file, prompt=None, response=None, session_id=None):
+    """Append a prompt, response, or session to the log."""
+    log = load_conversation_log(log_file)
+    timestamp = datetime.now().isoformat()
+    if prompt:
+        log["prompts"].append({"timestamp": timestamp, "text": prompt})
+    if response:
+        log["responses"].append({"timestamp": timestamp, "text": response})
+    if session_id:
+        log["sessions"].append({"timestamp": timestamp, "id": session_id})
+    with open(log_file, "w") as f:
+        json.dump(log, f, indent=4)
 
 def format_conversation(log):
+    """Format recent prompts, responses, and session history."""
     prompts = log["prompts"]
     responses = log["responses"]
+    sessions = log["sessions"]
+    # Take last 5 entries for brevity
     recent_prompts = prompts[-5:] if len(prompts) > 5 else prompts
     recent_responses = responses[-5:] if len(responses) > 5 else responses
-    summary = "* Conversation: {} prompts, {} responses\n".format(len(prompts), len(responses))
+    recent_sessions = sessions[-5:] if len(sessions) > 5 else sessions
+    
+    summary = "* Conversation: {} prompts, {} responses, {} sessions\n".format(
+        len(prompts), len(responses), len(sessions)
+    )
+    summary += "Recent Sessions:\n"
+    for s in recent_sessions:
+        summary += "* {}: Session {}\n".format(s["timestamp"], s["id"])
     summary += "Recent Prompts:\n"
     for p in recent_prompts:
         summary += "* {}: {}\n".format(p["timestamp"], p["text"])
@@ -52,14 +82,14 @@ def load_config(config_file="bootstrap_config.json"):
             "Conversation logging in logs/conversations/conversation_2025-03-11-1.json captures prompts and responses.",
             "Fixed 'assigned'/'completed' bug in tests/test_seclorum.py (status now syncs via load_tasks).",
             "Added worker_log.txt to worker.py for enhanced logging.",
-            "Enabled multi-session spawning in master.py with active_sessions tracking."
+            "Enabled multi-session spawning in master.py with active_sessions tracking.",
+            "Added cross-session memory to bootstrap.py for conversation persistence."
         ],
         "next_steps": [
-            "Add cross-session memory. Embed agent and user conversations in the background. Store all conversations.",
             "Refine and add UI elements:\n    1. The user text entry box should resize vertically upwards as new lines or text are added.\n    2. Since we’re developing a graph of agents to work on projects, I’d also like a Gantt chart display that might itself have tabs for each project. This display can either be in a third panel on the chat screen or as a tab in the Agent Output panel (the agents panel would then be renamed to Agents). I’m leaning towards a third panel.",
             "Improve bootstrapping:\n    1. Reduce the number of edits on bootstrap.py by storing sections in JSON. Recent prompts and responses need to be more fleshed out.\n    2. bootstrap.py should inform the new agent to immediately perform a commit before changing any file. The commit should mention that a handoff has occurred.\n    3. The bootstrapping process takes several prompts or actions (since prompts can be edited) from the user, so we’ll need to add a --preamble option:\n        1. Preamble: Our current short introduction, mentioning that the next prompt (or edit) will contain the rest of the bootstrap. Example: python bootstrap.py --preamble \"Hello, fresh Grok instance! You’re picking up the Seclorum project, a self-improving development agent system, from Chat <previous session id>. I’ll brief you in the next prompt.\"\n        2. The bootstrap proper; Example: python bootstrap.py --new-session <session id recovered from the previous step>"
         ],
-        "tasks": ["Add memory. Upgrade bootstrapping. Tidy up UI and app, and enhance features."],
+        "tasks": ["Upgrade bootstrapping. Tidy up UI and app, and enhance features."],
         "repo_structure": "Run tree -I \"__pycache__|*.pyc|*.log|logs|.git|.DS_Store|*.pid\" in the repo root to see the current structure:\n<insert tree output here>",
         "instructions": [
             "For file contents, use utils/copycb.py to request them from the user instead of hypothesizing (e.g., python utils/copycb.py seclorum/agents/master.py). Don't assume anything if overwriting files, but it's ok to assume or hypothesise if calling unknown files.",
@@ -84,29 +114,22 @@ def generate_prompt(previous_session_id, new_session_id, preamble_only=False):
     current_date = datetime.now().strftime("%B %d, %Y")
     previous_chat_url = "https://x.com/i/grok?conversation={}".format(previous_session_id)
     current_chat_url = "https://x.com/i/grok?conversation={}".format(new_session_id)
-    log_file = "logs/conversations/conversation_2025-03-11-1.json"  # TODO: Make dynamic
+    log_file = "logs/conversations/conversation_log.json"  # Updated to a persistent name
     log = load_conversation_log(log_file)
     conversation_summary = format_conversation(log)
     config = load_config()
 
+    # Record the new session in the log
+    save_conversation_log(log_file, session_id=new_session_id)
+
     if preamble_only:
-        return "Hello, fresh Grok instance! You’re picking up the Seclorum project, a self-improving development agent system, from Chat {}. I’ll brief you in the next prompt.".format(previous_chat_url)
+        preamble = "Hello, fresh Grok instance! You’re picking up the Seclorum project, a self-improving development agent system, from Chat {}. I’ll brief you in the next prompt.".format(previous_chat_url)
+        save_conversation_log(log_file, response=preamble)
+        return preamble
 
-    # Dynamically fetch repo structure
-    repo_structure = config["repo_structure"]
-    if "<insert tree output here>" in repo_structure:
-        try:
-            tree_output = subprocess.check_output(
-                ["tree", "-I", "__pycache__|*.pyc|*.log|logs|.git|.DS_Store|*.pid"],
-                text=True
-            )
-            repo_structure = repo_structure.replace("<insert tree output here>", tree_output.rstrip())
-        except subprocess.CalledProcessError:
-            repo_structure = repo_structure.replace("<insert tree output here>", "(tree output unavailable)")
-
-    # Build prompt as a raw string with .format()
+    # Build prompt with memory
     prompt = """Hello, fresh Grok instance! You’re taking over the Seclorum project (https://github.com/imars/seclorum), an agentic, self-improving development system (a graph of agents), from the chat at {0}, which is handing off to you due to slowing responses—likely caused by context size limits in Grok 3 Beta.
-You are the chat at {1}, started on {2}. Please review the following state for important instructions and helpful insights. Here’s the state:
+You are the chat at {1}, started on {2}. I’ve got memory now—check out the conversation history below! Please review the following state for important instructions and helpful insights. Here’s the state:
 
 Project Overview:
 * Goal: Build a 'graph of agents' with a MasterNode spawning and tracking worker sessions via a Flask UI, committing changes to Git.
@@ -116,22 +139,25 @@ Project Overview:
 Progress:
 * {4}
 
+Conversation History (Memory):
+{5}
+
 Current Bug:
 * There are no known bugs at the moment.
 
 Next Steps:
-{5}
+{6}
 Tasks:
-* {6}
-
-Repo Structure:
 * {7}
 
-Instructions:
+Repo Structure:
 * {8}
 
-Insights and surprises
+Instructions:
 * {9}
+
+Insights and Surprises:
+* {10}
 
 Chat Chain:
 * Previous: {0}
@@ -142,17 +168,20 @@ Use the repo, log file, and Chat {0} context to resume. Chain future chats by re
         current_chat_url,
         current_date,
         config["key_files"],
-        "* ".join(config["progress"] + [conversation_summary]),
+        "* ".join(config["progress"]),
+        conversation_summary,
         "".join(["{}. {}\n".format(i + 1, step) for i, step in enumerate(config["next_steps"])]),
         "* ".join(config["tasks"]),
         repo_structure,
         "* ".join(config["instructions"]),
         "* ".join(config["insights"])
     )
+    # Save the prompt as a response in the log
+    save_conversation_log(log_file, response=prompt)
     return prompt
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Generate a bootstrap prompt for Seclorum handoff.")
+    parser = argparse.ArgumentParser(description="Generate a bootstrap prompt for Seclorum handoff with memory.")
     parser.add_argument("--previous-session", type=str, default="1900257132001517690", help="Previous chat session ID")
     parser.add_argument("--new-session", type=str, default="1900718979536052318", help="New chat session ID")
     parser.add_argument("--preamble", action="store_true", help="Output preamble only")
