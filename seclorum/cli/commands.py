@@ -4,10 +4,13 @@ import logging
 import signal
 import redis
 from seclorum.agents.master import MasterNode
-from seclorum.web.app import run_app
+from seclorum.web.app import run_app, app as flask_app
 import subprocess
+from flask_socketio import SocketIO
+import time
 
-logging.basicConfig(filename='log.txt', level=logging.INFO)
+# Centralized logging
+logging.basicConfig(filename='app.log', level=logging.INFO, format='%(asctime)s - %(message)s')
 logger = logging.getLogger("CLI")
 
 def main():
@@ -18,7 +21,6 @@ def main():
     if len(sys.argv) > 1:
         if sys.argv[1] == "start":
             logger.info("Starting MasterNode, Flask app, and Redis via CLI")
-            # Start Redis if not running
             try:
                 subprocess.run(["redis-cli", "ping"], check=True, capture_output=True)
                 logger.info("Redis already running")
@@ -27,7 +29,7 @@ def main():
                 with open(redis_pid_file, 'w') as f:
                     f.write(str(redis_process.pid))
                 logger.info("Started Redis with PID %s", redis_process.pid)
-                time.sleep(1)  # Give Redis time to start
+                time.sleep(1)
             try:
                 master.start()
                 logger.info("MasterNode started with PID %s", os.getpid())
@@ -106,7 +108,18 @@ def main():
                 else:
                     open(log_file, 'a').close()
                     logger.info(f"Created and cleared {log_file}")
-            logger.info("Reset complete (run 'localStorage.clear()' in browser console)")
+            # Clear browser local storage with temporary Flask instance
+            try:
+                socketio = SocketIO(flask_app)
+                with flask_app.app_context():
+                    socketio.run(flask_app, host="127.0.0.1", port=5000, use_reloader=False, debug=False, allow_unsafe_werkzeug=True)
+                    socketio.emit("reset_storage", namespace='/')
+                    logger.info("Sent reset_storage event to clear browser local storage")
+                    time.sleep(1)
+                    socketio.stop()
+            except Exception as e:
+                logger.error(f"Failed to emit reset_storage event: {str(e)}. Ensure browser tab is open or clear manually: localStorage.clear()")
+            logger.info("Reset complete")
         else:
             logger.error(f"Unknown command: {sys.argv[1]}")
     else:

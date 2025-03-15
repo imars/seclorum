@@ -15,26 +15,27 @@ class MasterNode(RedisMixin, LifecycleMixin):
         RedisMixin.__init__(self, name="MasterNode")
         LifecycleMixin.__init__(self, name="MasterNode", pid_file="seclorum_master.pid")
         self.session_id = session_id
-        self.memory = ConversationMemory(session_id)  # Initialize memory
+        self.memory = ConversationMemory(session_id)
         self.redis_available = False
         self.tasks = self.load_tasks() or {}
-        self.socketio = SocketIO()
+        self.socketio = SocketIO()  # Placeholder, initialized by app.py
         self.active_workers = {}
-        logging.basicConfig(filename='app.log', level=logging.DEBUG)
         self.logger = logging.getLogger("MasterNode")
         self.running = False
         self.logger.info(f"MasterNode initialized with session {session_id}")
-        self.memory.save(session_id=session_id)  # Log session start
+        self.memory.save(session_id=session_id)
 
     def start(self):
         LifecycleMixin.start(self)
         try:
             self.connect_redis()
             self.redis_available = True
+            self.logger.info("Redis connected successfully")
         except Exception as e:
             self.logger.error(f"Redis unavailable at startup: {str(e)}. Running without Redis.")
             self.redis_available = False
         self.running = True
+        # Delay polling until socketio is initialized
         threading.Thread(target=self.poll_tasks, daemon=True).start()
         self.check_stuck_tasks()
         self.logger.info("MasterNode started and polling tasks")
@@ -62,8 +63,9 @@ class MasterNode(RedisMixin, LifecycleMixin):
         self.tasks[task_id] = {"task_id": task_id, "description": description, "status": "assigned", "result": ""}
         self.save_tasks()
         self.logger.info(f"Task {task_id} assigned to WebUI: {description}")
-        self.memory.save(prompt=f"Task {task_id}: {description}")  # Log task as prompt
-        self.socketio.emit("task_update", self.tasks[task_id], namespace='/')
+        self.memory.save(prompt=f"Task {task_id}: {description}")
+        if self.socketio.server:
+            self.socketio.emit("task_update", self.tasks[task_id], namespace='/')
         worker_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "worker.py"))
         if not os.path.exists(worker_path):
             self.logger.error(f"Worker script not found at {worker_path}")
@@ -90,16 +92,35 @@ class MasterNode(RedisMixin, LifecycleMixin):
                 self.logger.error(f"Worker stderr: {stderr}")
                 self.memory.save(response=f"Worker for Task {task_id} failed: {stderr or stdout}")
                 del self.active_workers[task_id]
+                self.tasks[task_id]["status"] = "failed"
+                self.tasks[task_id]["result"] = stderr or stdout or "Worker crashed"
+                self.save_tasks()
         except subprocess.TimeoutExpired:
             self.logger.info(f"Worker for Task {task_id} still running after 10s")
             self.memory.save(response=f"Worker for Task {task_id} still running after 10s")
         except Exception as e:
             self.logger.error(f"Failed to spawn worker for Task {task_id}: {str(e)}")
             self.memory.save(response=f"Failed to spawn worker for Task {task_id}: {str(e)}")
+            self.tasks[task_id]["status"] = "failed"
+            self.tasks[task_id]["result"] = str(e)
+            self.save_tasks()
 
     def poll_tasks(self):
         while self.running:
+            if not self.socketio.server:  # Wait for Flask to initialize socketio
+                time.sleep(1)
+                continue
             if not self.redis_available:
+                for task_id, pid in list(self.active_workers.items()):
+                    try:
+                        os.kill(pid, 0)
+                    except ProcessLookupError:
+                        self.logger.info(f"Worker for Task {task_id} (PID: {pid}) completed or crashed")
+                        self.memory.save(response=f"Task {task_id} assumed completed (no Redis)")
+                        self.tasks[task_id]["status"] = "completed"
+                        self.tasks[task_id]["result"] = "Completed (no Redis confirmation)"
+                        del self.active_workers[task_id]
+                        self.socketio.emit("task_update", self.tasks[task_id], namespace='/')
                 time.sleep(1)
                 continue
             redis_tasks = self.retrieve_data("tasks") or {}
@@ -126,7 +147,8 @@ class MasterNode(RedisMixin, LifecycleMixin):
                     self.tasks[task_id] = task
                     self.logger.warning(f"Marked Task {task_id} as failed: Worker never started (Redis unavailable)")
                     self.memory.save(response=f"Task {task_id} failed: Worker never started (Redis unavailable)")
-                    self.socketio.emit("task_update", task, namespace='/')
+                    if self.socketio.server:
+                        self.socketio.emit("task_update", task, namespace='/')
             return
         redis_tasks = self.retrieve_data("tasks") or {}
         self.logger.debug(f"Checking stuck tasks. Current tasks: {self.tasks}, Redis tasks: {redis_tasks}")
@@ -138,13 +160,14 @@ class MasterNode(RedisMixin, LifecycleMixin):
                 self.logger.warning(f"Marked Task {task_id} as failed: Worker never started")
                 self.memory.save(response=f"Task {task_id} failed: Worker never started")
                 self.save_tasks()
-                self.socketio.emit("task_update", task, namespace='/')
+                if self.socketio.server:
+                    self.socketio.emit("task_update", task, namespace='/')
 
     def save_tasks(self):
         if self.redis_available:
             self.store_data("tasks", self.tasks)
         else:
-            self.logger.warning("Redis unavailable, tasks not saved")
+            self.logger.warning("Redis unavailable, tasks saved in memory only")
 
     def load_tasks(self):
         if self.redis_available:
