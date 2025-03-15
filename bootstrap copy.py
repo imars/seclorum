@@ -75,8 +75,8 @@ def load_config(config_file="bootstrap_config.json"):
 
 def generate_prompt(previous_session_id, new_session_id, preamble_only=False):
     current_date = datetime.now().strftime("%B %d, %Y")
-    previous_chat_url = "https://x.com/i/grok?conversation={}".format(previous_session_id)
-    current_chat_url = "https://x.com/i/grok?conversation={}".format(new_session_id)
+    previous_chat_url = "https://x.com/i/grok?conversation={}".format\(previous_session_id\)
+    current_chat_url = "https://x.com/i/grok?conversation={}".format\(new_session_id\)
     log_file = "logs/conversations/conversation_2025-03-11-1.json"  # TODO: Make dynamic
     log = load_conversation_log(log_file)
     conversation_summary = format_conversation(log)
