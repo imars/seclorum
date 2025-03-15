@@ -1,38 +1,50 @@
-import click
-from seclorum.core.filesystem import FileSystemManager
-from seclorum.core.checkpoint import CheckpointManager
-from seclorum.core.bootstrap import Bootstrap
+import sys
+import os
+import logging
+import signal
+from seclorum.agents.master import MasterNode
+from seclorum.web.app import run_app
 
-@click.group()
+logging.basicConfig(filename='log.txt', level=logging.INFO)
+logger = logging.getLogger("CLI")
+
 def main():
-    pass
+    master = MasterNode()
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "start":
+            logger.info("Starting MasterNode via CLI")
+            try:
+                master.start()
+                logger.info("MasterNode started with PID %s", os.getpid())
+                run_app()  # Start Flask directly
+            except Exception as e:
+                logger.error(f"MasterNode start or Flask run failed: {str(e)}")
+                raise
+        elif sys.argv[1] == "stop":
+            logger.info("Stopping MasterNode via CLI")
+            if master.is_running():
+                try:
+                    master.stop()
+                    logger.info("MasterNode stopped via CLI")
+                except Exception as e:
+                    logger.error(f"Stop failed: {str(e)}")
+                    pid_file = "seclorum_master.pid"
+                    if os.path.exists(pid_file):
+                        with open(pid_file, 'r') as f:
+                            pid = int(f.read().strip())
+                        os.kill(pid, signal.SIGTERM)
+                        os.remove(pid_file)
+                        logger.info("Force-terminated MasterNode")
+            else:
+                logger.info("MasterNode is not running")
+        else:
+            logger.error(f"Unknown command: {sys.argv[1]}")
+    else:
+        logger.error("No command provided. Use 'start' or 'stop'")
 
-@main.command()
-@click.argument("path", default="./project")
-@click.argument("filename")
-@click.argument("content")
-def save(path, filename, content):
-    fs = FileSystemManager(path)
-    fs.save_file(filename, content)
-    click.echo(f"Saved {filename}")
-
-@main.command()
-@click.argument("path", default="./project")
-@click.argument("chat_url")
-@click.option("--chat-messages", default="[]", help="JSON list of chat messages")
-@click.option("--edited-files", default="[]", help="JSON list of edited files")
-def checkpoint(path, chat_url, chat_messages, edited_files):
-    import json
-    cp_manager = CheckpointManager(path)
-    messages = json.loads(chat_messages)
-    files = json.loads(edited_files)
-    hash = cp_manager.create_checkpoint(chat_url, messages, files)
-    click.echo(f"Checkpoint created with hash: {hash}")
-
-@main.command()
-@click.argument("path", default="./project")
-def bootstrap(path):
-    bootstrap = Bootstrap(path)
-    prompt = bootstrap.generate_prompt()
-    click.echo("Bootstrap Prompt:\n")
-    click.echo(prompt)
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        logger.info("Received Ctrl+C, stopping")
+        main()  # Retry stop on Ctrl+C

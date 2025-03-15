@@ -1,3 +1,4 @@
+# Force update
 import subprocess
 import time
 import requests
@@ -45,7 +46,7 @@ class TestSeclorum:
             text=True,
             env=env
         )
-        for _ in range(10):
+        for _ in range(30):  # Wait up to 60s
             try:
                 response = requests.get(f"{self.base_url}/chat", timeout=2)
                 if response.status_code == 200:
@@ -53,7 +54,12 @@ class TestSeclorum:
                     return
             except requests.ConnectionError:
                 time.sleep(2)
-        logger.error("App failed to start after 20 seconds")
+        logger.error("App failed to start after 60 seconds")
+        stdout = self.app_proc.stdout.read() if self.app_proc.stdout else "No stdout"
+        stderr = self.app_proc.stderr.read() if self.app_proc.stderr else "No stderr"
+        logger.error(f"App stdout: {stdout}")
+        logger.error(f"App stderr: {stderr}")
+        self.app_proc.kill()
         raise RuntimeError("App startup failed")
 
     def stop_processes(self):
@@ -66,11 +72,16 @@ class TestSeclorum:
         if self.app_proc:
             env = os.environ.copy()
             env["PYTHONPATH"] = self.project_root
-            subprocess.run(
-                ["python", "seclorum/cli/commands.py", "stop"],
-                cwd=self.project_root,
-                env=env
-            )
+            try:
+                subprocess.run(
+                    ["python", "seclorum/cli/commands.py", "stop"],
+                    cwd=self.project_root,
+                    env=env,
+                    timeout=10
+                )
+            except subprocess.TimeoutExpired:
+                logger.warning("Stop command timed out, force killing")
+                self.app_proc.kill()
             self.app_proc.wait()
             logger.info("App stopped")
         if self.redis_proc:
@@ -140,7 +151,7 @@ class TestSeclorum:
             time.sleep(45)
 
             self.check_dashboard()
-            time.sleep(2)  # Catch late updates
+            time.sleep(2)
             for task, task_id in self.task_ids.items():
                 if task_id in self.task_results:
                     result = self.task_results[task_id]

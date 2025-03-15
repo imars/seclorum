@@ -2,9 +2,11 @@ import sys
 import time
 import redis
 import logging
+import os
 from seclorum.agents.redis_mixin import RedisMixin
 
-logging.basicConfig(filename='worker_log.txt', level=logging.INFO)
+log_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'worker_log.txt'))
+logging.basicConfig(filename=log_path, level=logging.INFO)
 logger = logging.getLogger("Worker")
 
 class Worker(RedisMixin):
@@ -18,7 +20,7 @@ class Worker(RedisMixin):
     def run(self):
         logger.info(f"Worker started for Task {self.task_id}: {self.description}")
         if "Old task to fail" in self.description:
-            time.sleep(2)  # Shorten to beat check_stuck_tasks
+            time.sleep(1)
             result = "Intentional failure for testing"
             status = "failed"
         else:
@@ -48,6 +50,9 @@ class Worker(RedisMixin):
         self.disconnect_redis()
 
 if __name__ == "__main__":
+    if len(sys.argv) < 4:
+        logger.error("Insufficient arguments: task_id, description, source required")
+        sys.exit(1)
     task_id, description, source = sys.argv[1], sys.argv[2], sys.argv[3]
     worker = Worker(task_id, description, source)
     worker.run()
