@@ -13,24 +13,34 @@ logger = logging.getLogger("CLI")
 def main():
     master = MasterNode()
     flask_pid_file = "seclorum_flask.pid"
+    redis_pid_file = "seclorum_redis.pid"
     
     if len(sys.argv) > 1:
         if sys.argv[1] == "start":
-            logger.info("Starting MasterNode and Flask app via CLI")
+            logger.info("Starting MasterNode, Flask app, and Redis via CLI")
+            # Start Redis if not running
+            try:
+                subprocess.run(["redis-cli", "ping"], check=True, capture_output=True)
+                logger.info("Redis already running")
+            except subprocess.CalledProcessError:
+                redis_process = subprocess.Popen(["redis-server"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                with open(redis_pid_file, 'w') as f:
+                    f.write(str(redis_process.pid))
+                logger.info("Started Redis with PID %s", redis_process.pid)
+                time.sleep(1)  # Give Redis time to start
             try:
                 master.start()
                 logger.info("MasterNode started with PID %s", os.getpid())
-                # Run Flask in a subprocess and store PID
                 flask_process = subprocess.Popen([sys.executable, "seclorum/web/app.py"])
                 with open(flask_pid_file, 'w') as f:
                     f.write(str(flask_process.pid))
                 logger.info("Flask app started with PID %s", flask_process.pid)
-                flask_process.wait()  # Keep CLI running until Flask exits
+                flask_process.wait()
             except Exception as e:
                 logger.error(f"MasterNode start or Flask run failed: {str(e)}")
                 raise
         elif sys.argv[1] == "stop":
-            logger.info("Stopping MasterNode and Flask app via CLI")
+            logger.info("Stopping MasterNode, Flask app, and Redis via CLI")
             if master.is_running():
                 try:
                     master.stop()
@@ -46,7 +56,6 @@ def main():
                         logger.info("Force-terminated MasterNode")
             else:
                 logger.info("MasterNode is not running")
-            # Stop Flask app
             if os.path.exists(flask_pid_file):
                 try:
                     with open(flask_pid_file, 'r') as f:
@@ -59,8 +68,21 @@ def main():
                     os.remove(flask_pid_file)
                 except Exception as e:
                     logger.error(f"Failed to stop Flask app: {str(e)}")
+            if os.path.exists(redis_pid_file):
+                try:
+                    with open(redis_pid_file, 'r') as f:
+                        redis_pid = int(f.read().strip())
+                    os.kill(redis_pid, signal.SIGTERM)
+                    os.remove(redis_pid_file)
+                    logger.info("Redis stopped with PID %s", redis_pid)
+                except ProcessLookupError:
+                    logger.info("Redis already stopped")
+                    os.remove(redis_pid_file)
+                except Exception as e:
+                    logger.error(f"Failed to stop Redis: {str(e)}")
             else:
-                logger.info("No Flask PID file found; app may not be running")
+                logger.info("No Redis PID file found; attempting shutdown via redis-cli")
+                subprocess.run(["redis-cli", "shutdown"], check=False)
         elif sys.argv[1] == "reset":
             logger.info("Resetting Seclorum state")
             if master.is_running():
@@ -72,7 +94,7 @@ def main():
                 logger.info("Redis cleared")
             except Exception as e:
                 logger.error(f"Failed to clear Redis: {str(e)}")
-            for pid_file in ["seclorum_master.pid", flask_pid_file]:
+            for pid_file in ["seclorum_master.pid", flask_pid_file, redis_pid_file]:
                 if os.path.exists(pid_file):
                     os.remove(pid_file)
                     logger.info(f"PID file {pid_file} removed")
