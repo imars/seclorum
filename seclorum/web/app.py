@@ -1,7 +1,7 @@
 import os
 from flask import Flask
 from flask_socketio import SocketIO
-from seclorum.utils import logger, get_master_node, quick_llm, deepseek_r1_8b, assess_complexity, get_agent_response
+from seclorum.web.utils import logger, get_master_node, quick_llm, deepseek_r1_8b, assess_complexity, get_agent_response
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "secret_key_for_development")
