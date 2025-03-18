@@ -875,3 +875,664 @@ DEBUG:chromadb.config:Starting component PersistentLocalHnswSegment
 2025-03-15 18:20:22,455 - Redis stopped with PID 17205
 2025-03-15 18:20:22,455 - Redis stopped with PID 17205
 DEBUG:urllib3.connectionpool:https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+2025-03-16 02:26:39,089 - Starting Flask app
+2025-03-16 02:26:51,269 - Handling /chat request
+2025-03-16 02:26:51,270 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-16 02:26:53,979 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-16 02:26:56,865 - MasterNode initialized with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-16 02:26:56,870 - Redis unavailable at startup: Error 61 connecting to localhost:6379. Connection refused.. Running without Redis.
+2025-03-16 02:26:56,870 - MasterNode started and polling tasks
+2025-03-16 02:26:56,871 - MasterNode started, emitting debug
+2025-03-16 02:26:56,872 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-16 02:28:30,352 - Handling /chat request
+2025-03-16 02:28:30,359 - Received POST input: Write a very long haiku in mode task
+2025-03-16 02:28:30,359 - Processing task 1742092110359: Write a very long haiku
+2025-03-16 02:28:30,359 - Task 1742092110359 assigned to WebUI: Write a very long haiku
+2025-03-16 02:28:30,443 - Spawned session for WebUI on Task 1742092110359 (PID: 26276)
+2025-03-16 02:28:40,448 - Worker for Task 1742092110359 still running after 10s
+2025-03-16 02:28:48,834 - Handling /chat request
+2025-03-16 02:28:48,835 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-16 02:29:12,851 - Handling /chat request
+2025-03-16 02:29:12,854 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-16 02:29:35,734 - Handling /chat request
+2025-03-16 02:29:35,735 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-16 02:30:50,962 - Handling /chat request
+2025-03-16 02:30:50,962 - Received POST input: Write a haiku in mode task
+2025-03-16 02:30:50,963 - Processing task 1742092250963: Write a haiku
+2025-03-16 02:30:50,963 - Task 1742092250963 assigned to WebUI: Write a haiku
+2025-03-16 02:30:51,097 - Spawned session for WebUI on Task 1742092250963 (PID: 26318)
+2025-03-16 02:30:51,098 - Worker for Task 1742092110359 (PID: 26276) completed or crashed
+2025-03-16 02:31:01,098 - Worker for Task 1742092250963 still running after 10s
+2025-03-16 02:31:11,992 - Handling /chat request
+2025-03-16 02:31:11,993 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-16 02:31:54,585 - Handling /chat request
+2025-03-16 02:31:54,588 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-16 02:42:26,272 - Handling /chat request
+2025-03-16 02:42:26,273 - Received POST input: Tell a short joke in mode task
+2025-03-16 02:42:26,273 - Processing task 1742092946273: Tell a short joke
+2025-03-16 02:42:26,273 - Task 1742092946273 assigned to WebUI: Tell a short joke
+2025-03-16 02:42:26,299 - Spawned session for WebUI on Task 1742092946273 (PID: 26897)
+2025-03-16 02:42:36,305 - Worker for Task 1742092946273 still running after 10s
+2025-03-16 02:42:38,405 - Handling /chat request
+2025-03-16 02:42:38,405 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-16 02:46:16,652 - Handling /chat request
+2025-03-16 02:46:16,653 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+DEBUG:urllib3.util.retry:Converted retries value: 2 -> Retry(total=2, connect=None, read=None, redirect=None, status=None)
+INFO:chromadb.telemetry.product.posthog:Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+DEBUG:chromadb.config:Starting component System
+DEBUG:chromadb.config:Starting component Posthog
+DEBUG:chromadb.config:Starting component OpenTelemetryClient
+DEBUG:chromadb.config:Starting component SqliteDB
+DEBUG:chromadb.config:Starting component SimpleQuotaEnforcer
+DEBUG:chromadb.config:Starting component SimpleRateLimitEnforcer
+DEBUG:chromadb.config:Starting component LocalSegmentManager
+DEBUG:chromadb.config:Starting component LocalExecutor
+DEBUG:chromadb.config:Starting component SegmentAPI
+DEBUG:chromadb.api.segment:Collection conversations already exists, returning existing collection.
+INFO:sentence_transformers.SentenceTransformer:Use pytorch device_name: cpu
+INFO:sentence_transformers.SentenceTransformer:Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): us.i.posthog.com:443
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6771
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6771
+2025-03-16 02:55:38,578 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+2025-03-16 02:55:38,578 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+DEBUG:urllib3.connectionpool:https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+DEBUG:chromadb.config:Starting component PersistentLocalHnswSegment
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+2025-03-16 02:55:40,130 - MasterNode initialized with session default_session
+2025-03-16 02:55:40,130 - MasterNode initialized with session default_session
+2025-03-16 02:55:40,132 - Stopping MasterNode, Flask app, and Redis via CLI
+2025-03-16 02:55:40,132 - Stopping MasterNode, Flask app, and Redis via CLI
+WARNING:MasterNode:MasterNode is not running
+2025-03-16 02:55:40,132 - MasterNode stopped
+2025-03-16 02:55:40,132 - MasterNode stopped
+2025-03-16 02:55:40,133 - MasterNode stopped via CLI
+2025-03-16 02:55:40,133 - MasterNode stopped via CLI
+2025-03-16 02:55:40,133 - No Redis PID file found; attempting shutdown via redis-cli
+2025-03-16 02:55:40,133 - No Redis PID file found; attempting shutdown via redis-cli
+DEBUG:urllib3.connectionpool:https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+2025-03-16 03:02:20,086 - Starting Flask app
+2025-03-16 03:02:44,379 - Handling /chat request
+2025-03-16 03:02:44,379 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-16 03:02:48,442 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-16 03:02:48,464 - MasterNode initialized with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-16 03:02:48,468 - Redis unavailable at startup: Error 61 connecting to localhost:6379. Connection refused.. Running without Redis.
+2025-03-16 03:02:48,469 - MasterNode started and polling tasks
+2025-03-16 03:02:48,469 - MasterNode started, emitting debug
+2025-03-16 03:02:48,470 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-16 04:33:32,395 - Handling /chat request
+2025-03-16 04:33:32,402 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-16 18:16:50,488 - Handling /chat request
+2025-03-16 18:16:50,490 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-16 18:17:14,145 - Handling /chat request
+2025-03-16 18:17:14,149 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-16 18:20:26,400 - Handling /chat request
+2025-03-16 18:20:26,401 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-16 18:20:42,315 - Handling /chat request
+2025-03-16 18:20:42,337 - Received POST input: Tell a joke in mode task
+2025-03-16 18:20:42,337 - Processing task 1742149242337: Tell a joke
+2025-03-16 18:20:42,338 - Task 1742149242337 assigned to WebUI: Tell a joke
+2025-03-16 18:20:42,548 - Spawned session for WebUI on Task 1742149242337 (PID: 50632)
+2025-03-16 18:20:48,008 - Handling /chat request
+2025-03-16 18:20:48,009 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-16 18:20:52,026 - Handling /chat request
+2025-03-16 18:20:52,027 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-16 18:20:52,550 - Worker for Task 1742149242337 still running after 10s
+DEBUG:urllib3.util.retry:Converted retries value: 2 -> Retry(total=2, connect=None, read=None, redirect=None, status=None)
+INFO:chromadb.telemetry.product.posthog:Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+DEBUG:chromadb.config:Starting component System
+DEBUG:chromadb.config:Starting component Posthog
+DEBUG:chromadb.config:Starting component OpenTelemetryClient
+DEBUG:chromadb.config:Starting component SqliteDB
+DEBUG:chromadb.config:Starting component SimpleQuotaEnforcer
+DEBUG:chromadb.config:Starting component SimpleRateLimitEnforcer
+DEBUG:chromadb.config:Starting component LocalSegmentManager
+DEBUG:chromadb.config:Starting component LocalExecutor
+DEBUG:chromadb.config:Starting component SegmentAPI
+DEBUG:chromadb.api.segment:Collection conversations already exists, returning existing collection.
+INFO:sentence_transformers.SentenceTransformer:Use pytorch device_name: cpu
+INFO:sentence_transformers.SentenceTransformer:Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (2): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (3): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (4): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (5): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (6): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (7): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (8): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (9): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (10): huggingface.co:443
+2025-03-16 19:18:03,143 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+2025-03-16 19:18:03,143 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=1, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12b807590>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (2): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=0, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12b610a50>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (3): us.i.posthog.com:443
+INFO:backoff:Backing off send_request(...) for 0.3s (requests.exceptions.ConnectionError: HTTPSConnectionPool(host='us.i.posthog.com', port=443): Max retries exceeded with url: /batch/ (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12b5fb890>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")))
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (4): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=1, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12bc00550>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (5): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=0, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12c1a1ad0>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (6): us.i.posthog.com:443
+INFO:backoff:Backing off send_request(...) for 0.5s (requests.exceptions.ConnectionError: HTTPSConnectionPool(host='us.i.posthog.com', port=443): Max retries exceeded with url: /batch/ (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12c1b38d0>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")))
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (7): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=1, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12c775010>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (8): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=0, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12cdd3190>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (9): us.i.posthog.com:443
+INFO:backoff:Backing off send_request(...) for 0.6s (requests.exceptions.ConnectionError: HTTPSConnectionPool(host='us.i.posthog.com', port=443): Max retries exceeded with url: /batch/ (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12cde0150>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")))
+DEBUG:chromadb.config:Starting component PersistentLocalHnswSegment
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+2025-03-16 19:18:04,479 - MasterNode initialized with session default_session
+2025-03-16 19:18:04,479 - MasterNode initialized with session default_session
+2025-03-16 19:18:04,480 - Stopping MasterNode, Flask app, and Redis via CLI
+2025-03-16 19:18:04,480 - Stopping MasterNode, Flask app, and Redis via CLI
+2025-03-16 19:18:04,480 - MasterNode is not running
+2025-03-16 19:18:04,480 - MasterNode is not running
+2025-03-16 19:18:04,480 - No Redis PID file found; attempting shutdown via redis-cli
+2025-03-16 19:18:04,480 - No Redis PID file found; attempting shutdown via redis-cli
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (10): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=1, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x1067517d0>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (11): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=0, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12c1f2510>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (12): us.i.posthog.com:443
+ERROR:backoff:Giving up send_request(...) after 4 tries (requests.exceptions.ConnectionError: HTTPSConnectionPool(host='us.i.posthog.com', port=443): Max retries exceeded with url: /batch/ (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12c440210>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")))
+DEBUG:urllib3.util.retry:Converted retries value: 2 -> Retry(total=2, connect=None, read=None, redirect=None, status=None)
+INFO:chromadb.telemetry.product.posthog:Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+DEBUG:chromadb.config:Starting component System
+DEBUG:chromadb.config:Starting component Posthog
+DEBUG:chromadb.config:Starting component OpenTelemetryClient
+DEBUG:chromadb.config:Starting component SqliteDB
+DEBUG:chromadb.config:Starting component SimpleQuotaEnforcer
+DEBUG:chromadb.config:Starting component SimpleRateLimitEnforcer
+DEBUG:chromadb.config:Starting component LocalSegmentManager
+DEBUG:chromadb.config:Starting component LocalExecutor
+DEBUG:chromadb.config:Starting component SegmentAPI
+DEBUG:chromadb.api.segment:Collection conversations already exists, returning existing collection.
+INFO:sentence_transformers.SentenceTransformer:Use pytorch device_name: cpu
+INFO:sentence_transformers.SentenceTransformer:Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (2): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (3): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (4): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (5): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (6): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (7): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (8): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (9): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (10): huggingface.co:443
+2025-03-16 19:18:49,602 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+2025-03-16 19:18:49,602 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+2025-03-16 19:18:49,618 - MasterNode initialized with session default_session
+2025-03-16 19:18:49,618 - MasterNode initialized with session default_session
+2025-03-16 19:18:49,619 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-16 19:18:49,619 - Starting MasterNode, Flask app, and Redis via CLI
+2025-03-16 19:18:49,647 - Started Redis with PID 83133
+2025-03-16 19:18:49,647 - Started Redis with PID 83133
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=1, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x130d66810>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (2): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=0, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x130d67410>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (3): us.i.posthog.com:443
+INFO:backoff:Backing off send_request(...) for 0.3s (requests.exceptions.ConnectionError: HTTPSConnectionPool(host='us.i.posthog.com', port=443): Max retries exceeded with url: /batch/ (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x130ce5410>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")))
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (4): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=1, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x130d7c0d0>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (5): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=0, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x130d7d990>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (6): us.i.posthog.com:443
+INFO:backoff:Backing off send_request(...) for 0.4s (requests.exceptions.ConnectionError: HTTPSConnectionPool(host='us.i.posthog.com', port=443): Max retries exceeded with url: /batch/ (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x130d7fe10>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")))
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (7): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=1, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x130d44ed0>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (8): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=0, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x130d45310>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (9): us.i.posthog.com:443
+INFO:backoff:Backing off send_request(...) for 2.6s (requests.exceptions.ConnectionError: HTTPSConnectionPool(host='us.i.posthog.com', port=443): Max retries exceeded with url: /batch/ (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x130d45ad0>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")))
+INFO:MasterNode:MasterNode started with PID 83128
+INFO:MasterNode:Connected to Redis
+2025-03-16 19:18:50,658 - Redis connected successfully
+2025-03-16 19:18:50,658 - Redis connected successfully
+DEBUG:MasterNode:Checking stuck tasks. Current tasks: {}, Redis tasks: {'1742054590639': {'task_id': '1742054590639', 'description': 'Write a haiku', 'status': 'failed', 'result': "'1742054590639'", 'created_at': 1742054594.408653}, '1742056407458': {'task_id': '1742056407458', 'description': 'Write a haiku', 'status': 'completed', 'result': 'Soft winds whisper low\nBlossoms fade in twilight’s glow\nTime drifts ever on', 'created_at': 1742056411.167286}, '1742057243012': {'task_id': '1742057243012', 'description': 'Write a haiku', 'status': 'completed', 'result': 'Soft winds whisper low\nBlossoms fade in twilight’s glow\nTime drifts ever on', 'created_at': 1742057246.702046}, '1742058889938': {'task_id': '1742058889938', 'description': 'Write a haiku', 'status': 'completed', 'result': 'Soft winds whisper low\nBlossoms fade in twilight’s glow\nTime drifts ever on', 'created_at': 1742058893.723943}, '1742058928684': {'task_id': '1742058928684', 'description': 'Write a haiku', 'status': 'completed', 'result': 'Soft winds whisper low\nBlossoms fade in twilight’s glow\nTime drifts ever on', 'created_at': 1742058932.411198}, '1742062382257': {'task_id': '1742062382257', 'description': 'Write a haiku', 'status': 'completed', 'result': 'Soft winds whisper low\nBlossoms fade in twilight’s glow\nTime drifts ever on', 'created_at': 1742062393.2610419}}
+2025-03-16 19:18:50,660 - MasterNode started and polling tasks
+2025-03-16 19:18:50,660 - MasterNode started and polling tasks
+2025-03-16 19:18:50,661 - MasterNode started with PID 83128
+2025-03-16 19:18:50,661 - MasterNode started with PID 83128
+2025-03-16 19:18:50,674 - Flask app started with PID 83134
+2025-03-16 19:18:50,674 - Flask app started with PID 83134
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (10): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=1, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x130ff5fd0>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (11): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=0, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x130ff6b10>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (12): us.i.posthog.com:443
+ERROR:backoff:Giving up send_request(...) after 4 tries (requests.exceptions.ConnectionError: HTTPSConnectionPool(host='us.i.posthog.com', port=443): Max retries exceeded with url: /batch/ (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x130ff7250>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")))
+2025-03-16 19:18:54,770 - Starting Flask app
+2025-03-16 19:19:00,427 - Handling /chat request
+2025-03-16 19:19:00,427 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-16 19:19:01,009 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-16 19:19:01,028 - MasterNode initialized with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-16 19:19:01,033 - Redis connected successfully
+2025-03-16 19:19:01,036 - Task 1742054590639 failed: '1742054590639'
+2025-03-16 19:19:01,036 - MasterNode started and polling tasks
+2025-03-16 19:19:01,038 - MasterNode started, emitting debug
+2025-03-16 19:19:01,040 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-16 19:19:08,397 - Handling /chat request
+2025-03-16 19:19:08,398 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+DEBUG:urllib3.util.retry:Converted retries value: 2 -> Retry(total=2, connect=None, read=None, redirect=None, status=None)
+INFO:chromadb.telemetry.product.posthog:Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+DEBUG:chromadb.config:Starting component System
+DEBUG:chromadb.config:Starting component Posthog
+DEBUG:chromadb.config:Starting component OpenTelemetryClient
+DEBUG:chromadb.config:Starting component SqliteDB
+DEBUG:chromadb.config:Starting component SimpleQuotaEnforcer
+DEBUG:chromadb.config:Starting component SimpleRateLimitEnforcer
+DEBUG:chromadb.config:Starting component LocalSegmentManager
+DEBUG:chromadb.config:Starting component LocalExecutor
+DEBUG:chromadb.config:Starting component SegmentAPI
+DEBUG:chromadb.api.segment:Collection conversations already exists, returning existing collection.
+INFO:sentence_transformers.SentenceTransformer:Use pytorch device_name: cpu
+INFO:sentence_transformers.SentenceTransformer:Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (2): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (3): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (4): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (5): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (6): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (7): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (8): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (9): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (10): huggingface.co:443
+2025-03-16 19:19:37,345 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+2025-03-16 19:19:37,345 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=1, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x1296483d0>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (2): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=0, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12960af50>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (3): us.i.posthog.com:443
+INFO:backoff:Backing off send_request(...) for 0.8s (requests.exceptions.ConnectionError: HTTPSConnectionPool(host='us.i.posthog.com', port=443): Max retries exceeded with url: /batch/ (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x129609c10>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")))
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (4): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=1, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12abc2c10>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (5): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=0, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12ae3eb10>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (6): us.i.posthog.com:443
+INFO:backoff:Backing off send_request(...) for 0.1s (requests.exceptions.ConnectionError: HTTPSConnectionPool(host='us.i.posthog.com', port=443): Max retries exceeded with url: /batch/ (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12ae44890>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")))
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (7): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=1, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12afb5210>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (8): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=0, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12afb74d0>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (9): us.i.posthog.com:443
+INFO:backoff:Backing off send_request(...) for 2.2s (requests.exceptions.ConnectionError: HTTPSConnectionPool(host='us.i.posthog.com', port=443): Max retries exceeded with url: /batch/ (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12afd9c90>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")))
+DEBUG:chromadb.config:Starting component PersistentLocalHnswSegment
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+2025-03-16 19:19:38,731 - MasterNode initialized with session default_session
+2025-03-16 19:19:38,731 - MasterNode initialized with session default_session
+2025-03-16 19:19:38,732 - Stopping MasterNode, Flask app, and Redis via CLI
+2025-03-16 19:19:38,732 - Stopping MasterNode, Flask app, and Redis via CLI
+WARNING:MasterNode:MasterNode is not running
+2025-03-16 19:19:38,732 - MasterNode stopped
+2025-03-16 19:19:38,732 - MasterNode stopped
+2025-03-16 19:19:38,733 - MasterNode stopped via CLI
+2025-03-16 19:19:38,733 - MasterNode stopped via CLI
+2025-03-16 19:19:38,733 - Flask app stopped with PID 83134
+2025-03-16 19:19:38,733 - Flask app stopped with PID 83134
+2025-03-16 19:19:38,734 - Redis stopped with PID 83133
+2025-03-16 19:19:38,734 - Redis stopped with PID 83133
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (10): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=1, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x12afb4c10>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (11): us.i.posthog.com:443
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/batch/'): Retry(total=0, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x10488e8d0>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")': /batch/
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (12): us.i.posthog.com:443
+ERROR:backoff:Giving up send_request(...) after 4 tries (requests.exceptions.ConnectionError: HTTPSConnectionPool(host='us.i.posthog.com', port=443): Max retries exceeded with url: /batch/ (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x126fb2a90>: Failed to resolve 'us.i.posthog.com' ([Errno 8] nodename nor servname provided, or not known)")))
+2025-03-17 00:05:13,132 - Starting Flask app
+2025-03-17 00:05:31,171 - Handling /chat request
+2025-03-17 00:05:31,171 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 00:05:34,159 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-17 00:05:35,821 - MasterNode initialized with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 00:05:35,831 - Redis unavailable at startup: Error 61 connecting to localhost:6379. Connection refused.. Running without Redis.
+2025-03-17 00:05:35,831 - MasterNode started and polling tasks
+2025-03-17 00:05:35,832 - MasterNode started, emitting debug
+2025-03-17 00:05:35,832 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-17 00:05:58,502 - Handling /chat request
+2025-03-17 00:05:58,502 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-17 00:06:01,588 - Handling /chat request
+2025-03-17 00:06:01,597 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+DEBUG:urllib3.util.retry:Converted retries value: 2 -> Retry(total=2, connect=None, read=None, redirect=None, status=None)
+INFO:chromadb.telemetry.product.posthog:Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+DEBUG:chromadb.config:Starting component System
+DEBUG:chromadb.config:Starting component Posthog
+DEBUG:chromadb.config:Starting component OpenTelemetryClient
+DEBUG:chromadb.config:Starting component SqliteDB
+DEBUG:chromadb.config:Starting component SimpleQuotaEnforcer
+DEBUG:chromadb.config:Starting component SimpleRateLimitEnforcer
+DEBUG:chromadb.config:Starting component LocalSegmentManager
+DEBUG:chromadb.config:Starting component LocalExecutor
+DEBUG:chromadb.config:Starting component SegmentAPI
+DEBUG:chromadb.api.segment:Collection conversations already exists, returning existing collection.
+INFO:sentence_transformers.SentenceTransformer:Use pytorch device_name: cpu
+INFO:sentence_transformers.SentenceTransformer:Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): us.i.posthog.com:443
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6770
+DEBUG:urllib3.connectionpool:https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6770
+2025-03-17 00:16:28,700 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+2025-03-17 00:16:28,700 - ConversationMemory initialized for session default_session at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_default_session.json
+DEBUG:urllib3.connectionpool:https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+DEBUG:chromadb.config:Starting component PersistentLocalHnswSegment
+WARNING:MasterNode:Redis unavailable, loading empty tasks
+2025-03-17 00:16:30,025 - MasterNode initialized with session default_session
+2025-03-17 00:16:30,025 - MasterNode initialized with session default_session
+2025-03-17 00:16:30,026 - Stopping MasterNode, Flask app, and Redis via CLI
+2025-03-17 00:16:30,026 - Stopping MasterNode, Flask app, and Redis via CLI
+WARNING:MasterNode:MasterNode is not running
+2025-03-17 00:16:30,027 - MasterNode stopped
+2025-03-17 00:16:30,027 - MasterNode stopped
+2025-03-17 00:16:30,028 - MasterNode stopped via CLI
+2025-03-17 00:16:30,028 - MasterNode stopped via CLI
+2025-03-17 00:16:30,028 - No Redis PID file found; attempting shutdown via redis-cli
+2025-03-17 00:16:30,028 - No Redis PID file found; attempting shutdown via redis-cli
+DEBUG:urllib3.connectionpool:https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+2025-03-17 00:17:46,640 - Starting Flask app
+2025-03-17 00:17:59,859 - Handling /chat request
+2025-03-17 00:17:59,859 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 00:18:04,224 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-17 00:18:05,580 - MasterNode initialized with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 00:18:05,583 - Redis unavailable at startup: Error 61 connecting to localhost:6379. Connection refused.. Running without Redis.
+2025-03-17 00:18:05,583 - MasterNode started and polling tasks
+2025-03-17 00:18:05,584 - MasterNode started, emitting debug
+2025-03-17 00:18:05,584 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-17 00:18:11,930 - Handling /chat request
+2025-03-17 00:18:11,932 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ...
+2025-03-17 01:26:30,491 - Starting Flask app
+2025-03-17 01:26:42,646 - Handling /chat request
+2025-03-17 01:32:36,856 - Starting Flask app
+2025-03-17 01:32:56,440 - Handling /chat request
+2025-03-17 01:32:56,440 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 01:33:03,600 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-17 01:33:05,259 - MasterNode initialized with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 01:33:05,264 - Redis unavailable at startup: Error 61 connecting to localhost:6379. Connection refused.. Running without Redis.
+2025-03-17 01:33:05,264 - MasterNode started and polling tasks
+2025-03-17 01:33:05,266 - MasterNode started, emitting debug
+2025-03-17 01:33:05,266 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 01:33:24,456 - Handling /chat request
+2025-03-17 01:33:24,469 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 01:34:49,491 - Handling /chat request
+2025-03-17 01:34:49,498 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 01:34:51,287 - Handling /chat request
+2025-03-17 01:34:51,290 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 01:34:52,038 - Handling /chat request
+2025-03-17 01:34:52,039 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 01:36:19,124 - Handling /chat request
+2025-03-17 01:36:19,127 - Received POST input: Hello, Seclorum! in mode agent
+2025-03-17 01:36:19,127 - Saving agent message: Hello, Seclorum!
+2025-03-17 01:36:19,127 - Assessing prompt: Hello, Seclorum!
+2025-03-17 01:36:19,161 - Complexity: simple, Memory context: Good morning, Seclorum! Hello! You said: Good morn...
+2025-03-17 01:36:19,161 - Escalating to DeepSeek-R1:8b
+2025-03-17 01:36:19,162 - Queue size after save: 2
+2025-03-17 01:36:19,162 - Starting new embedding thread
+2025-03-17 01:45:06,314 - Starting Flask app
+2025-03-17 01:45:15,631 - Handling /chat request
+2025-03-17 01:45:15,632 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 01:45:19,301 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-17 01:45:20,736 - MasterNode initialized with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 01:45:20,739 - Redis unavailable at startup: Error 61 connecting to localhost:6379. Connection refused.. Running without Redis.
+2025-03-17 01:45:20,740 - MasterNode started and polling tasks
+2025-03-17 01:45:20,741 - MasterNode started, emitting debug
+2025-03-17 01:45:20,742 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 01:46:31,415 - Handling /chat request
+2025-03-17 01:46:31,419 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 01:47:23,429 - Handling /chat request
+2025-03-17 01:47:23,430 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 01:47:26,447 - Handling /chat request
+2025-03-17 01:47:26,448 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 01:47:31,761 - Handling /chat request
+2025-03-17 01:47:31,762 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 01:47:37,048 - Handling /chat request
+2025-03-17 01:47:37,049 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 01:49:54,831 - Handling /chat request
+2025-03-17 01:49:54,831 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 01:50:52,467 - Handling /chat request
+2025-03-17 01:50:52,470 - Received POST input: Tell me a joke in mode agent
+2025-03-17 01:50:52,470 - Saving agent message: Tell me a joke
+2025-03-17 01:50:52,470 - Assessing prompt: Tell me a joke
+2025-03-17 01:50:52,542 - Complexity: simple, Memory context: No relevant history...
+2025-03-17 01:50:52,542 - Escalating to DeepSeek-R1:8b
+2025-03-17 01:50:52,551 - Queue size after save: 2
+2025-03-17 01:50:52,551 - Starting new embedding thread
+2025-03-17 01:50:52,551 - Starting embedding processing
+2025-03-17 01:50:52,551 - Emitted chat_update: {'prompt': 'Tell me a joke', 'response': 'DeepSeek-R1:8b here. Query: Tell me a joke. Memory: No relevant history'}
+2025-03-17 01:50:52,621 - Embedding queue processed
+2025-03-17 01:50:57,307 - Handling /chat request
+2025-03-17 01:50:57,307 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 01:51:07,878 - Handling /chat request
+2025-03-17 01:51:07,885 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 01:51:21,447 - Handling /chat request
+2025-03-17 01:51:21,448 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 01:52:16,885 - Handling /chat request
+2025-03-17 01:52:16,886 - Received POST input: 🤣 in mode user
+2025-03-17 01:52:16,886 - Saving agent message: 🤣
+2025-03-17 01:52:16,886 - Assessing prompt: 🤣
+2025-03-17 01:52:16,966 - Complexity: simple, Memory context: No relevant history...
+2025-03-17 01:52:16,967 - Escalating to DeepSeek-R1:8b
+2025-03-17 01:52:16,968 - Queue size after save: 1
+2025-03-17 01:52:16,968 - Starting new embedding thread
+2025-03-17 01:52:16,968 - Starting embedding processing
+2025-03-17 01:52:16,968 - Emitted chat_update: {'prompt': '🤣', 'response': 'DeepSeek-R1:8b here. Query: 🤣. Memory: No relevant history'}
+2025-03-17 01:52:17,038 - Embedding queue processed
+2025-03-17 01:53:15,083 - Handling /chat request
+2025-03-17 01:53:15,083 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 02:07:33,819 - Starting Flask app
+2025-03-17 02:07:49,996 - Handling /chat request
+2025-03-17 02:07:49,996 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 02:07:54,489 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-17 02:07:54,513 - MasterNode initialized with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 02:07:54,516 - Redis unavailable at startup: Error 61 connecting to localhost:6379. Connection refused.. Running without Redis.
+2025-03-17 02:07:54,516 - MasterNode started and polling tasks
+2025-03-17 02:07:54,517 - MasterNode started, emitting debug
+2025-03-17 02:07:54,518 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 02:08:07,404 - Handling /chat request
+2025-03-17 02:08:07,405 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 02:08:15,477 - Handling /chat request
+2025-03-17 02:08:15,480 - Received POST input: Hello in mode agent with task_id master
+2025-03-17 02:08:15,480 - Saving agent message: Hello for task_id master
+2025-03-17 02:08:15,480 - Assessing prompt: Hello
+2025-03-17 02:08:16,785 - Complexity: simple, Memory context: No relevant history...
+2025-03-17 02:08:16,785 - Escalating to DeepSeek-R1:8b
+2025-03-17 02:08:16,786 - Queue size after save: 2
+2025-03-17 02:08:16,786 - Starting new embedding thread
+2025-03-17 02:08:16,786 - Starting embedding processing
+2025-03-17 02:08:16,786 - Emitted chat_update: {'prompt': 'Hello', 'response': 'DeepSeek-R1:8b here. Query: Hello. Memory: No relevant history', 'task_id': 'master'}
+2025-03-17 02:08:16,842 - Embedding queue processed
+2025-03-17 02:12:48,393 - Handling /chat request
+2025-03-17 02:12:48,396 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}
+2025-03-17 02:15:25,667 - Starting Flask app
+2025-03-17 02:15:42,614 - Handling /chat request
+2025-03-17 02:15:42,614 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 02:15:48,002 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-17 02:15:48,023 - MasterNode initialized with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 02:15:48,025 - Redis unavailable at startup: Error 61 connecting to localhost:6379. Connection refused.. Running without Redis.
+2025-03-17 02:15:48,025 - MasterNode started and polling tasks
+2025-03-17 02:15:48,026 - MasterNode started, emitting debug
+2025-03-17 02:15:48,026 - Selected task_id: master
+2025-03-17 02:15:48,028 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}, selected_task_id: master
+2025-03-17 02:16:35,967 - Handling /chat request
+2025-03-17 02:16:35,968 - Selected task_id: master
+2025-03-17 02:16:35,974 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}, selected_task_id: master
+2025-03-17 02:16:58,668 - Handling /chat request
+2025-03-17 02:16:58,668 - Selected task_id: master
+2025-03-17 02:16:58,672 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}, selected_task_id: master
+2025-03-17 02:17:04,166 - Handling /chat request
+2025-03-17 02:17:04,166 - Selected task_id: master
+2025-03-17 02:17:04,167 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}, selected_task_id: master
+2025-03-17 02:17:27,999 - Handling /chat request
+2025-03-17 02:17:28,000 - Selected task_id: master
+2025-03-17 02:17:28,001 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}, selected_task_id: master
+2025-03-17 02:17:33,826 - Handling /chat request
+2025-03-17 02:17:33,826 - Selected task_id: master
+2025-03-17 02:17:33,827 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}, selected_task_id: master
+2025-03-17 02:18:05,709 - Handling /chat request
+2025-03-17 02:18:05,711 - Selected task_id: master
+2025-03-17 02:18:05,713 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}, selected_task_id: master
+2025-03-17 02:18:32,765 - Handling /chat request
+2025-03-17 02:18:32,765 - Selected task_id: master
+2025-03-17 02:18:32,768 - Received POST input: Write a haiku in mode user with task_id master
+2025-03-17 02:18:32,768 - Processing task 1742177912768: Write a haiku
+2025-03-17 02:18:32,768 - Task 1742177912768 assigned to WebUI: Write a haiku
+2025-03-17 02:18:32,806 - Spawned session for WebUI on Task 1742177912768 (PID: 93460)
+2025-03-17 02:18:37,549 - Handling /chat request
+2025-03-17 02:18:37,550 - Selected task_id: master
+2025-03-17 02:18:37,550 - Received POST input: Write a haiku in mode user with task_id master
+2025-03-17 02:18:37,550 - Processing task 1742177917550: Write a haiku
+2025-03-17 02:18:37,550 - Task 1742177917550 assigned to WebUI: Write a haiku
+2025-03-17 02:18:37,562 - Spawned session for WebUI on Task 1742177917550 (PID: 93463)
+2025-03-17 02:18:42,794 - Worker for Task 1742177912768 still running after 10s
+2025-03-17 02:18:42,807 - Handling /chat request
+2025-03-17 02:18:42,807 - Selected task_id: 1742177912768
+2025-03-17 02:18:42,808 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {'1742177912768': {'task_id': '1742177912768', 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '1742177917550': {'task_id': '1742177917550', 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}, selected_task_id: 1742177912768
+2025-03-17 02:18:47,552 - Worker for Task 1742177917550 still running after 10s
+2025-03-17 02:18:47,565 - Handling /chat request
+2025-03-17 02:18:47,565 - Selected task_id: 1742177917550
+2025-03-17 02:18:47,567 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {'1742177912768': {'task_id': '1742177912768', 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '1742177917550': {'task_id': '1742177917550', 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}, selected_task_id: 1742177917550
+2025-03-17 02:19:07,844 - Handling /chat request
+2025-03-17 02:19:07,844 - Selected task_id: master
+2025-03-17 02:19:07,845 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {'1742177912768': {'task_id': '1742177912768', 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}, '1742177917550': {'task_id': '1742177917550', 'description': 'Write a haiku', 'status': 'assigned', 'result': ''}}, selected_task_id: master
+2025-03-17 02:24:00,495 - Starting Flask app
+2025-03-17 02:24:13,136 - Handling /chat request
+2025-03-17 02:24:13,136 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 02:24:15,873 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-17 02:24:24,047 - Handling /chat request
+2025-03-17 02:24:24,048 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 02:24:29,437 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-17 02:34:16,798 - Starting Flask app
+2025-03-17 02:34:21,827 - Handling /chat request
+2025-03-17 02:34:21,827 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 02:34:24,679 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-17 02:34:33,191 - Handling /chat request
+2025-03-17 02:34:33,191 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 02:34:36,755 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-17 02:36:41,624 - Starting Flask app
+2025-03-17 02:36:52,793 - Handling /chat request
+2025-03-17 02:36:52,793 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 02:36:57,862 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-17 02:36:58,804 - MasterNode initialized with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 02:36:58,807 - Redis unavailable at startup: Error 61 connecting to localhost:6379. Connection refused.. Running without Redis.
+2025-03-17 02:36:58,807 - MasterNode started and polling tasks
+2025-03-17 02:36:58,808 - MasterNode started, emitting debug
+2025-03-17 02:36:58,808 - Selected task_id: master
+2025-03-17 02:36:58,809 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}, selected_task_id: master
+2025-03-17 02:37:42,283 - Handling /chat request
+2025-03-17 02:37:42,284 - Selected task_id: 
+2025-03-17 02:37:42,284 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}, selected_task_id: 
+2025-03-17 02:37:56,447 - Handling /chat request
+2025-03-17 02:37:56,447 - Selected task_id: master
+2025-03-17 02:37:56,449 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}, selected_task_id: master
+2025-03-17 02:48:21,263 - Starting Flask app
+2025-03-17 02:48:41,048 - Initializing MasterNode with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 02:48:47,416 - ConversationMemory initialized for session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe at /Users/ian/dev/projects/agents/local/seclorum/seclorum/memory/../logs/conversations/conversation_01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe.json
+2025-03-17 02:48:49,085 - MasterNode initialized with session 01eb67c6-c2d3-4cf8-a92b-ad0f2e902bbe
+2025-03-17 02:48:49,090 - Redis unavailable at startup: Error 61 connecting to localhost:6379. Connection refused.. Running without Redis.
+2025-03-17 02:48:49,090 - MasterNode started and polling tasks
+2025-03-17 02:48:49,091 - MasterNode started, emitting debug
+2025-03-17 02:48:58,591 - Handling /chat request
+2025-03-17 02:48:58,592 - Selected task_id: master
+2025-03-17 02:48:58,593 - Rendering chat with history: Agent: MasterNode started and polling tasks
+User: ..., agents: {}, selected_task_id: master
+2025-03-18 22:05:35,678 - Starting Flask app and Redis via CLI
+2025-03-18 22:05:35,799 - Started Redis with PID 6550
+2025-03-18 22:05:36,807 - Flask app started with PID 6552

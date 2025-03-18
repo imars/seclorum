@@ -22,6 +22,7 @@ class MasterNode(RedisMixin, LifecycleMixin):
         self.socketio = SocketIO()
         self.active_workers = {}
         self.running = False
+        self.embedding_thread = None
         logger.info(f"MasterNode initialized with session {session_id}")
         self.memory.save(session_id=session_id)
 
@@ -56,6 +57,12 @@ class MasterNode(RedisMixin, LifecycleMixin):
         LifecycleMixin.stop(self)
         logger.info("MasterNode stopped")
         self.memory.save(response="MasterNode stopped")
+
+    def process_embedding_queue(self):
+        """Process embeddings in background thread."""
+        logger.info("Starting embedding processing")
+        self.memory.process_embedding_queue()
+        logger.info("Embedding queue processed")
 
     def process_task(self, task_id, description):
         task_id = str(task_id)

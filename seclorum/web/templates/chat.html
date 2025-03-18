@@ -14,65 +14,101 @@
         .glow::after { content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px; background: radial-gradient(circle, rgba(147, 197, 253, 0.2), transparent); z-index: -1; filter: blur(10px); }
         .dark .glow::after { background: radial-gradient(circle, rgba(59, 130, 246, 0.2), transparent); }
         .agent-output { max-height: 200px; overflow-y: auto; }
-        textarea { resize: none; overflow: hidden; min-height: 2.5rem; }
+        /* Hide scrollbars */
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 dark:from-slate-800 dark:to-slate-900 font-sans p-6 transition-colors duration-300">
-    <div class="max-w-5xl mx-auto flex space-x-6" x-data="appData">
-        <div class="w-5/12 flex flex-col space-y-4">
-            <div class="panel p-4 glow h-96 flex flex-col">
-                <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Chat History</h2>
-                <div class="flex-1 overflow-y-auto flex flex-col-reverse" x-ref="history">
-                    <template x-for="(entry, index) in conversationHistory.slice().reverse()" :key="index">
-                        <div class="panel mb-2 p-3" x-text="entry"></div>
+<body class="h-screen bg-gradient-to-br from-blue-100 to-purple-100 dark:from-slate-800 dark:to-slate-900 font-sans overflow-hidden transition-colors duration-300">
+    <div class="h-full max-w-5xl mx-auto flex space-x-6 p-6" x-data="appData">
+        <div class="w-5/12 flex flex-col space-y-4 h-full">
+            <div class="panel p-4 glow flex flex-col flex-1">
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4" x-text="mode === 'user' ? 'Chat History' : 'Available Agents'"></h2>
+                <div class="flex-1 overflow-y-auto flex flex-col-reverse no-scrollbar" x-ref="history" @mousedown="startDrag($event)" @mousemove="drag($event)" @mouseup="stopDrag()" @mouseleave="stopDrag()">
+                    <template x-if="mode === 'user'">
+                        <template x-for="(entry, index) in conversationHistory.slice().reverse()" :key="index">
+                            <div class="panel mb-2 p-3" x-text="entry"></div>
+                        </template>
+                    </template>
+                    <template x-if="mode === 'agent'">
+                        <div>
+                            <div class="panel mb-2 p-3 cursor-pointer" :class="{ 'active-agent': selectedAgent === 'master' }" @click="selectedAgent = 'master'; saveState(); console.log('Selected MasterNode, selectedAgent:', selectedAgent)" x-text="'MasterNode: Coordinating agents'"></div>
+                            <template x-for="(agent, id) in agents" :key="id">
+                                <div class="panel mb-2 p-3 cursor-pointer" :class="{ 'active-agent': selectedAgent === id }" @click="selectedAgent = id; saveState(); console.log('Selected Agent', id, 'selectedAgent:', selectedAgent)" x-text="`Agent ${id}: ${agent.description || 'Idle'}`"></div>
+                            </template>
+                        </div>
                     </template>
                 </div>
             </div>
-            <div class="panel p-4 glow" x-data="{ input: '', mode: '{{ mode }}', history: ['Write a haiku', 'What’s 2+2?', 'Tell a joke'] }">
-                <form @submit.prevent="submitInput(input)" method="POST" action="/chat?mode={{ mode }}">
-                    <div class="relative flex space-x-2">
+            <div class="panel p-4 glow">
+                <form @submit.prevent="submitInput(input)" method="POST" :action="'/chat?mode=' + mode + (selectedAgent ? '&task_id=' + selectedAgent : '')">
+                    <div class="flex flex-col space-y-2">
                         <textarea
                             name="input"
                             x-model="input"
-                            list="task-history"
-                            :placeholder="mode === 'task' ? 'Enter a task (e.g., Write a haiku)' : 'Chat with agent'"
-                            class="w-full p-2 border rounded-lg bg-white/80 dark:bg-slate-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            :placeholder="mode === 'user' ? 'Chat with agent' : 'Enter agent command or task'"
+                            class="w-full p-2 border rounded-lg bg-white/80 dark:bg-slate-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y min-h-[2.5rem] max-h-[10rem]"
                             @input="adjustHeight($event.target)"
                         ></textarea>
-                        <datalist id="task-history">
-                            <template x-for="item in history" :key="item">
-                                <option x-text="item"></option>
-                            </template>
-                        </datalist>
-                        <button type="button" @click="mode = mode === 'task' ? 'agent' : 'task'; window.location.href = '/chat?mode=' + mode" class="p-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500">
-                            <span x-text="mode === 'task' ? 'Task' : 'Agent'"></span>
-                        </button>
+                        <div class="flex space-x-2">
+                            <input type="submit" value="Send" class="flex-1 p-2 bg-blue-900 dark:bg-blue-800 text-white rounded-lg hover:bg-blue-800 dark:hover:bg-blue-700 opacity-75">
+                            <button type="button" @click="toggleMode()" class="p-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500">
+                                <span x-text="mode === 'user' ? 'User' : 'Agent'"></span>
+                            </button>
+                        </div>
                     </div>
-                    <input type="submit" value="Send" class="mt-2 w-full p-2 bg-blue-900 dark:bg-blue-800 text-white rounded-lg hover:bg-blue-800 dark:hover:bg-blue-700 opacity-75">
                 </form>
             </div>
         </div>
-        <div class="w-7/12 panel p-6 glow" x-data="{ selectedAgent: null }">
-            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Agents</h2>
+        <div class="w-7/12 panel p-6 glow flex-1">
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4" x-text="mode === 'user' ? 'Agents' : 'Agent Details'"></h2>
             <div class="space-y-4">
-                <template x-for="(agent, id) in agents" :key="id">
-                    <div class="panel p-3 agent-output" :class="{ 'active-agent': selectedAgent === id }" @click="selectedAgent = id">
-                        <strong>Agent {{ id }}:</strong>
-                        <div x-text="agent.result ? agent.result.replace(/\n/g, '<br>') : agent.output.replace(/\n/g, '<br>')" class="text-gray-600 dark:text-gray-400"></div>
+                <template x-if="mode === 'user'">
+                    <template x-for="(agent, id) in agents" :key="id">
+                        <div class="panel p-3 agent-output" :class="{ 'active-agent': selectedAgent === id }" @click="selectedAgent = id">
+                            <strong>Agent {{ id }}:</strong>
+                            <div x-text="agent.result ? agent.result.replace(/\n/g, '<br>') : agent.output ? agent.output.replace(/\n/g, '<br>') : 'No output'" class="text-gray-600 dark:text-gray-400"></div>
+                        </template>
+                    </template>
+                </template>
+                <template x-if="mode === 'agent'">
+                    <div class="panel p-3 agent-output">
+                        <template x-if="selectedAgent">
+                            <div>
+                                <strong x-text="selectedAgent === 'master' ? 'MasterNode' : 'Agent ' + selectedAgent"></strong>
+                                <div x-text="(agentHistories[selectedAgent] || 'No history yet').replace(/\n/g, '<br>')" class="text-gray-600 dark:text-gray-400"></div>
+                                <div class="mt-2 text-sm text-gray-500 dark:text-gray-400" x-text="selectedAgent === 'master' ? 'Description: Coordinates agent graph' : `Description: ${agents[selectedAgent]?.description || 'No description'}`"></div>
+                            </div>
+                        </template>
+                        <template x-if="!selectedAgent">
+                            <div class="text-gray-600 dark:text-gray-400">Select an agent or MasterNode from the left panel.</div>
+                        </template>
                     </div>
                 </template>
             </div>
         </div>
     </div>
-    <p class="mt-6 text-center"><a href="/settings" class="text-blue-500 dark:text-blue-400 hover:underline">Settings</a> | <a href="/dashboard" class="text-blue-500 dark:text-blue-400 hover:underline">Dashboard</a></p>
+    <p class="max-w-5xl mx-auto text-center pb-6">
+        <a :href="'/settings?mode=' + mode + (selectedAgent ? '&task_id=' + selectedAgent : '')" class="text-blue-500 dark:text-blue-400 hover:underline">Settings</a> | 
+        <a :href="'/dashboard?mode=' + mode + (selectedAgent ? '&task_id=' + selectedAgent : '')" class="text-blue-500 dark:text-blue-400 hover:underline">Dashboard</a> | 
+        <a :href="'/chat?mode=' + mode + (selectedAgent ? '&task_id=' + selectedAgent : '')" class="text-blue-500 dark:text-blue-400 hover:underline">Chat</a>
+    </p>
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('appData', () => ({
             darkMode: localStorage.getItem('darkMode') === 'true',
-            conversationHistory: {{ conversation_history|tojson|safe }}.split('\n').filter(line => line.trim()),
-            agents: {{ agents|tojson|safe }},
-            tasks: {{ tasks|tojson|safe }},
+            mode: localStorage.getItem('chatMode') || ('{{ mode }}' === 'agent' ? 'agent' : 'user'),
+            conversationHistory: ({{ conversation_history|tojson|safe }} || '').split('\n').filter(line => line.trim()),
+            agents: {{ agents|tojson|safe }} || {},
+            tasks: {{ tasks|tojson|safe }} || {},
+            agentHistories: {{ agent_histories|tojson|safe }} || {},
+            selectedAgent: localStorage.getItem('selectedAgent') || ('{{ selected_task_id }}' === '' ? null : '{{ selected_task_id }}'),
+            input: '',
+            isDragging: false,
+            startY: 0,
+            scrollTop: 0,
             init() {
+                console.log('Initial mode:', this.mode, 'selectedAgent:', this.selectedAgent);
                 document.documentElement.classList.toggle('dark', this.darkMode);
                 const socket = io('http://127.0.0.1:5000');
                 socket.on('connect', () => console.log('SocketIO connected'));
@@ -80,7 +116,7 @@
                 socket.on('task_update', (data) => {
                     console.log('Task update:', data);
                     if (data.status === 'assigned') {
-                        this.agents[data.task_id] = { output: 'Pending...' };
+                        this.agents[data.task_id] = { output: 'Pending...', description: data.description };
                     } else if (data.status === 'completed' || data.status === 'failed') {
                         this.agents[data.task_id] = data;
                     }
@@ -89,6 +125,9 @@
                     console.log('Chat update:', data);
                     this.conversationHistory.push(`User: ${data.prompt}`);
                     this.conversationHistory.push(`Agent: ${data.response}`);
+                    if (data.task_id && this.agentHistories[data.task_id] !== undefined) {
+                        this.agentHistories[data.task_id] = (this.agentHistories[data.task_id] ? this.agentHistories[data.task_id] + '\n' : '') + `User: ${data.prompt}\nAgent: ${data.response}`;
+                    }
                     this.$refs.history.scrollTop = 0;
                 });
                 socket.on('reset_storage', () => {
@@ -97,12 +136,25 @@
                     this.agents = {};
                     this.conversationHistory = [];
                     this.tasks = {};
+                    this.agentHistories = {};
+                    this.mode = 'user';
+                    this.selectedAgent = null;
                 });
+            },
+            saveState() {
+                localStorage.setItem('chatMode', this.mode);
+                localStorage.setItem('selectedAgent', this.selectedAgent);
+            },
+            toggleMode() {
+                this.mode = this.mode === 'user' ? 'agent' : 'user';
+                this.selectedAgent = null;
+                this.saveState();
+                window.location.href = '/chat?mode=' + this.mode;
             },
             submitInput(input) {
                 if (input.trim()) {
-                    console.log('Submitting:', input, 'Mode:', '{{ mode }}');
-                    fetch('/chat?mode={{ mode }}', {
+                    console.log('Submitting:', input, 'Mode:', this.mode, 'Task ID:', this.selectedAgent);
+                    fetch('/chat?mode=' + this.mode + (this.selectedAgent ? '&task_id=' + this.selectedAgent : ''), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: 'input=' + encodeURIComponent(input)
@@ -110,7 +162,7 @@
                         console.log('Fetch response:', response.status);
                         if (response.ok) {
                             this.input = '';
-                            if ('{{ mode }}' === 'task') {
+                            if (this.mode === 'task') {
                                 console.log('Reloading for task mode');
                                 window.location.reload();
                             } else {
@@ -127,6 +179,21 @@
             adjustHeight(el) {
                 el.style.height = 'auto';
                 el.style.height = `${el.scrollHeight}px`;
+            },
+            startDrag(event) {
+                this.isDragging = true;
+                this.startY = event.pageY;
+                this.scrollTop = this.$refs.history.scrollTop;
+                event.preventDefault();
+            },
+            drag(event) {
+                if (this.isDragging) {
+                    const delta = this.startY - event.pageY;
+                    this.$refs.history.scrollTop = this.scrollTop + delta;
+                }
+            },
+            stopDrag() {
+                this.isDragging = false;
             }
         }));
     });
