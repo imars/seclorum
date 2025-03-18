@@ -52,11 +52,17 @@ class ConversationMemory:
             "session_id": session_id or self.session_id,
             "task_id": task_id
         }
+        data = []
         if os.path.exists(self.log_file):
-            with open(self.log_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-        else:
-            data = []
+            try:
+                with open(self.log_file, 'r', encoding='utf-8') as f:
+                    content = f.read().strip()
+                    if content:
+                        data = json.loads(content)
+                    else:
+                        logger.warning(f"{self.log_file} is empty, initializing with empty list")
+            except json.JSONDecodeError as e:
+                logger.warning(f"Invalid JSON in {self.log_file}: {e}, starting fresh")
         data.append(entry)
         with open(self.log_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2)
