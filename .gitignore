@@ -38,3 +38,23 @@ bootstrap_run.txt
 worker_log.txt
 worker_log.txt
 .DS_Store
+# Ignore log files
+app.log
+dump.rdb
+*.pid
+
+# Ignore other generated files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+.venv
+*.egg-info/
+dist/
+build/
+*.log
+*.rdb
