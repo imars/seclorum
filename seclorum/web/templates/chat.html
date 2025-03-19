@@ -12,30 +12,32 @@
         .dark .panel { background: rgba(30, 41, 59, 0.85); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); }
         .active-agent { background: rgba(255, 255, 236, 0.95); }
         .dark .active-agent { background: rgba(30, 41, 59, 0.95); }
-        .agent-output, .task-output { max-height: 300px; overflow-y: auto; min-width: 0; padding: 0.75rem; }
+        .agent-output, .task-output { max-height: 400px; overflow-y: auto; min-width: 0; padding: 0.75rem; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .history-container { max-height: calc(100vh - 15rem); overflow-y: auto; min-width: 0; }
-        .input-container { display: flex; flex-direction: column-reverse; height: 10rem; width: 100%; min-width: 0; }
-        .grow-upward { resize: none; min-height: 2.5rem; max-height: 8rem; overflow-y: auto; width: 100%; font-size: 1rem; line-height: 1.5; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.75rem; }
+        .input-container { display: flex; flex-direction: column; height: auto; width: 100%; min-width: 0; padding-bottom: 1rem; }
+        .grow-upward { resize: none; min-height: 2.5rem; max-height: 12rem; overflow-y: auto; width: 100%; font-size: 1rem; line-height: 1.5; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.75rem; }
         .grow-upward:focus { border: 2px solid #3b82f6; outline: none; }
         .gantt-bar { height: 1.5rem; background: #3b82f6; border-radius: 0.25rem; }
-        .columns-container { display: flex; flex-wrap: nowrap; gap: 1.5rem; width: 100%; min-width: 0; overflow-x: auto; }
-        .columns-container > div { flex: 1 1 0; min-width: 200px; max-width: 100%; box-sizing: border-box; overflow-x: hidden; }
+        .columns-container { display: flex; flex-wrap: nowrap; gap: 1.5rem; width: 100%; min-width: 0; overflow-x: auto; height: 100%; }
+        .columns-container > div { flex: 1 1 0; min-width: 200px; max-width: 100%; box-sizing: border-box; overflow-x: hidden; height: 100%; }
+        .columns-container > div > .panel { height: 100%; display: flex; flex-direction: column; }
         .columns-container > div > .panel > div { max-width: 100%; min-width: 0; }
         @media (max-width: 768px) {
-            .columns-container { flex-direction: column; gap: 1rem; overflow-x: visible; }
-            .columns-container > div { flex: none; width: 100%; min-width: 0; }
+            .columns-container { flex-direction: column; gap: 1rem; overflow-x: visible; height: 100%; }
+            .columns-container > div { flex: none; width: 100%; min-width: 0; height: auto; }
             .columns-container > div:not(:nth-child(2)) { display: none; } /* Show only middle column (chat panel) */
-            .columns-container > div:nth-child(2) { display: flex; width: 100%; }
+            .columns-container > div:nth-child(2) { display: flex; width: 100%; height: 100%; }
+            .columns-container > div:nth-child(2) > .panel { height: 100%; }
             .history-container { max-height: calc(100vh - 13rem); }
             .panel { padding: 0.5rem; }
-            .input-container { height: 9rem; }
+            .input-container { padding-bottom: 0.5rem; }
         }
         @media (max-width: 640px) {
             .panel { padding: 0.5rem; }
             .history-container { max-height: calc(100vh - 11rem); }
-            .input-container { height: 8rem; }
+            .input-container { padding-bottom: 0.5rem; }
         }
     </style>
 </head>
@@ -103,7 +105,7 @@
                         <form @submit.prevent="submitInput(input)" method="POST" :action="'/chat?mode=' + mode + (selectedAgent ? '&task_id=' + selectedAgent : '')">
                             <div class="input-container">
                                 <textarea name="input" x-model="input" :placeholder="mode === 'user' ? 'Chat with agent...' : 'Enter agent command or task...'" class="grow-upward bg-white/90 dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200" @input="adjustHeight($event.target)"></textarea>
-                                <div class="flex space-x-3 items-center mt-3">
+                                <div class="flex space-x-3 items-center mt-2">
                                     <input type="submit" value="Send" class="flex-1 p-2 bg-blue-900 dark:bg-blue-800 text-white rounded-xl hover:bg-blue-800 dark:hover:bg-blue-700 transition-colors duration-200 opacity-90 hover:opacity-100 cursor-pointer">
                                     <button type="button" @click="toggleMode()" class="p-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors duration-200">
                                         <span x-text="mode === 'user' ? 'User' : 'Agent'"></span>
@@ -228,9 +230,14 @@
             },
             adjustHeight(el) {
                 el.style.height = 'auto';
-                const newHeight = Math.min(Math.max(el.scrollHeight, 2.5 * 16), 8 * 16); // Min 2.5rem, max 8rem
+                const newHeight = Math.min(Math.max(el.scrollHeight, 2.5 * 16), 12 * 16); // Min 2.5rem, max 12rem
                 el.style.height = `${newHeight}px`;
                 el.scrollTop = el.scrollHeight;
+                // Adjust parent panel height
+                const panel = el.closest('.panel');
+                if (panel) {
+                    panel.style.height = 'auto';
+                }
             },
             startDrag(event) {
                 if (event.button === 0) {
