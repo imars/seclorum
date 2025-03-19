@@ -7,7 +7,7 @@ MasterNode_tasks.json
 log.txt
 sessions.json
 project/
-conversation_*.json
+# conversation_*.json
 logs/
 
 # Python build files
@@ -16,22 +16,6 @@ __pycache__/
 seclorum.egg-info/
 dist/
 build/
-bootstrap_output.txt
-bootstrap_prompt.txt
-bootstrap_output.txt
-bootstrap_prompt.txt
-bootstrap_output.txt
-bootstrap_prompt.txt
-bootstrap_output.txt
-bootstrap_prompt.txt
-bootstrap_output.txt
-bootstrap_prompt.txt
-bootstrap_output.txt
-bootstrap_prompt.txt
-bootstrap_output.txt
-bootstrap_prompt.txt
-bootstrap_output.txt
-bootstrap_prompt.txt
 bootstrap_output.txt
 bootstrap_prompt.txt
 bootstrap_run.txt
@@ -48,6 +32,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.pid
 .Python
 env/
 venv/
