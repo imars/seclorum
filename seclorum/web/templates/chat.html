@@ -8,41 +8,51 @@
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <style>
-        .panel { background: rgba(255, 255, 255, 0.85); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border-radius: 0.75rem; transition: all 0.3s ease; }
+        .panel { background: rgba(255, 255, 255, 0.85); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border-radius: 0.75rem; transition: all 0.3s ease; width: 100%; word-break: break-word; overflow-wrap: break-word; min-width: 0; }
         .dark .panel { background: rgba(30, 41, 59, 0.85); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); }
         .active-agent { background: rgba(255, 255, 236, 0.95); }
         .dark .active-agent { background: rgba(30, 41, 59, 0.95); }
-        .agent-output { max-height: 250px; overflow-y: auto; }
+        .agent-output, .task-output { max-height: 250px; overflow-y: auto; min-width: 0; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .history-container { max-height: calc(100vh - 20rem); } /* Adjusted to slide chat panel up */
-        @media (max-width: 1024px) {
-            .flex.space-x-6 > div { width: 100% !important; min-width: 0; }
-            .history-container { max-height: calc(100vh - 18rem); }
+        .history-container { max-height: calc(100vh - 15rem); overflow-y: auto; min-width: 0; }
+        .input-container { display: flex; flex-direction: column-reverse; height: 9rem; width: 100%; min-width: 0; }
+        .grow-upward { resize: none; min-height: 2rem; max-height: 7rem; overflow-y: auto; width: 100%; }
+        .gantt-bar { height: 1.5rem; background: #3b82f6; border-radius: 0.25rem; }
+        .columns-container { display: flex; flex-wrap: nowrap; gap: 1.5rem; width: 100%; min-width: 0; overflow-x: auto; }
+        .columns-container > div { flex: 1 1 0; min-width: 200px; max-width: 100%; box-sizing: border-box; overflow-x: hidden; }
+        .columns-container > div > .panel > div { max-width: 100%; min-width: 0; }
+        @media (max-width: 768px) {
+            .columns-container { flex-direction: column; gap: 1rem; overflow-x: visible; }
+            .columns-container > div { flex: none; width: 100%; min-width: 0; }
+            .history-container { max-height: calc(100vh - 13rem); }
+            .panel { padding: 0.5rem; }
         }
         @media (max-width: 640px) {
-            .panel { padding: 1rem; }
-            .history-container { max-height: calc(100vh - 14rem); }
-        }
-        .grow-upward {
-            resize: vertical;
-            transform-origin: bottom;
-            margin-bottom: auto;
+            .panel { padding: 0.5rem; }
+            .history-container { max-height: calc(100vh - 11rem); }
+            .input-container { height: 8rem; }
         }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-100 to-purple-100 dark:from-slate-800 dark:to-slate-900 font-sans transition-colors duration-300 flex flex-col h-screen">
-    <div class="flex-1 flex flex-col max-w-5xl mx-auto p-4 overflow-hidden" x-data="appData"> <!-- Reduced padding from p-6 to p-4 -->
-        <div class="flex flex-col h-full space-y-4"> <!-- Reduced space-y-6 to space-y-4 -->
-            <div class="flex space-x-6 flex-1 overflow-hidden">
-                <div class="w-1/2 min-w-[400px] flex flex-col space-y-4">
-                    <div class="panel p-4 glow flex flex-col flex-1"> <!-- Reduced padding from p-6 to p-4 -->
+    <div class="flex-1 flex flex-col max-w-7xl mx-auto p-4 overflow-hidden" 
+         x-data="appData" 
+         x-init="() => { 
+             if (!selectedAgent) selectedAgent = localStorage.getItem('selectedAgent') || 'master'; 
+             $nextTick(() => console.log('Post-render: mode=', mode, 'selectedAgent=', selectedAgent, 'widths=', Array.from(document.querySelectorAll('.columns-container > div')).map(d => d.offsetWidth)));
+         }">
+        <div class="flex flex-col h-full space-y-4">
+            <div class="columns-container flex-1 overflow-hidden">
+                <!-- Left Column: History/Agents -->
+                <div class="flex flex-col space-y-4">
+                    <div class="panel p-4 flex flex-col flex-1">
                         <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4" x-text="mode === 'user' ? 'Chat History' : 'Available Agents'"></h2>
                         <div class="flex-1 overflow-y-auto no-scrollbar flex flex-col history-container" x-ref="history" @mousedown="startDrag($event)" @mousemove="drag($event)" @mouseup="stopDrag()" @mouseleave="stopDrag()" @wheel="wheelScroll($event)">
                             <div class="flex-1"></div>
                             <template x-if="mode === 'user'">
                                 <template x-for="(entry, index) in conversationHistory" :key="index">
-                                    <div class="panel mb-2 p-2" x-text="entry"></div> <!-- Reduced padding from p-4 to p-2 -->
+                                    <div class="panel mb-2 p-2" x-text="entry"></div>
                                 </template>
                             </template>
                             <template x-if="mode === 'agent'">
@@ -55,11 +65,41 @@
                             </template>
                         </div>
                     </div>
-                    <div class="panel p-4 glow shrink-0 h-36">
+                </div>
+                <!-- Middle Column: Input + Agents/Details -->
+                <div class="flex flex-col space-y-4">
+                    <div class="panel p-4 flex flex-col flex-1">
+                        <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4" x-text="mode === 'user' ? 'Agents' : 'Agent Details'"></h2>
+                        <div class="space-y-4 flex-1 overflow-y-auto">
+                            <template x-if="mode === 'user'">
+                                <template x-for="(agent, id) in agents" :key="id">
+                                    <div class="panel p-2 agent-output" :class="{ 'active-agent': selectedAgent === id }" @click="selectedAgent = id">
+                                        <strong class="text-lg">Agent {{ id }}:</strong>
+                                        <div x-text="agent.result ? agent.result.replace(/\n/g, '<br>') : agent.output ? agent.output.replace(/\n/g, '<br>') : 'No output'" class="text-gray-600 dark:text-gray-400 mt-2"></div>
+                                    </div>
+                                </template>
+                            </template>
+                            <template x-if="mode === 'agent'">
+                                <div class="panel p-2 agent-output">
+                                    <template x-if="selectedAgent">
+                                        <div>
+                                            <strong class="text-lg" x-text="selectedAgent === 'master' ? 'MasterNode' : 'Agent ' + selectedAgent"></strong>
+                                            <div x-text="(agentHistories[selectedAgent] || 'No history yet').replace(/\n/g, '<br>')"></div>
+                                            <div class="mt-3 text-sm text-gray-500 dark:text-gray-400" x-text="selectedAgent === 'master' ? 'Description: Coordinates agent graph' : `Description: ${agents[selectedAgent]?.description || 'No description'}`"></div>
+                                        </div>
+                                    </template>
+                                    <template x-if="!selectedAgent">
+                                        <div class="text-gray-600 dark:text-gray-400 text-center min-h-[50px]">Select an agent or MasterNode from the left panel.</div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    <div class="panel p-4 shrink-0">
                         <form @submit.prevent="submitInput(input)" method="POST" :action="'/chat?mode=' + mode + (selectedAgent ? '&task_id=' + selectedAgent : '')">
-                            <div class="flex flex-col h-full space-y-2">
-                                <textarea name="input" x-model="input" :placeholder="mode === 'user' ? 'Chat with agent...' : 'Enter agent command or task...'" class="w-full p-3 border rounded-xl bg-white/90 dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 grow-upward min-h-[2rem] max-h-[20rem] transition-all duration-200" @input="adjustHeight($event.target)"></textarea>
-                                <div class="flex space-x-3 items-center">
+                            <div class="input-container">
+                                <textarea name="input" x-model="input" :placeholder="mode === 'user' ? 'Chat with agent...' : 'Enter agent command or task...'" class="grow-upward p-3 border rounded-xl bg-white/90 dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200" @input="adjustHeight($event.target)"></textarea>
+                                <div class="flex space-x-3 items-center mt-2">
                                     <input type="submit" value="Send" class="flex-1 p-2 bg-blue-900 dark:bg-blue-800 text-white rounded-xl hover:bg-blue-800 dark:hover:bg-blue-700 transition-colors duration-200 opacity-90 hover:opacity-100">
                                     <button type="button" @click="toggleMode()" class="p-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors duration-200">
                                         <span x-text="mode === 'user' ? 'User' : 'Agent'"></span>
@@ -69,37 +109,27 @@
                         </form>
                     </div>
                 </div>
-                <div class="w-1/2 min-w-[400px] panel p-4 glow flex-1"> <!-- Reduced padding from p-6 to p-4 -->
-                    <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4" x-text="mode === 'user' ? 'Agents' : 'Agent Details'"></h2>
-                    <div class="space-y-4 h-full overflow-y-auto">
-                        <template x-if="mode === 'user'">
-                            <template x-for="(agent, id) in agents" :key="id">
-                                <div class="panel p-2 agent-output" :class="{ 'active-agent': selectedAgent === id }" @click="selectedAgent = id">
-                                    <strong class="text-lg">Agent {{ id }}:</strong>
-                                    <div x-text="agent.result ? agent.result.replace(/\n/g, '<br>') : agent.output ? agent.output.replace(/\n/g, '<br>') : 'No output'" class="text-gray-600 dark:text-gray-400 mt-2"></div>
-                                </template>
-                            </template>
-                        </template>
-                        <template x-if="mode === 'agent'">
-                            <div class="panel p-2 agent-output">
-                                <template x-if="selectedAgent">
-                                    <div>
-                                        <strong class="text-lg" x-text="selectedAgent === 'master' ? 'MasterNode' : 'Agent ' + selectedAgent"></strong>
-                                        <div x-text="(agentHistories[selectedAgent] || 'No history yet').replace(/\n/g, '<br>')" class="text-gray-600 dark:text-gray-400 mt-2"></div>
-                                        <div class="mt-3 text-sm text-gray-500 dark:text-gray-400" x-text="selectedAgent === 'master' ? 'Description: Coordinates agent graph' : `Description: ${agents[selectedAgent]?.description || 'No description'}`"></div>
+                <!-- Right Column: Tasks -->
+                <div class="flex flex-col space-y-4">
+                    <div class="panel p-4 flex flex-col flex-1">
+                        <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Tasks</h2>
+                        <div class="space-y-4 flex-1 overflow-y-auto task-output">
+                            <div class="relative">
+                                <div class="absolute top-0 left-0 w-full h-px bg-gray-300 dark:bg-gray-600"></div>
+                                <template x-for="(task, id) in tasks" :key="id">
+                                    <div class="mt-4">
+                                        <div class="text-gray-800 dark:text-gray-200" x-text="`Task ${id}: ${task.description}`"></div>
+                                        <div class="gantt-bar" :style="{ width: task.status === 'completed' ? '100%' : task.status === 'assigned' ? '50%' : '10%' }"></div>
                                     </div>
                                 </template>
-                                <template x-if="!selectedAgent">
-                                    <div class="text-gray-600 dark:text-gray-400 text-center">Select an agent or MasterNode from the left panel.</div>
-                                </template>
                             </div>
-                        </template>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <footer class="max-w-5xl mx-auto text-center py-4 shrink-0 text-gray-600 dark:text-gray-400"> <!-- Reduced py-6 to py-4 -->
+    <footer class="max-w-7xl mx-auto text-center py-4 shrink-0 text-gray-600 dark:text-gray-400 mb-2">
         <a :href="'/settings?mode=' + mode + (selectedAgent ? '&task_id=' + selectedAgent : '')" @click.prevent="navigate($event, '/settings')" class="text-blue-600 dark:text-blue-400 hover:underline mx-2">Settings</a> | 
         <a :href="'/dashboard?mode=' + mode + (selectedAgent ? '&task_id=' + selectedAgent : '')" @click.prevent="navigate($event, '/dashboard')" class="text-blue-600 dark:text-blue-400 hover:underline mx-2">Dashboard</a> | 
         <a :href="'/chat?mode=' + mode + (selectedAgent ? '&task_id=' + selectedAgent : '')" @click.prevent="navigate($event, '/chat')" class="text-blue-600 dark:text-blue-400 hover:underline mx-2">Chat</a>
@@ -113,7 +143,7 @@
             agents: {{ agents|tojson|safe }} || {},
             tasks: {{ tasks|tojson|safe }} || {},
             agentHistories: {{ agent_histories|tojson|safe }} || {},
-            selectedAgent: localStorage.getItem('selectedAgent') || ('{{ selected_task_id }}' === '' ? null : '{{ selected_task_id }}'),
+            selectedAgent: localStorage.getItem('selectedAgent') || ('{{ selected_task_id }}' === '' ? 'master' : '{{ selected_task_id }}'),
             input: '',
             isDragging: false,
             startY: 0,
@@ -130,8 +160,10 @@
                     console.log('Task update:', data);
                     if (data.status === 'assigned') {
                         this.agents[data.task_id] = { output: 'Pending...', description: data.description };
+                        this.tasks[data.task_id] = { status: 'assigned', description: data.description };
                     } else if (data.status === 'completed' || data.status === 'failed') {
                         this.agents[data.task_id] = data;
+                        this.tasks[data.task_id] = data;
                     }
                 });
                 socket.on('chat_update', (data) => {
@@ -151,7 +183,7 @@
                     this.tasks = {};
                     this.agentHistories = {};
                     this.mode = 'user';
-                    this.selectedAgent = null;
+                    this.selectedAgent = 'master';
                 });
             },
             saveState() {
@@ -169,7 +201,7 @@
             },
             toggleMode() {
                 this.mode = this.mode === 'user' ? 'agent' : 'user';
-                this.selectedAgent = null;
+                this.selectedAgent = 'master'; // Default to master on mode switch
                 this.saveState();
                 window.location.href = '/chat?mode=' + this.mode;
             },
@@ -194,7 +226,9 @@
             },
             adjustHeight(el) {
                 el.style.height = 'auto';
-                el.style.height = `${Math.min(el.scrollHeight, 300)}px`; // Kept at 20rem (300px)
+                const newHeight = Math.min(el.scrollHeight, 7 * 16); // Max 7rem
+                el.style.height = `${newHeight}px`;
+                el.scrollTop = el.scrollHeight;
             },
             startDrag(event) {
                 if (event.button === 0) {
