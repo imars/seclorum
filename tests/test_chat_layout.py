@@ -52,6 +52,7 @@ class TestChatLayout(unittest.TestCase):
 
     def test_column_widths(self):
         logger.info("Testing column widths")
+        # User mode
         columns = self.driver.find_elements(By.CSS_SELECTOR, ".columns-container > div")
         logger.info(f"Found {len(columns)} columns in user mode")
         logger.info(f"User mode viewport width: {self.driver.execute_script('return window.innerWidth')}")
@@ -59,8 +60,17 @@ class TestChatLayout(unittest.TestCase):
         logger.info(f"User mode widths: {widths}")
         self.assertEqual(len(columns), 3, "Expected 3 columns in user mode")
         self.assertEqual(len(set(widths)), 1, "Columns are not equal width in user mode")
+        
+        # Agent mode with pre-set selectedAgent
+        self.driver.execute_script("localStorage.setItem('selectedAgent', 'master');")
         self.driver.get("http://127.0.0.1:5000/chat?mode=agent")
-        WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".agent-output")))
+        WebDriverWait(self.driver, 5).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".agent-output strong"))
+        )
+        # Wait for stretch to settle
+        WebDriverWait(self.driver, 5).until(
+            lambda driver: all(col.size['width'] >= 270 for col in driver.find_elements(By.CSS_SELECTOR, ".columns-container > div"))
+        )
         columns_agent = self.driver.find_elements(By.CSS_SELECTOR, ".columns-container > div")
         logger.info(f"Found {len(columns_agent)} columns in agent mode")
         logger.info(f"Agent mode viewport width: {self.driver.execute_script('return window.innerWidth')}")

@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <style>
-        .panel { background: rgba(255, 255, 255, 0.85); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border-radius: 0.75rem; transition: all 0.3s ease; width: 100%; word-break: break-word; overflow-wrap: break-word; min-width: 0; }
+        .panel { background: rgba(255, 255, 255, 0.85); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border-radius: 0.75rem; transition: width 0.3s ease; width: 100%; word-break: break-word; overflow-wrap: break-word; min-width: 0; }
         .dark .panel { background: rgba(30, 41, 59, 0.85); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); }
         .active-agent { background: rgba(255, 255, 236, 0.95); }
         .dark .active-agent { background: rgba(30, 41, 59, 0.95); }
@@ -201,9 +201,8 @@
             },
             toggleMode() {
                 this.mode = this.mode === 'user' ? 'agent' : 'user';
-                this.selectedAgent = 'master'; // Default to master on mode switch
+                if (!this.selectedAgent) this.selectedAgent = 'master'; // Ensure selectedAgent persists
                 this.saveState();
-                window.location.href = '/chat?mode=' + this.mode;
             },
             submitInput(input) {
                 if (input.trim()) {
