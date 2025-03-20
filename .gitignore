@@ -1,46 +1,38 @@
-logs/
-__pycache__/
-*.pyc
-*.pid
-.DS_Store
-# Runtime artifacts
-MasterNode_tasks.json
-log.txt
-sessions.json
-seclorum_master.pid
-project/
-app.log
-# conversation_*.json
-logs/
-# Python build files
-*.pyc
-__pycache__/
-seclorum.egg-info/
-dist/
-build/
-bootstrap_output.txt
-bootstrap_prompt.txt
-bootstrap_run.txt
-worker_log.txt
-worker_log.txt
-.DS_Store
-# Ignore log files
-app.log
-dump.rdb
-
-# Ignore other generated files
+# Python-specific
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.pid
+*.egg-info/
 .Python
+dist/
+build/
+
+# Logs
+logs/
+*.log
+app.log
+log.txt
+worker_log.txt
+dump.rdb
+
+# System/OS files
+.DS_Store
+*.pid
+
+# Virtual environments
 env/
 venv/
 .env
 .venv
-*.egg-info/
-dist/
-build/
-*.log
-*.rdb
+
+# Project-specific runtime artifacts
+MasterNode_tasks.json
+sessions.json
+seclorum_master.pid
+project/
+conversation_*.json
+seclorum.egg-info/
+bootstrap_output.txt
+bootstrap_prompt.txt
+bootstrap_run.txt
