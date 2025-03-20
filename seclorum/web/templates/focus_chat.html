@@ -10,15 +10,16 @@
     <style>
         .panel { background: rgba(255, 255, 255, 0.85); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border-radius: 0.75rem; width: 100%; word-break: break-word; overflow-wrap: break-word; min-width: 0; }
         .dark .panel { background: rgba(30, 41, 59, 0.85); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); }
-        .chat-container { max-height: calc(100vh - 12rem); overflow-y: auto; min-width: 0; display: flex; flex-direction: column; }
+        .chat-container { max-height: calc(100vh - 12rem); overflow-y: auto; min-width: 0; display: flex; flex-direction: column; width: 100%; }
         .chat-container > div:last-child { margin-top: auto; } /* Push chat to bottom */
         .input-container { display: flex; flex-direction: column; height: auto; width: 100%; min-width: 0; padding-bottom: 0.5rem; }
         .grow-upward { resize: none; min-height: 2.5rem; max-height: 12rem; overflow-y: auto; width: 100%; font-size: 1rem; line-height: 1.5; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.75rem; }
         .grow-upward:focus { border: 2px solid #3b82f6; outline: none; }
+        .full-width-container { width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-100 to-purple-100 dark:from-slate-800 dark:to-slate-900 font-sans transition-colors duration-300 flex flex-col h-screen">
-    <div class="flex-1 flex flex-col max-w-4xl mx-auto p-4 overflow-hidden" 
+    <div class="flex-1 flex flex-col p-4 overflow-hidden full-width-container" 
          x-data="focusChatData" 
          x-init="() => { 
              $nextTick(() => { 
@@ -55,29 +56,38 @@
             darkMode: localStorage.getItem('darkMode') === 'true',
             conversationHistory: ({{ conversation_history|tojson|safe }} || '').split('\n').filter(line => line.trim()),
             input: '',
+            taskId: '{{ task_id }}',
             init() {
                 document.documentElement.classList.toggle('dark', this.darkMode);
                 const socket = io('http://127.0.0.1:5000');
                 socket.on('connect', () => console.log('SocketIO connected'));
                 socket.on('chat_update', (data) => {
-                    if (data.task_id === '{{ task_id }}') {
+                    console.log('Received chat_update:', data);
+                    if (data.task_id === this.taskId) {
                         this.conversationHistory.push(`User: ${data.prompt}`);
                         this.conversationHistory.push(`Agent: ${data.response}`);
                         this.$nextTick(() => {
                             const chat = this.$refs.chat;
-                            if (chat) chat.scrollTop = chat.scrollHeight;
+                            if (chat) {
+                                chat.scrollTop = chat.scrollHeight;
+                                console.log('Scroll to bottom triggered, scrollHeight:', chat.scrollHeight);
+                            }
                         });
                     }
                 });
             },
             submitInput(input) {
                 if (input.trim()) {
+                    console.log('Submitting input:', input);
                     fetch('/focus_chat?task_id={{ task_id }}', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: 'input=' + encodeURIComponent(input)
                     }).then(response => {
-                        if (response.ok) this.input = '';
+                        console.log('Fetch response:', response.status);
+                        if (response.ok) {
+                            this.input = '';
+                        }
                     }).catch(error => console.error('Fetch error:', error));
                 }
             },
