@@ -12,11 +12,14 @@
          x-data="settingsData" 
          x-init="() => { document.documentElement.classList.toggle('dark', darkMode); }">
         <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4">Settings</h1>
-        <div class="panel p-4">
+        <div class="panel p-4 space-y-4">
             <label class="flex items-center space-x-2">
                 <input type="checkbox" x-model="darkMode" @change="saveDarkMode()">
                 <span class="text-gray-800 dark:text-gray-100">Dark Mode</span>
             </label>
+            <button @click="resetStorage()" class="p-2 bg-red-900 dark:bg-red-800 text-white rounded-xl hover:bg-red-800 dark:hover:bg-red-700 transition-colors duration-200 opacity-90 hover:opacity-100">
+                Reset Local Storage (Debug)
+            </button>
         </div>
     </div>
     <footer class="max-w-7xl mx-auto text-center py-4 shrink-0 text-gray-600 dark:text-gray-400 mb-2">
@@ -32,6 +35,18 @@
             saveDarkMode() {
                 localStorage.setItem('darkMode', this.darkMode);
                 document.documentElement.classList.toggle('dark', this.darkMode);
+            },
+            resetStorage() {
+                if (confirm('Reset local storage? This will clear all UI state.')) {
+                    localStorage.clear();
+                    this.darkMode = false;
+                    this.mode = 'user';
+                    this.selectedAgent = 'master';
+                    document.documentElement.classList.remove('dark');
+                    fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'input=reset_storage' })
+                        .then(() => window.location.reload())
+                        .catch(error => console.error('Reset error:', error));
+                }
             }
         }));
     });
