@@ -1,15 +1,17 @@
 logs/
 __pycache__/
 *.pyc
+*.pid
 .DS_Store
 # Runtime artifacts
 MasterNode_tasks.json
 log.txt
 sessions.json
+seclorum_master.pid
 project/
+app.log
 # conversation_*.json
 logs/
-
 # Python build files
 *.pyc
 __pycache__/
@@ -25,7 +27,6 @@ worker_log.txt
 # Ignore log files
 app.log
 dump.rdb
-*.pid
 
 # Ignore other generated files
 __pycache__/
