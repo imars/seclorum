@@ -23,12 +23,14 @@
         .columns-container { display: flex; flex-wrap: nowrap; gap: 1.5rem; width: 100%; min-width: 0; overflow-x: auto; height: 100%; }
         .columns-container > div { flex: 1 1 0; min-width: 300px; max-width: 100%; box-sizing: border-box; overflow-x: hidden; height: 100%; }
         .columns-container > div > .panel { height: 100%; display: flex; flex-direction: column; }
-        .columns-container > div > .panel > div { max-width: 100%; min-width: 0; flex-grow: 1; } /* Ensure content grows */
-        .history-container > div:last-child { margin-top: auto; } /* Push history to bottom */
+        .columns-container > div > .panel > div { max-width: 100%; min-width: 0; flex-grow: 1; }
+        .history-container > div:last-child { margin-top: auto; }
+        .agent-history { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+        .agent-history.expanded { max-height: 20rem; /* Adjust as needed */ }
         @media (max-width: 768px) {
             .columns-container { flex-direction: column; gap: 1rem; overflow-x: visible; height: 100%; }
             .columns-container > div { flex: none; width: 100%; min-width: 0; height: auto; }
-            .columns-container > div:not(:nth-child(2)) { display: none; } /* Show only middle column (chat panel) */
+            .columns-container > div:not(:nth-child(2)) { display: none; }
             .columns-container > div:nth-child(2) { display: flex; width: 100%; min-width: 0; height: 100%; }
             .columns-container > div:nth-child(2) > .panel { height: 100%; }
             .history-container { max-height: calc(100vh - 13rem); }
@@ -49,7 +51,6 @@
              if (!selectedAgent) selectedAgent = localStorage.getItem('selectedAgent') || 'master'; 
              $nextTick(() => {
                  console.log('Post-render: mode=', mode, 'selectedAgent=', selectedAgent, 'widths=', Array.from(document.querySelectorAll('.columns-container > div')).map(d => d.offsetWidth));
-                 // Force scroll to bottom on load
                  const history = $refs.history;
                  if (history) history.scrollTop = history.scrollHeight;
              });
@@ -59,19 +60,25 @@
                 <!-- Left Column: History/Agents -->
                 <div class="flex flex-col space-y-4">
                     <div class="panel p-4 flex flex-col flex-1">
-                        <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4" x-text="mode === 'user' ? 'Chat History' : 'Available Agents'"></h2>
+                        <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4" x-text="mode === 'design' ? 'Chat History' : 'Available Agents'"></h2>
                         <div class="flex-1 overflow-y-auto no-scrollbar flex flex-col history-container" x-ref="history" @mousedown="startDrag($event)" @mousemove="drag($event)" @mouseup="stopDrag()" @mouseleave="stopDrag()" @wheel="wheelScroll($event)">
                             <div class="flex-1"></div>
-                            <template x-if="mode === 'user'">
+                            <template x-if="mode === 'design'">
                                 <template x-for="(entry, index) in conversationHistory" :key="index">
                                     <div class="panel mb-2 p-2 text-gray-700 dark:text-gray-300 text-sm" x-text="entry"></div>
                                 </template>
                             </template>
                             <template x-if="mode === 'agent'">
                                 <div>
-                                    <div class="panel mb-2 p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" :class="{ 'active-agent': selectedAgent === 'master' }" @click="selectedAgent = 'master'; saveState()" x-text="'MasterNode: Coordinating agents'"></div>
+                                    <div class="mb-2">
+                                        <div class="panel p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" :class="{ 'active-agent': selectedAgent === 'master' }" @click="selectedAgent = 'master'; saveState()" x-text="'MasterNode: Coordinating agents'"></div>
+                                        <div class="agent-history" :class="{ 'expanded': selectedAgent === 'master' }" x-html="(agentHistories['master'] || 'No history yet').replace(/\n/g, '<br>')"></div>
+                                    </div>
                                     <template x-for="(agent, id) in agents" :key="id">
-                                        <div class="panel mb-2 p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" :class="{ 'active-agent': selectedAgent === id }" @click="selectedAgent = id; saveState()" x-text="`Agent ${id}: ${agent.description || 'Idle'}`"></div>
+                                        <div class="mb-2">
+                                            <div class="panel p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" :class="{ 'active-agent': selectedAgent === id }" @click="selectedAgent = id; saveState()" x-text="`Agent ${id}: ${agent.description || 'Idle'}`"></div>
+                                            <div class="agent-history" :class="{ 'expanded': selectedAgent === id }" x-html="(agentHistories[id] || 'No history yet').replace(/\n/g, '<br>')"></div>
+                                        </div>
                                     </template>
                                 </div>
                             </template>
@@ -81,9 +88,9 @@
                 <!-- Middle Column: Input + Agents/Details -->
                 <div class="flex flex-col space-y-2">
                     <div class="panel p-4 flex flex-col flex-1">
-                        <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4" x-text="mode === 'user' ? 'Agents' : 'Agent Details'"></h2>
+                        <button class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4 cursor-pointer hover:underline" @click="navigate('/focus_chat')" x-text="mode === 'design' ? 'Agents' : (selectedAgent === 'master' ? 'MasterNode' : 'Agent ' + selectedAgent)"></button>
                         <div class="space-y-4 flex-1 overflow-y-auto">
-                            <template x-if="mode === 'user'">
+                            <template x-if="mode === 'design'">
                                 <template x-for="(agent, id) in agents" :key="id">
                                     <div class="panel p-2 agent-output" :class="{ 'active-agent': selectedAgent === id }" @click="selectedAgent = id">
                                         <strong class="text-lg text-gray-800 dark:text-gray-200">Agent {{ id }}:</strong>
@@ -94,11 +101,7 @@
                             <template x-if="mode === 'agent'">
                                 <div class="panel p-2 agent-output">
                                     <template x-if="selectedAgent">
-                                        <div>
-                                            <strong class="text-lg text-gray-800 dark:text-gray-200" x-text="selectedAgent === 'master' ? 'MasterNode' : 'Agent ' + selectedAgent"></strong>
-                                            <div x-html="(agentHistories[selectedAgent] || 'No history yet').replace(/\n/g, '<br>')" class="text-gray-600 dark:text-gray-400 mt-2 text-sm"></div>
-                                            <div class="mt-3 text-xs text-gray-500 dark:text-gray-400" x-text="selectedAgent === 'master' ? 'Description: Coordinates agent graph' : `Description: ${agents[selectedAgent]?.description || 'No description'}`"></div>
-                                        </div>
+                                        <div x-html="getLatestResponse(selectedAgent)" class="text-gray-600 dark:text-gray-400 text-sm"></div>
                                     </template>
                                     <template x-if="!selectedAgent">
                                         <div class="text-gray-600 dark:text-gray-400 text-center min-h-[50px] text-sm">Select an agent or MasterNode from the left panel.</div>
@@ -110,11 +113,11 @@
                     <div class="panel p-4 shrink-0">
                         <form @submit.prevent="submitInput(input)" method="POST" :action="'/chat?mode=' + mode + (selectedAgent ? '&task_id=' + selectedAgent : '')">
                             <div class="input-container">
-                                <textarea name="input" x-model="input" :placeholder="mode === 'user' ? 'Chat with agent...' : 'Enter agent command or task...'" class="grow-upward bg-white/90 dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200" @input="adjustHeight($event.target)"></textarea>
+                                <textarea name="input" x-model="input" :placeholder="mode === 'design' ? 'Chat with agent...' : 'Enter agent command or task...'" class="grow-upward bg-white/90 dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200" @input="adjustHeight($event.target)"></textarea>
                                 <div class="flex space-x-3 items-center mt-3">
                                     <input type="submit" value="Send" class="flex-1 p-2 bg-blue-900 dark:bg-blue-800 text-white rounded-xl hover:bg-blue-800 dark:hover:bg-blue-700 transition-colors duration-200 opacity-90 hover:opacity-100 cursor-pointer">
                                     <button type="button" @click="toggleMode()" class="p-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors duration-200">
-                                        <span x-text="mode === 'user' ? 'User' : 'Agent'"></span>
+                                        <span x-text="mode === 'design' ? 'Design' : 'Agent'"></span>
                                     </button>
                                 </div>
                             </div>
@@ -149,7 +152,7 @@
     document.addEventListener('alpine:init', () => {
         Alpine.data('appData', () => ({
             darkMode: localStorage.getItem('darkMode') === 'true',
-            mode: localStorage.getItem('chatMode') || new URLSearchParams(window.location.search).get('mode') || ('{{ mode }}' === 'agent' ? 'agent' : 'user'),
+            mode: localStorage.getItem('chatMode') || new URLSearchParams(window.location.search).get('mode') || ('{{ mode }}' === 'agent' ? 'agent' : 'design'),
             conversationHistory: ({{ conversation_history|tojson|safe }} || '').split('\n').filter(line => line.trim()),
             agents: {{ agents|tojson|safe }} || {},
             tasks: {{ tasks|tojson|safe }} || {},
@@ -193,7 +196,7 @@
                     this.conversationHistory = [];
                     this.tasks = {};
                     this.agentHistories = {};
-                    this.mode = 'user';
+                    this.mode = 'design';
                     this.selectedAgent = 'master';
                 });
             },
@@ -206,13 +209,13 @@
             updateModeFromURL() {
                 const urlParams = new URLSearchParams(window.location.search);
                 const modeFromURL = urlParams.get('mode');
-                if (modeFromURL && ['user', 'agent'].includes(modeFromURL)) {
+                if (modeFromURL && ['design', 'agent'].includes(modeFromURL)) {
                     this.mode = modeFromURL;
                     this.saveState();
                 }
             },
             toggleMode() {
-                this.mode = this.mode === 'user' ? 'agent' : 'user';
+                this.mode = this.mode === 'design' ? 'agent' : 'design';
                 if (!this.selectedAgent) this.selectedAgent = 'master';
                 this.saveState();
             },
@@ -237,7 +240,7 @@
             },
             adjustHeight(el) {
                 el.style.height = 'auto';
-                const newHeight = Math.min(Math.max(el.scrollHeight, 2.5 * 16), 12 * 16); // Min 2.5rem, max 12rem
+                const newHeight = Math.min(Math.max(el.scrollHeight, 2.5 * 16), 12 * 16);
                 el.style.height = `${newHeight}px`;
                 el.scrollTop = el.scrollHeight;
                 const panel = el.closest('.panel');
@@ -270,6 +273,12 @@
             navigate(path) {
                 const url = `${path}?mode=${this.mode}${this.selectedAgent ? '&task_id=' + this.selectedAgent : ''}`;
                 window.location.href = url;
+            },
+            getLatestResponse(agentId) {
+                const history = this.agentHistories[agentId] || 'No history yet';
+                const lines = history.split('\n');
+                const lastAgentLine = lines.filter(line => line.startsWith('Agent:')).pop() || 'No response yet';
+                return lastAgentLine.replace(/\n/g, '<br>');
             }
         }));
     });

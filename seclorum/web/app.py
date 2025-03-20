@@ -12,11 +12,13 @@ def register_blueprints(app, socketio):
     from seclorum.web.routes.dashboard import dashboard_bp
     from seclorum.web.routes.settings import settings_bp
     from seclorum.web.routes.tasks import tasks_bp
+    from seclorum.web.routes.focus_chat import focus_chat_bp
 
     app.register_blueprint(chat_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(tasks_bp)
+    app.register_blueprint(focus_chat_bp)
 
     # Set socketio for chat_bp
     set_socketio(socketio)

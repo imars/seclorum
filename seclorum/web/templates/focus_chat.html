@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Chat - {{ agent_name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+        .panel { background: rgba(255, 255, 255, 0.85); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border-radius: 0.75rem; width: 100%; word-break: break-word; overflow-wrap: break-word; min-width: 0; }
+        .dark .panel { background: rgba(30, 41, 59, 0.85); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); }
+        .chat-container { max-height: calc(100vh - 12rem); overflow-y: auto; min-width: 0; display: flex; flex-direction: column; }
+        .chat-container > div:last-child { margin-top: auto; } /* Push chat to bottom */
+        .input-container { display: flex; flex-direction: column; height: auto; width: 100%; min-width: 0; padding-bottom: 0.5rem; }
+        .grow-upward { resize: none; min-height: 2.5rem; max-height: 12rem; overflow-y: auto; width: 100%; font-size: 1rem; line-height: 1.5; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.75rem; }
+        .grow-upward:focus { border: 2px solid #3b82f6; outline: none; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-100 to-purple-100 dark:from-slate-800 dark:to-slate-900 font-sans transition-colors duration-300 flex flex-col h-screen">
+    <div class="flex-1 flex flex-col max-w-4xl mx-auto p-4 overflow-hidden" 
+         x-data="focusChatData" 
+         x-init="() => { 
+             $nextTick(() => { 
+                 const chat = $refs.chat; 
+                 if (chat) chat.scrollTop = chat.scrollHeight; 
+             }); 
+         }">
+        <div class="flex flex-col h-full space-y-4">
+            <div class="panel p-4 flex flex-col flex-1">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">{{ agent_name }}</h2>
+                <div class="chat-container flex-1" x-ref="chat">
+                    <div class="flex-1"></div>
+                    <template x-for="(entry, index) in conversationHistory" :key="index">
+                        <div class="mb-2 p-2 text-gray-700 dark:text-gray-300 text-sm" x-text="entry"></div>
+                    </template>
+                </div>
+            </div>
+            <div class="panel p-4 shrink-0">
+                <form @submit.prevent="submitInput(input)" method="POST" action="/focus_chat?task_id={{ task_id }}">
+                    <div class="input-container">
+                        <textarea name="input" x-model="input" placeholder="Chat with {{ agent_name }}..." class="grow-upward bg-white/90 dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200" @input="adjustHeight($event.target)"></textarea>
+                        <div class="flex space-x-3 items-center mt-3">
+                            <input type="submit" value="Send" class="flex-1 p-2 bg-blue-900 dark:bg-blue-800 text-white rounded-xl hover:bg-blue-800 dark:hover:bg-blue-700 transition-colors duration-200 opacity-90 hover:opacity-100 cursor-pointer">
+                            <a href="/chat?mode=agent&task_id={{ task_id }}" class="p-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-xl hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors duration-200">Back</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('focusChatData', () => ({
+            darkMode: localStorage.getItem('darkMode') === 'true',
+            conversationHistory: ({{ conversation_history|tojson|safe }} || '').split('\n').filter(line => line.trim()),
+            input: '',
+            init() {
+                document.documentElement.classList.toggle('dark', this.darkMode);
+                const socket = io('http://127.0.0.1:5000');
+                socket.on('connect', () => console.log('SocketIO connected'));
+                socket.on('chat_update', (data) => {
+                    if (data.task_id === '{{ task_id }}') {
+                        this.conversationHistory.push(`User: ${data.prompt}`);
+                        this.conversationHistory.push(`Agent: ${data.response}`);
+                        this.$nextTick(() => {
+                            const chat = this.$refs.chat;
+                            if (chat) chat.scrollTop = chat.scrollHeight;
+                        });
+                    }
+                });
+            },
+            submitInput(input) {
+                if (input.trim()) {
+                    fetch('/focus_chat?task_id={{ task_id }}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'input=' + encodeURIComponent(input)
+                    }).then(response => {
+                        if (response.ok) this.input = '';
+                    }).catch(error => console.error('Fetch error:', error));
+                }
+            },
+            adjustHeight(el) {
+                el.style.height = 'auto';
+                const newHeight = Math.min(Math.max(el.scrollHeight, 2.5 * 16), 12 * 16);
+                el.style.height = `${newHeight}px`;
+                el.scrollTop = el.scrollHeight;
+            }
+        }));
+    });
+</script>
+</body>
+</html>
