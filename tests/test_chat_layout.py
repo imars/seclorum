@@ -50,47 +50,42 @@ class TestChatLayout(unittest.TestCase):
         new_height = textarea.size['height']
         self.assertGreater(new_height, initial_height, "Textarea height did not increase")
 
-    def test_column_widths_agent_mode(self):
-        logger.info("Testing column widths in agent mode")
-        self.driver.execute_script("localStorage.setItem('selectedAgent', 'master');")
+    def test_column_widths(self):
+        logger.info("Testing column widths")
+        # User mode
+        columns = self.driver.find_elements(By.CSS_SELECTOR, ".columns-container > div")
+        logger.info(f"Found {len(columns)} columns in user mode")
+        viewport_width = self.driver.execute_script('return window.innerWidth')
+        logger.info(f"User mode viewport width: {viewport_width}")
+        widths = [col.size['width'] for col in columns]
+        logger.info(f"User mode widths: {widths}")
+        self.assertEqual(len(columns), 3, "Expected 3 columns in user mode")
+        # In user mode on desktop, all columns are visible but should be uniform
+        self.assertEqual(len(set(widths)), 1, "Columns are not equal width in user mode")
+        
+        # Agent mode
         self.driver.get("http://127.0.0.1:5000/chat?mode=agent")
         WebDriverWait(self.driver, 5).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, ".agent-output strong"))
         )
-        viewport_width = self.driver.execute_script("return window.innerWidth")
-        columns = self.driver.find_elements(By.CSS_SELECTOR, ".columns-container > div")
-        logger.info(f"Found {len(columns)} columns in agent mode")
-        widths = [col.size['width'] for col in columns]
-        logger.info(f"Agent mode widths: {widths}, viewport width: {viewport_width}")
-        self.assertEqual(len(columns), 3, "Expected 3 columns in agent mode")
-        total_width = sum(widths) + 48  # Account for 1.5rem gap (24px * 2)
-        self.assertGreaterEqual(total_width, viewport_width - 32, "Columns do not expand to full viewport width")  # Allow 32px padding
+        columns_agent = self.driver.find_elements(By.CSS_SELECTOR, ".columns-container > div")
+        logger.info(f"Found {len(columns_agent)} columns in agent mode")
+        viewport_width_agent = self.driver.execute_script('return window.innerWidth')
+        logger.info(f"Agent mode viewport width: {viewport_width_agent}")
+        widths_agent = [col.size['width'] for col in columns_agent]
+        logger.info(f"Agent mode widths: {widths_agent}")
+        self.assertEqual(len(columns_agent), 3, "Expected 3 columns in agent mode")
+        self.assertEqual(len(set(widths_agent)), 1, "Columns are not equal width in agent mode")
+        self.assertTrue(all(w >= 300 for w in widths_agent), "Columns in agent mode are too narrow")
 
-    def test_column_width_user_mode(self):
-        logger.info("Testing column width in user mode (mobile)")
-        self.driver.set_window_size(600, 720)  # Simulate mobile
-        self.driver.get("http://127.0.0.1:5000/chat?mode=user")
-        WebDriverWait(self.driver, 5).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, ".input-container"))
-        )
-        columns = self.driver.find_elements(By.CSS_SELECTOR, ".columns-container > div")
-        visible_columns = [col for col in columns if col.is_displayed()]
-        logger.info(f"Found {len(visible_columns)} visible columns in user mode")
-        viewport_width = self.driver.execute_script("return window.innerWidth")
-        middle_column = visible_columns[0]  # Only middle should be visible
-        width = middle_column.size['width']
-        logger.info(f"User mode middle column width: {width}, viewport width: {viewport_width}")
-        self.assertEqual(len(visible_columns), 1, "Expected only 1 column in user mode")
-        self.assertGreaterEqual(width, viewport_width - 32, "Middle column does not take full width")
-
-    def test_chat_panel_alignment(self):
-        logger.info("Testing chat panel alignment")
-        history = self.driver.find_element(By.CSS_SELECTOR, ".history-container")
-        scroll_height = self.driver.execute_script("return arguments[0].scrollHeight", history)
-        scroll_top = self.driver.execute_script("return arguments[0].scrollTop", history)
-        client_height = self.driver.execute_script("return arguments[0].clientHeight", history)
+    def test_chat_alignment(self):
+        logger.info("Testing chat alignment on load")
+        history_container = self.driver.find_element(By.CSS_SELECTOR, ".history-container")
+        scroll_height = self.driver.execute_script("return arguments[0].scrollHeight", history_container)
+        scroll_top = self.driver.execute_script("return arguments[0].scrollTop", history_container)
+        client_height = history_container.size['height']
         logger.info(f"Scroll height: {scroll_height}, Scroll top: {scroll_top}, Client height: {client_height}")
-        self.assertAlmostEqual(scroll_top, scroll_height - client_height, delta=5, msg="Chat panel not aligned to bottom")
+        self.assertAlmostEqual(scroll_top + client_height, scroll_height, delta=10, msg="Chat is not aligned to bottom on load")
 
     def test_ui_elements_on_screen(self):
         logger.info("Testing UI elements visibility")

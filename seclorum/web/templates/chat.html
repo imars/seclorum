@@ -15,21 +15,22 @@
         .agent-output, .task-output { max-height: 400px; overflow-y: auto; min-width: 0; padding: 0.75rem; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .history-container { max-height: calc(100vh - 15rem); overflow-y: auto; min-width: 0; }
+        .history-container { max-height: calc(100vh - 15rem); overflow-y: auto; min-width: 0; display: flex; flex-direction: column; }
         .input-container { display: flex; flex-direction: column; height: auto; width: 100%; min-width: 0; padding-bottom: 0.5rem; }
         .grow-upward { resize: none; min-height: 2.5rem; max-height: 12rem; overflow-y: auto; width: 100%; font-size: 1rem; line-height: 1.5; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.75rem; }
         .grow-upward:focus { border: 2px solid #3b82f6; outline: none; }
         .gantt-bar { height: 1.5rem; background: #3b82f6; border-radius: 0.25rem; }
-        .columns-container { display: flex; flex-wrap: nowrap; gap: 1.5rem; width: 100%; min-width: 0; overflow-x: auto; height: 100%; max-width: 100%; }
-        .columns-container > div { flex: 1 1 0; min-width: 200px; max-width: none; box-sizing: border-box; overflow-x: hidden; height: 100%; }
+        .columns-container { display: flex; flex-wrap: nowrap; gap: 1.5rem; width: 100%; min-width: 0; overflow-x: auto; height: 100%; }
+        .columns-container > div { flex: 1 1 0; min-width: 300px; max-width: 100%; box-sizing: border-box; overflow-x: hidden; height: 100%; }
         .columns-container > div > .panel { height: 100%; display: flex; flex-direction: column; }
-        .columns-container > div > .panel > div { max-width: 100%; min-width: 0; }
+        .columns-container > div > .panel > div { max-width: 100%; min-width: 0; flex-grow: 1; } /* Ensure content grows */
+        .history-container > div:last-child { margin-top: auto; } /* Push history to bottom */
         @media (max-width: 768px) {
-            .columns-container { flex-direction: column; gap: 1rem; overflow-x: visible; height: 100%; width: 100%; }
+            .columns-container { flex-direction: column; gap: 1rem; overflow-x: visible; height: 100%; }
             .columns-container > div { flex: none; width: 100%; min-width: 0; height: auto; }
             .columns-container > div:not(:nth-child(2)) { display: none; } /* Show only middle column (chat panel) */
-            .columns-container > div:nth-child(2) { display: flex; width: 100%; min-width: 0; height: 100%; max-width: 100%; }
-            .columns-container > div:nth-child(2) > .panel { height: 100%; width: 100%; }
+            .columns-container > div:nth-child(2) { display: flex; width: 100%; min-width: 0; height: 100%; }
+            .columns-container > div:nth-child(2) > .panel { height: 100%; }
             .history-container { max-height: calc(100vh - 13rem); }
             .panel { padding: 0.5rem; }
             .input-container { padding-bottom: 0.25rem; }
@@ -46,10 +47,11 @@
          x-data="appData" 
          x-init="() => { 
              if (!selectedAgent) selectedAgent = localStorage.getItem('selectedAgent') || 'master'; 
-             $nextTick(() => { 
+             $nextTick(() => {
                  console.log('Post-render: mode=', mode, 'selectedAgent=', selectedAgent, 'widths=', Array.from(document.querySelectorAll('.columns-container > div')).map(d => d.offsetWidth));
+                 // Force scroll to bottom on load
                  const history = $refs.history;
-                 history.scrollTop = history.scrollHeight; // Scroll to bottom on init
+                 if (history) history.scrollTop = history.scrollHeight;
              });
          }">
         <div class="flex flex-col h-full space-y-4">
