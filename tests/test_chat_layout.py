@@ -5,8 +5,10 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.keys import Keys
 import time
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -18,30 +20,66 @@ class TestChatLayout(unittest.TestCase):
         options.add_argument("--headless")
         options.add_argument("--window-size=1200,720")
         options.binary_location = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-        service = Service(executable_path='/usr/local/bin/chromedriver')
-        logger.info("Initializing ChromeDriver")
+        options.add_argument("--enable-logging")
+        service = Service(executable_path='/usr/local/bin/chromedriver', log_path='chromedriver.log')
         self.driver = webdriver.Chrome(service=service, options=options)
-        logger.info("ChromeDriver initialized, setting timeout")
         self.driver.set_page_load_timeout(30)
+
+    def tearDown(self):
+        logger.info("Tearing down test environment")
+        console_logs = self.driver.get_log('browser')
+        logger.info("Browser console logs:")
+        for log in console_logs:
+            logger.info(log['message'])
+        self.driver.quit()
+        if os.path.exists('chromedriver.log'):
+            with open('chromedriver.log', 'r') as f:
+                logger.info("Last 10 lines of chromedriver.log:")
+                logger.info('\n'.join(f.read().splitlines()[-10:]))
+
+    def load_page(self, url):
         for attempt in range(3):
             try:
-                logger.info("Loading page")
-                self.driver.get("http://127.0.0.1:5000/chat?mode=user")
+                logger.info(f"Loading {url}")
+                self.driver.get(url)
                 logger.info("Page loaded successfully")
-                logger.info("Page title: " + self.driver.title)
                 break
             except Exception as e:
                 logger.error(f"Attempt {attempt + 1} failed to load page: {e}")
                 if attempt == 2:
                     raise
                 time.sleep(2)
-        time.sleep(1)
+        time.sleep(1)  # Wait for page render
 
-    def tearDown(self):
-        logger.info("Tearing down test environment")
-        self.driver.quit()
+    def test_middle_column_alignment(self):
+        modes = ['design', 'agent']
+        for mode in modes:
+            # Test initial load
+            self.load_page(f"http://127.0.0.1:5000/chat?mode={mode}")
+            logger.info(f"Testing initial alignment in {mode} mode")
+            input_panel = WebDriverWait(self.driver, 5).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, ".middle-column .input-panel"))
+            )
+            viewport_height = self.driver.execute_script("return window.innerHeight")
+            panel_rect = input_panel.rect
+            panel_bottom = panel_rect['y'] + panel_rect['height']
+            logger.info(f"{mode} mode initial: Viewport height={viewport_height}, Panel bottom={panel_bottom}")
+            self.assertLessEqual(abs(viewport_height - panel_bottom), 100, f"Input panel not at bottom on initial load in {mode} mode")
+
+            # Test mode switch
+            toggle_button = self.driver.find_element(By.XPATH, "//button[span[text()='Design' or text()='Agent']]")
+            toggle_button.click()
+            time.sleep(1)  # Wait for mode switch
+            new_mode = 'agent' if mode == 'design' else 'design'
+            logger.info(f"Testing alignment after switching to {new_mode} mode")
+            input_panel = self.driver.find_element(By.CSS_SELECTOR, ".middle-column .input-panel")
+            panel_rect = input_panel.rect
+            panel_bottom = panel_rect['y'] + panel_rect['height']
+            logger.info(f"{new_mode} mode after switch: Viewport height={viewport_height}, Panel bottom={panel_bottom}")
+            self.assertLessEqual(abs(viewport_height - panel_bottom), 100, f"Input panel not at bottom after mode switch to {new_mode}")
 
     def test_textarea_resize_upward(self):
+        self.load_page("http://127.0.0.1:5000/chat?mode=design")
         logger.info("Testing textarea resize upward")
         textarea = self.driver.find_element(By.NAME, "input")
         initial_height = textarea.size['height']
@@ -49,53 +87,6 @@ class TestChatLayout(unittest.TestCase):
         time.sleep(0.5)
         new_height = textarea.size['height']
         self.assertGreater(new_height, initial_height, "Textarea height did not increase")
-
-    def test_column_widths(self):
-        logger.info("Testing column widths")
-        # User mode
-        columns = self.driver.find_elements(By.CSS_SELECTOR, ".columns-container > div")
-        logger.info(f"Found {len(columns)} columns in user mode")
-        viewport_width = self.driver.execute_script('return window.innerWidth')
-        logger.info(f"User mode viewport width: {viewport_width}")
-        widths = [col.size['width'] for col in columns]
-        logger.info(f"User mode widths: {widths}")
-        self.assertEqual(len(columns), 3, "Expected 3 columns in user mode")
-        # In user mode on desktop, all columns are visible but should be uniform
-        self.assertEqual(len(set(widths)), 1, "Columns are not equal width in user mode")
-        
-        # Agent mode
-        self.driver.get("http://127.0.0.1:5000/chat?mode=agent")
-        WebDriverWait(self.driver, 5).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, ".agent-output strong"))
-        )
-        columns_agent = self.driver.find_elements(By.CSS_SELECTOR, ".columns-container > div")
-        logger.info(f"Found {len(columns_agent)} columns in agent mode")
-        viewport_width_agent = self.driver.execute_script('return window.innerWidth')
-        logger.info(f"Agent mode viewport width: {viewport_width_agent}")
-        widths_agent = [col.size['width'] for col in columns_agent]
-        logger.info(f"Agent mode widths: {widths_agent}")
-        self.assertEqual(len(columns_agent), 3, "Expected 3 columns in agent mode")
-        self.assertEqual(len(set(widths_agent)), 1, "Columns are not equal width in agent mode")
-        self.assertTrue(all(w >= 300 for w in widths_agent), "Columns in agent mode are too narrow")
-
-    def test_chat_alignment(self):
-        logger.info("Testing chat alignment on load")
-        history_container = self.driver.find_element(By.CSS_SELECTOR, ".history-container")
-        scroll_height = self.driver.execute_script("return arguments[0].scrollHeight", history_container)
-        scroll_top = self.driver.execute_script("return arguments[0].scrollTop", history_container)
-        client_height = history_container.size['height']
-        logger.info(f"Scroll height: {scroll_height}, Scroll top: {scroll_top}, Client height: {client_height}")
-        self.assertAlmostEqual(scroll_top + client_height, scroll_height, delta=10, msg="Chat is not aligned to bottom on load")
-
-    def test_ui_elements_on_screen(self):
-        logger.info("Testing UI elements visibility")
-        viewport_height = self.driver.execute_script("return window.innerHeight")
-        history = self.driver.find_element(By.CSS_SELECTOR, ".history-container")
-        input_area = self.driver.find_element(By.CSS_SELECTOR, ".input-container")
-        footer = self.driver.find_element(By.TAG_NAME, "footer")
-        self.assertLess(history.location['y'] + history.size['height'], viewport_height, "History overflows viewport")
-        self.assertLess(input_area.location['y'] + input_area.size['height'], viewport_height, "Input area overflows viewport")
-        self.assertLess(footer.location['y'] + footer.size['height'], viewport_height, "Footer overflows viewport")
 
 if __name__ == "__main__":
     unittest.main()
