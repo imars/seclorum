@@ -49,12 +49,11 @@ class TestChatLayout(unittest.TestCase):
                 if attempt == 2:
                     raise
                 time.sleep(2)
-        time.sleep(1)  # Wait for page render
+        time.sleep(1)
 
     def test_middle_column_alignment(self):
         modes = ['design', 'agent']
         for mode in modes:
-            # Test initial load
             self.load_page(f"http://127.0.0.1:5000/chat?mode={mode}")
             logger.info(f"Testing initial alignment in {mode} mode")
             input_panel = WebDriverWait(self.driver, 5).until(
@@ -64,19 +63,18 @@ class TestChatLayout(unittest.TestCase):
             panel_rect = input_panel.rect
             panel_bottom = panel_rect['y'] + panel_rect['height']
             logger.info(f"{mode} mode initial: Viewport height={viewport_height}, Panel bottom={panel_bottom}")
-            self.assertLessEqual(abs(viewport_height - panel_bottom), 100, f"Input panel not at bottom on initial load in {mode} mode")
+            self.assertLessEqual(abs(viewport_height - panel_bottom), 100, f"Input panel not at bottom in {mode} mode")
 
-            # Test mode switch
             toggle_button = self.driver.find_element(By.XPATH, "//button[span[text()='Design' or text()='Agent']]")
             toggle_button.click()
-            time.sleep(1)  # Wait for mode switch
+            time.sleep(1)
             new_mode = 'agent' if mode == 'design' else 'design'
             logger.info(f"Testing alignment after switching to {new_mode} mode")
             input_panel = self.driver.find_element(By.CSS_SELECTOR, ".middle-column .input-panel")
             panel_rect = input_panel.rect
             panel_bottom = panel_rect['y'] + panel_rect['height']
             logger.info(f"{new_mode} mode after switch: Viewport height={viewport_height}, Panel bottom={panel_bottom}")
-            self.assertLessEqual(abs(viewport_height - panel_bottom), 100, f"Input panel not at bottom after mode switch to {new_mode}")
+            self.assertLessEqual(abs(viewport_height - panel_bottom), 100, f"Input panel not at bottom after switch to {new_mode}")
 
     def test_textarea_resize_upward(self):
         self.load_page("http://127.0.0.1:5000/chat?mode=design")
@@ -87,6 +85,50 @@ class TestChatLayout(unittest.TestCase):
         time.sleep(0.5)
         new_height = textarea.size['height']
         self.assertGreater(new_height, initial_height, "Textarea height did not increase")
+
+    def test_additional_routes(self):
+        pages = [
+            ('dashboard', 'Dashboard'),
+            ('settings', 'Settings'),
+            ('favicon.ico', None)
+        ]
+        for page, expected_title in pages:
+            self.load_page(f"http://127.0.0.1:5000/{page}")
+            logger.info(f"Testing {page} page load")
+            if expected_title:
+                title = self.driver.find_element(By.TAG_NAME, "h1").text
+                self.assertIn(expected_title, title, f"{page} page not loaded correctly")
+            else:
+                self.assertNotIn("404", self.driver.title, "Favicon returned 404")
+
+    def test_navigation_links(self):
+        pages = [
+            ('dashboard', ['Chat', 'Settings']),
+            ('settings', ['Chat', 'Dashboard'])
+        ]
+        for page, link_texts in pages:
+            self.load_page(f"http://127.0.0.1:5000/{page}?mode=design&task_id=master")
+            logger.info(f"Testing navigation links on {page}")
+            links = self.driver.find_elements(By.TAG_NAME, "a")
+            found_texts = [link.text for link in links]
+            for text in link_texts:
+                self.assertIn(text, found_texts, f"{text} link missing on {page}")
+            for link in links:
+                href = link.get_attribute('href')
+                self.assertTrue(href.startswith('http://127.0.0.1:5000/'), f"Invalid href on {page}: {href}")
+                self.assertIn('mode=design', href, f"Mode not preserved in {page} link: {href}")
+                self.assertIn('task_id=master', href, f"Task ID not preserved in {page} link: {href}")
+
+        # Test delete task (assumes at least one task exists)
+        self.load_page("http://127.0.0.1:5000/dashboard?mode=design&task_id=master")
+        delete_buttons = self.driver.find_elements(By.CSS_SELECTOR, "form button[type='submit']")
+        if delete_buttons:
+            delete_buttons[0].click()
+            WebDriverWait(self.driver, 5).until(
+                EC.url_contains('/dashboard'),
+                "Did not redirect to dashboard after delete"
+            )
+            logger.info("Delete task redirected successfully")
 
 if __name__ == "__main__":
     unittest.main()
