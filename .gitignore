@@ -27,6 +27,7 @@ venv/
 .venv
 
 # Project-specific runtime artifacts
+dump.rdb
 MasterNode_tasks.json
 sessions.json
 seclorum_master.pid
