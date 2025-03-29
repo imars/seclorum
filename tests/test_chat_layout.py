@@ -103,7 +103,7 @@ class TestChatLayout(unittest.TestCase):
 
     def test_navigation_links(self):
         pages = [
-            ('dashboard', ['Chat', 'Settings']),
+            ('dashboard', ['Back to Chat', 'Settings']),
             ('settings', ['Chat', 'Dashboard'])
         ]
         for page, link_texts in pages:

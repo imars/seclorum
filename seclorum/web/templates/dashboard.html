@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="light" x-data="{ darkMode: false }" @click="darkMode = localStorage.getItem('darkMode') === 'true'">
+<html lang="en" class="light">
 <head>
     <meta charset="UTF-8">
     <title>Dashboard - Seclorum Chat</title>
@@ -14,7 +14,7 @@
         .dark .task-panel { background: rgba(30, 41, 59, 0.95); }
     </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 dark:from-slate-800 dark:to-slate-900 font-sans p-6 transition-colors duration-300">
+<body class="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 dark:from-slate-800 dark:to-slate-900 font-sans p-6 transition-colors duration-300" x-data="dashboardData">
     <div class="max-w-4xl mx-auto">
         <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-8 text-center">Dashboard</h1>
         <div class="panel p-6 glow">
@@ -45,22 +45,22 @@
                 {% endif %}
             </div>
             <p class="mt-4">
-                <a :href="'/chat?mode=' + mode + (task_id ? '&task_id=' + task_id : '')" class="text-blue-500 dark:text-blue-400 hover:underline">Back to Chat</a> | 
-                <a :href="'/settings?mode=' + mode + (task_id ? '&task_id=' + task_id : '')" class="text-blue-500 dark:text-blue-400 hover:underline">Settings</a>
+                <a :href="`/chat?mode=${mode}${task_id ? '&task_id=' + task_id : ''}`" class="text-blue-500 dark:text-blue-400 hover:underline">Back to Chat</a> | 
+                <a :href="`/settings?mode=${mode}${task_id ? '&task_id=' + task_id : ''}`" class="text-blue-500 dark:text-blue-400 hover:underline">Settings</a>
             </p>
         </div>
     </div>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const darkMode = localStorage.getItem('darkMode') === 'true';
-            document.documentElement.classList.toggle('dark', darkMode);
-            Alpine.data('root').darkMode = darkMode;
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('dashboardData', () => ({
+                darkMode: localStorage.getItem('darkMode') === 'true',
+                mode: '{{ mode }}',
+                task_id: '{{ task_id }}',
+                init() {
+                    document.documentElement.classList.toggle('dark', this.darkMode);
+                }
+            }));
         });
-        // Pass mode and task_id from Flask to Alpine
-        Alpine.data('root', () => ({
-            mode: '{{ mode }}',
-            task_id: '{{ task_id }}'
-        }));
     </script>
 </body>
 </html>

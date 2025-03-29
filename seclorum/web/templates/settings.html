@@ -6,6 +6,10 @@
     <title>Seclorum Settings</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        .panel { background: rgba(255, 255, 255, 0.9); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border-radius: 0.5rem; }
+        .dark .panel { background: rgba(30, 41, 59, 0.9); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); }
+    </style>
 </head>
 <body class="bg-gradient-to-br from-blue-100 to-purple-100 dark:from-slate-800 dark:to-slate-900 font-sans transition-colors duration-300 flex flex-col h-screen">
     <div class="flex-1 flex flex-col max-w-7xl mx-auto p-4 overflow-hidden" 
@@ -21,17 +25,17 @@
                 Reset Local Storage (Debug)
             </button>
         </div>
+        <footer class="mt-4 text-center text-gray-600 dark:text-gray-400">
+            <a :href="`/chat?mode=${mode}${selectedAgent ? '&task_id=' + selectedAgent : ''}`" class="text-blue-600 dark:text-blue-400 hover:underline mx-2">Chat</a> | 
+            <a :href="`/dashboard?mode=${mode}${selectedAgent ? '&task_id=' + selectedAgent : ''}`" class="text-blue-600 dark:text-blue-400 hover:underline mx-2">Dashboard</a>
+        </footer>
     </div>
-    <footer class="max-w-7xl mx-auto text-center py-4 shrink-0 text-gray-600 dark:text-gray-400 mb-2">
-        <a :href="'/chat?mode=' + mode + (selectedAgent ? '&task_id=' + selectedAgent : '')" class="text-blue-600 dark:text-blue-400 hover:underline mx-2">Chat</a> | 
-        <a :href="'/dashboard?mode=' + mode + (selectedAgent ? '&task_id=' + selectedAgent : '')" class="text-blue-600 dark:text-blue-400 hover:underline mx-2">Dashboard</a>
-    </footer>
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('settingsData', () => ({
             darkMode: localStorage.getItem('darkMode') === 'true',
-            mode: localStorage.getItem('chatMode') || new URLSearchParams(window.location.search).get('mode') || 'user',
-            selectedAgent: localStorage.getItem('selectedAgent') || 'master',
+            mode: '{{ mode }}',
+            selectedAgent: '{{ selectedAgent }}',
             saveDarkMode() {
                 localStorage.setItem('darkMode', this.darkMode);
                 document.documentElement.classList.toggle('dark', this.darkMode);
@@ -40,7 +44,7 @@
                 if (confirm('Reset local storage? This will clear all UI state.')) {
                     localStorage.clear();
                     this.darkMode = false;
-                    this.mode = 'user';
+                    this.mode = 'design';
                     this.selectedAgent = 'master';
                     document.documentElement.classList.remove('dark');
                     fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'input=reset_storage' })
