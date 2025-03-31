@@ -1,3 +1,4 @@
+# seclorum/memory/core.py
 import os
 import json
 import logging
@@ -13,7 +14,8 @@ class ConversationMemory:
     def __init__(self, session_id="default_session", use_json=False):
         self.session_id = session_id
         self.use_json = use_json
-        self.log_dir = os.path.join(os.path.dirname(__file__), "..", "logs", "conversations")
+        # Use absolute path from repo root
+        self.log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../logs/conversations"))
         os.makedirs(self.log_dir, exist_ok=True)
 
         self.db_file = os.path.join(self.log_dir, f"conversations_{session_id}.db")
