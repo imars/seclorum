@@ -1,170 +1,41 @@
-# Force update
-import subprocess
-import time
-import requests
-import socketio
+# tests/test_pydantic_agents.py
+import sys
+for module in list(sys.modules.keys()):
+    if module.startswith("seclorum"):
+        sys.modules.pop(module)
+
 import logging
-import os
-from threading import Thread
+from seclorum.models import Task, CodeOutput, TestResult
+from seclorum.agents.master import MasterNode  # Updated import
+from seclorum.agents.generator import Generator
+from seclorum.agents.tester import Tester
+from seclorum.agents.executor import Executor
+from seclorum.agents.debugger import Debugger
+from seclorum.agents.model_manager import ModelManager
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("TestSeclorum")
+logging.basicConfig(level=logging.DEBUG)
 
-class TestSeclorum:
-    def __init__(self):
-        self.base_url = "http://127.0.0.1:5000"
-        self.redis_proc = None
-        self.app_proc = None
-        self.sio = socketio.Client()
-        self.task_results = {}
-        self.task_ids = {}
-        self.project_root = "/Users/ian/dev/projects/agents/local/seclorum"
+def test_agent_workflow():
+    session_id = "test_session"
+    task = Task(task_id="test1", description="create a Python script to list all Python files in a directory", parameters={"generate_tests": True})
 
-    def start_redis(self):
-        logger.info("Starting Redis...")
-        self.redis_proc = subprocess.Popen(
-            ["redis-server", "--daemonize", "yes"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
-        time.sleep(1)
-        result = subprocess.run(["redis-cli", "ping"], capture_output=True, text=True)
-        if result.stdout.strip() != "PONG":
-            logger.error("Redis failed to start")
-            raise RuntimeError("Redis ping failed")
-        logger.info("Redis started successfully")
+    master = MasterNode(session_id)
+    master.start()
 
-    def start_app(self):
-        logger.info("Starting Seclorum app...")
-        env = os.environ.copy()
-        env["PYTHONPATH"] = self.project_root
-        self.app_proc = subprocess.Popen(
-            ["python", "seclorum/cli/commands.py", "start"],
-            cwd=self.project_root,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=env
-        )
-        for _ in range(30):  # Wait up to 60s
-            try:
-                response = requests.get(f"{self.base_url}/chat", timeout=2)
-                if response.status_code == 200:
-                    logger.info("App started successfully")
-                    return
-            except requests.ConnectionError:
-                time.sleep(2)
-        logger.error("App failed to start after 60 seconds")
-        stdout = self.app_proc.stdout.read() if self.app_proc.stdout else "No stdout"
-        stderr = self.app_proc.stderr.read() if self.app_proc.stderr else "No stderr"
-        logger.error(f"App stdout: {stdout}")
-        logger.error(f"App stderr: {stderr}")
-        self.app_proc.kill()
-        raise RuntimeError("App startup failed")
+    status, result = master.run(task.task_id, task.description)
 
-    def stop_processes(self):
-        logger.info("Stopping app and Redis...")
-        try:
-            requests.get(f"{self.base_url}/chat", timeout=2)
-            time.sleep(2)
-        except requests.ConnectionError:
-            logger.warning("Could not trigger final check_stuck_tasks")
-        if self.app_proc:
-            env = os.environ.copy()
-            env["PYTHONPATH"] = self.project_root
-            try:
-                subprocess.run(
-                    ["python", "seclorum/cli/commands.py", "stop"],
-                    cwd=self.project_root,
-                    env=env,
-                    timeout=10
-                )
-            except subprocess.TimeoutExpired:
-                logger.warning("Stop command timed out, force killing")
-                self.app_proc.kill()
-            self.app_proc.wait()
-            logger.info("App stopped")
-        if self.redis_proc:
-            subprocess.run(["redis-cli", "shutdown"])
-            self.redis_proc.wait()
-            logger.info("Redis stopped")
+    print(f"Final status: {status}")
+    print(f"Final result: {result}")
+    history = master.memory.load_history(task_id=task.task_id)
+    print(f"Raw conversation history: {history}")
 
-    def setup_socketio(self):
-        @self.sio.event
-        def connect():
-            logger.info("SocketIO connected")
+    assert status in ["generated", "tested", "debugged"], f"Unexpected status: {status}"
+    if status == "tested":
+        assert isinstance(result, TestResult), "Result should be TestResult for tested status"
+        assert result.passed, "Tests should pass"
 
-        @self.sio.event
-        def disconnect():
-            logger.info("SocketIO disconnected")
-
-        @self.sio.event
-        def task_update(data):
-            logger.info(f"Task update received: {data}")
-            task_id = data["task_id"]
-            if data["status"] == "assigned" and task_id not in self.task_ids.values():
-                for task, tid in self.task_ids.items():
-                    if not tid and data["description"] == task:
-                        self.task_ids[task] = task_id
-            self.task_results[task_id] = data
-
-        self.sio.connect(self.base_url)
-        Thread(target=self.sio.wait, daemon=True).start()
-
-    def submit_task(self, task_description):
-        logger.info(f"Submitting task: {task_description}")
-        response = requests.post(
-            f"{self.base_url}/chat",
-            data={"task": task_description},
-            headers={"Content-Type": "application/x-www-form-urlencoded"}
-        )
-        if response.status_code not in [200, 302]:
-            logger.error(f"Task submission failed: {response.text[:200]}...")
-            return None
-        return None
-
-    def check_dashboard(self):
-        logger.info("Checking dashboard...")
-        response = requests.get(f"{self.base_url}/dashboard")
-        if response.status_code == 200:
-            logger.info(f"Dashboard response: {response.text[:200]}...")
-        else:
-            logger.error(f"Dashboard check failed: {response.status_code}")
-
-    def run_test(self):
-        try:
-            self.start_redis()
-            self.start_app()
-            self.setup_socketio()
-
-            tasks = [
-                "Write a haiku",
-                "Tell a joke",
-                "Sing a song",
-                "Old task to fail"
-            ]
-            self.task_ids = {task: None for task in tasks}
-            for task in tasks:
-                self.submit_task(task)
-                time.sleep(1)
-
-            time.sleep(45)
-
-            self.check_dashboard()
-            time.sleep(2)
-            for task, task_id in self.task_ids.items():
-                if task_id in self.task_results:
-                    result = self.task_results[task_id]
-                    logger.info(f"Task '{task}' (ID: {task_id}) status: {result['status']}, result: {result['result']}")
-                else:
-                    logger.warning(f"Task '{task}' (ID: {task_id or 'unknown'}) not completed or failed silently")
-
-        except Exception as e:
-            logger.error(f"Test failed: {str(e)}")
-        finally:
-            self.stop_processes()
-            self.sio.disconnect()
+    master.stop()
 
 if __name__ == "__main__":
-    test = TestSeclorum()
-    test.run_test()
+    test_agent_workflow()
+    print("Agent workflow tests passed!")
