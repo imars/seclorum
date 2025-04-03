@@ -16,27 +16,26 @@ class Executor(AbstractAgent):
         self.log_update(f"Executing for Task {task.task_id}")
         code_output = CodeOutput(**task.parameters.get("code_output", {}))
         test_result = TestResult(**task.parameters.get("test_result", {"test_code": "", "passed": False}))
-
-        temp_file = f"temp_{task.task_id}.py"
         full_code = f"{code_output.code}\n\n{test_result.test_code}" if test_result.test_code else code_output.code
         self.log_update(f"Executing code:\n{full_code}")
 
+        temp_file = f"temp_{task.task_id}.py"
         with open(temp_file, "w") as f:
             f.write(full_code)
 
         try:
             output = subprocess.check_output(["python", temp_file], stderr=subprocess.STDOUT, text=True)
+            self.log_update(f"Execution output: {output}")
             if test_result.test_code:
                 result = TestResult(test_code=test_result.test_code, passed=True, output=output)
                 status = "tested"
             else:
                 result = TestResult(test_code="", passed=True, output=output)
                 status = "executed"
-            self.log_update(f"Execution succeeded: {output}")
         except subprocess.CalledProcessError as e:
+            self.log_update(f"Execution failed with error: {e.output}")
             result = TestResult(test_code=test_result.test_code, passed=False, output=e.output)
             status = "failed" if not test_result.test_code else "tested"
-            self.log_update(f"Execution failed with output: {e.output}")
         finally:
             if os.path.exists(temp_file):
                 os.remove(temp_file)
