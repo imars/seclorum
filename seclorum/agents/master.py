@@ -6,7 +6,7 @@ import redis
 from flask_socketio import SocketIO
 from seclorum.agents.redis_mixin import RedisMixin
 from seclorum.agents.lifecycle import LifecycleMixin
-from seclorum.agents.base import AbstractAgent
+from seclorum.agents.base import AbstractAgent, AbstractAggregate
 from seclorum.agents.generator import Generator
 from seclorum.agents.tester import Tester
 from seclorum.agents.executor import Executor
@@ -15,24 +15,31 @@ from seclorum.models import Task, CodeOutput, TestResult
 from seclorum.agents.model_manager import ModelManager
 import threading
 import time
+from typing import Optional
 
 class MasterNode(AbstractAggregate, RedisMixin, LifecycleMixin):
-    def __init__(self, session_id="default_session"):
+    def __init__(self, session_id="default_session", require_redis=True):  # Added require_redis parameter
         AbstractAggregate.__init__(self, name="MasterNode", session_id=session_id)
         RedisMixin.__init__(self, name="MasterNode")
         LifecycleMixin.__init__(self, name="MasterNode", pid_file="seclorum_master.pid")
         self.redis_available = False
-        try:
-            self.connect_redis()
-            self.redis_available = True
-            self.logger.info("Redis connected successfully")
-            self.memory.save(response="Redis connected successfully")
-        except redis.ConnectionError as e:
-            self.logger.error(f"Redis unavailable at startup: {str(e)}")
+        if require_redis:
+            try:
+                self.connect_redis()
+                self.redis_available = True
+                self.logger.info("Redis connected successfully")
+                self.memory.save(response="Redis connected successfully")
+            except redis.ConnectionError as e:
+                self.logger.error(f"Redis unavailable at startup: {str(e)}")
+                # Don’t raise here; let it proceed without Redis
+        else:
+            self.logger.info("Running without Redis requirement")
         self.tasks = self.load_tasks() or {}
         self.socketio = SocketIO()
         self.running = False
         self._setup_default_graph()
+        # Note: active_workers needs initialization to avoid AttributeError in stop()
+        self.active_workers = {}
 
     def _setup_default_graph(self):
         """Initialize the default agent graph."""
