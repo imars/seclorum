@@ -14,13 +14,19 @@ class Generator(AbstractAgent):
 
     def process_task(self, task: Task) -> tuple[str, CodeOutput]:
         self.log_update(f"Generating code for Task {task.task_id}: {task.description}")
-        code_prompt = f"Generate Python code to {task.description}. Return only the raw Python code without Markdown or explanations."
+        code_prompt = (
+            f"Generate Python code to {task.description}. "
+            "Return only the raw, executable Python code without Markdown, comments, or explanations."
+        )
         code = self.model.generate(code_prompt).strip()
 
-        test_prompt = f"Generate a Python unit test for this code:\n{code}\nReturn only the raw Python test code without Markdown or explanations."
+        test_prompt = (
+            f"Generate a Python unit test for this code:\n{code}\n"
+            "Return only the raw, executable Python test code without Markdown, comments, or explanations."
+        )
         tests = self.model.generate(test_prompt).strip() if task.parameters.get("generate_tests", False) else None
 
-        # Clean any residual Markdown
+        # Final cleanup (just in case)
         code = code.replace("```python", "").replace("```", "").strip()
         if tests:
             tests = tests.replace("```python", "").replace("```", "").strip()

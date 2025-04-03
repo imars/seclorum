@@ -5,6 +5,8 @@ from .tester import Tester
 from .executor import Executor
 from .debugger import Debugger
 from .master import MasterNode
+from .learner import Learner
+from .outsourcing import Outsourcing
 from .model_manager import ModelManager
 from .memory_manager import MemoryManager
 from .redis_mixin import RedisMixin

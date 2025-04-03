@@ -1,4 +1,4 @@
-# seclorum/agents/learner_agent.py
+# seclorum/agents/learner.py
 from seclorum.agents.base import AbstractAgent
 from seclorum.models import TrainingSample, PredictionInput, PredictionOutput
 from seclorum.agents.memory_manager import MemoryManager

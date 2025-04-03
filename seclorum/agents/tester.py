@@ -14,19 +14,25 @@ class Tester(AbstractAgent):
 
     def process_task(self, task: Task) -> tuple[str, TestResult]:
         self.log_update(f"Generating tests for Task {task.task_id}")
-        code_output = CodeOutput(**task.parameters)  # Expecting code from Generator
+        code_output = CodeOutput(**task.parameters)
 
         if code_output.tests:
             test_code = code_output.tests
-            self.log_update(f"Using provided test code for Task {task.task_id}")
+            self.log_update(f"Using provided test code:\n{test_code}")
         else:
-            test_prompt = f"Generate a Python unit test for this code:\n{code_output.code}\nReturn only the test code."
-            test_code = self.model.generate(test_prompt)
-            self.log_update(f"Generated new test code for Task {task.task_id}")
+            test_prompt = (
+                f"Generate a Python unit test for this code:\n{code_output.code}\n"
+                "Return only the raw, executable Python test code without Markdown, comments, or explanations."
+            )
+            test_code = self.model.generate(test_prompt).strip()
+            self.log_update(f"Generated new test code:\n{test_code}")
 
-        result = TestResult(test_code=test_code, passed=False)  # Execution will validate
+        # Clean residual Markdown
+        test_code = test_code.replace("```python", "").replace("```", "").strip()
+
+        result = TestResult(test_code=test_code, passed=False)
         self.memory.save(response=f"Task {task.task_id} test: {result.model_dump_json()}", task_id=task.task_id)
-        self.commit_changes(f"Generated tests for Task {task.task_id}")
+        self.commit_changes(f"Generated tests for {task.task_id}")
         return "tested", result
 
     def start(self):

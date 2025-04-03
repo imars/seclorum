@@ -16,9 +16,9 @@ from seclorum.agents.model_manager import ModelManager
 import threading
 import time
 
-class MasterNode(AbstractAgent, RedisMixin, LifecycleMixin):
+class MasterNode(AbstractAggregate, RedisMixin, LifecycleMixin):
     def __init__(self, session_id="default_session"):
-        AbstractAgent.__init__(self, name="MasterNode", session_id=session_id)
+        AbstractAggregate.__init__(self, name="MasterNode", session_id=session_id)
         RedisMixin.__init__(self, name="MasterNode")
         LifecycleMixin.__init__(self, name="MasterNode", pid_file="seclorum_master.pid")
         self.redis_available = False
@@ -28,12 +28,72 @@ class MasterNode(AbstractAgent, RedisMixin, LifecycleMixin):
             self.logger.info("Redis connected successfully")
             self.memory.save(response="Redis connected successfully")
         except redis.ConnectionError as e:
-            self.logger.error(f"Redis unavailable at startup: {str(e)}. Running without Redis.")
-            self.memory.save(response=f"Redis unavailable at startup: {str(e)}")
+            self.logger.error(f"Redis unavailable at startup: {str(e)}")
         self.tasks = self.load_tasks() or {}
         self.socketio = SocketIO()
-        self.active_workers = {}
         self.running = False
+        self._setup_default_graph()
+
+    def _setup_default_graph(self):
+        """Initialize the default agent graph."""
+        model_manager = ModelManager()
+        generator = Generator("test1", self.session_id, model_manager)
+        tester = Tester("test1", self.session_id, model_manager)
+        executor = Executor("test1", self.session_id)
+        debugger = Debugger("test1", self.session_id, model_manager)
+
+        self.add_agent(generator)
+        self.add_agent(tester, [(generator.name, {"status": "generated"})])
+        self.add_agent(executor, [(tester.name, {"status": "tested"})])
+        self.add_agent(debugger, [(executor.name, {"status": "tested", "passed": False})])
+
+    def orchestrate(self, task: Task) -> tuple[str, str]:
+        task_id = task.task_id
+        self.tasks[task_id] = {"task_id": task_id, "description": task.description, "status": "assigned", "result": ""}
+        self.save_tasks()
+        self.logger.info(f"Task {task_id} assigned")
+
+        # Start with root agents (no dependencies)
+        for agent_name, deps in self.graph.items():
+            if not deps:  # Root node
+                agent = self.agents[agent_name]
+                status, result = agent.process_task(task)
+                self._propagate(agent_name, status, result, task)
+
+        final_status = self.tasks[task_id]["status"]
+        final_result = self.tasks[task_id]["result"]
+        return final_status, final_result
+
+    def _propagate(self, current_agent: str, status: str, result: str, task: Task):
+        """Propagate task through the graph based on conditions."""
+        task_id = task.task_id
+        self.tasks[task_id]["status"] = status
+        self.tasks[task_id]["result"] = result
+        self.save_tasks()
+        if self.socketio.server:
+            self.socketio.emit("task_update", self.tasks[task_id], namespace='/')
+
+        for next_agent_name, condition in self.graph.get(current_agent, []):
+            if self._check_condition(status, result, condition):
+                next_agent = self.agents[next_agent_name]
+                if isinstance(result, (CodeOutput, TestResult)):
+                    new_params = {"code_output": result.model_dump()} if isinstance(result, CodeOutput) else {"test_result": result.model_dump()}
+                    if "error" in condition:
+                        new_params["error"] = condition["error"]
+                    new_task = Task(task_id=task_id, description=task.description, parameters=new_params)
+                else:
+                    new_task = task
+                new_status, new_result = next_agent.process_task(new_task)
+                self._propagate(next_agent_name, new_status, new_result, task)
+
+    def _check_condition(self, status: str, result: str, condition: Optional[dict]) -> bool:
+        if not condition:
+            return True
+        if "status" in condition and condition["status"] != status:
+            return False
+        if "passed" in condition and isinstance(result, TestResult) and condition["passed"] != result.passed:
+            return False
+        return True
 
     def start(self):
         LifecycleMixin.start(self)
