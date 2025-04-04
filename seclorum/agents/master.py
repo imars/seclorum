@@ -3,6 +3,7 @@ import subprocess
 import os
 import signal
 import redis
+import logging
 from flask_socketio import SocketIO
 from seclorum.agents.redis_mixin import RedisMixin
 from seclorum.agents.lifecycle import LifecycleMixin
@@ -15,10 +16,11 @@ from seclorum.models import Task, CodeOutput, TestResult
 from seclorum.agents.model_manager import ModelManager
 import threading
 import time
-from typing import Optional
+import json
+from typing import Optional, List, Any
 
 class MasterNode(AbstractAggregate, RedisMixin, LifecycleMixin):
-    def __init__(self, session_id="default_session", require_redis=True):  # Added require_redis parameter
+    def __init__(self, session_id="default_session", require_redis=True):
         AbstractAggregate.__init__(self, name="MasterNode", session_id=session_id)
         RedisMixin.__init__(self, name="MasterNode")
         LifecycleMixin.__init__(self, name="MasterNode", pid_file="seclorum_master.pid")
@@ -31,15 +33,13 @@ class MasterNode(AbstractAggregate, RedisMixin, LifecycleMixin):
                 self.memory.save(response="Redis connected successfully")
             except redis.ConnectionError as e:
                 self.logger.error(f"Redis unavailable at startup: {str(e)}")
-                # Don’t raise here; let it proceed without Redis
         else:
             self.logger.info("Running without Redis requirement")
         self.tasks = self.load_tasks() or {}
         self.socketio = SocketIO()
         self.running = False
+        self.active_workers = {}  # Initialize here to avoid AttributeError
         self._setup_default_graph()
-        # Note: active_workers needs initialization to avoid AttributeError in stop()
-        self.active_workers = {}
 
     def _setup_default_graph(self):
         """Initialize the default agent graph."""
@@ -54,42 +54,62 @@ class MasterNode(AbstractAggregate, RedisMixin, LifecycleMixin):
         self.add_agent(executor, [(tester.name, {"status": "tested"})])
         self.add_agent(debugger, [(executor.name, {"status": "tested", "passed": False})])
 
-    def orchestrate(self, task: Task) -> tuple[str, str]:
+    def orchestrate(self, task: Task) -> tuple[str, TestResult]:  # Update return type
         task_id = task.task_id
-        self.tasks[task_id] = {"task_id": task_id, "description": task.description, "status": "assigned", "result": ""}
+        if task_id not in self.tasks:
+            self.tasks[task_id] = {"task_id": task_id, "description": task.description, "status": "assigned", "result": None, "outputs": {}}
         self.save_tasks()
-        self.logger.info(f"Task {task_id} assigned")
+        self.logger.info(f"Task {task_id} assigned or resumed with status {self.tasks[task_id]['status']}")
 
-        # Start with root agents (no dependencies)
-        for agent_name, deps in self.graph.items():
-            if not deps:  # Root node
-                agent = self.agents[agent_name]
-                status, result = agent.process_task(task)
-                self._propagate(agent_name, status, result, task)
+        processed = set()
+        final_result = None
+        while True:
+            made_progress = False
+            for agent_name, deps in self.graph.items():
+                if agent_name in processed:
+                    continue
+                deps_satisfied = True
+                for dep_agent, condition in deps:
+                    if dep_agent not in self.graph or dep_agent not in processed or not self._check_condition(self.tasks[task_id]["status"], self.tasks[task_id]["result"], condition):
+                        deps_satisfied = False
+                        break
+                if deps_satisfied:
+                    agent = self.agents[agent_name]
+                    params = self.tasks[task_id].get("outputs", {}).copy()
+                    new_task = Task(task_id=task_id, description=task.description, parameters=params)
+                    status, result = agent.process_task(new_task)
+                    self._propagate(agent_name, status, result, task)
+                    processed.add(agent_name)
+                    made_progress = True
+                    if status == "tested" and isinstance(result, TestResult) and result.passed:
+                        final_result = result  # Keep successful TestResult
+            if not made_progress:
+                break
 
         final_status = self.tasks[task_id]["status"]
-        final_result = self.tasks[task_id]["result"]
+        final_result = final_result if final_result is not None else self.tasks[task_id]["result"]
         return final_status, final_result
 
-    def _propagate(self, current_agent: str, status: str, result: str, task: Task):
-        """Propagate task through the graph based on conditions."""
+    def _propagate(self, current_agent: str, status: str, result: Any, task: Task):
         task_id = task.task_id
         self.tasks[task_id]["status"] = status
-        self.tasks[task_id]["result"] = result
+        self.tasks[task_id]["result"] = result  # Keep as object
+        if "outputs" not in self.tasks[task_id]:
+            self.tasks[task_id]["outputs"] = {}
+        if isinstance(result, CodeOutput):
+            self.tasks[task_id]["outputs"]["code_output"] = result.model_dump()
+        elif isinstance(result, TestResult):
+            self.tasks[task_id]["outputs"]["test_result"] = result.model_dump()
         self.save_tasks()
-        if self.socketio.server:
-            self.socketio.emit("task_update", self.tasks[task_id], namespace='/')
+        self.logger.debug(f"Updated task {task_id}: {self.tasks[task_id]}")
 
         for next_agent_name, condition in self.graph.get(current_agent, []):
             if self._check_condition(status, result, condition):
                 next_agent = self.agents[next_agent_name]
-                if isinstance(result, (CodeOutput, TestResult)):
-                    new_params = {"code_output": result.model_dump()} if isinstance(result, CodeOutput) else {"test_result": result.model_dump()}
-                    if "error" in condition:
-                        new_params["error"] = condition["error"]
-                    new_task = Task(task_id=task_id, description=task.description, parameters=new_params)
-                else:
-                    new_task = task
+                params = self.tasks[task_id]["outputs"].copy()
+                if "error" in condition:
+                    params["error"] = condition["error"]
+                new_task = Task(task_id=task_id, description=task.description, parameters=params)
                 new_status, new_result = next_agent.process_task(new_task)
                 self._propagate(next_agent_name, new_status, new_result, task)
 
@@ -124,11 +144,15 @@ class MasterNode(AbstractAggregate, RedisMixin, LifecycleMixin):
         LifecycleMixin.stop(self)
         self.log_update("Stopped")
 
-    def add_agent(self, agent: AbstractAgent):
+    def add_agent(self, agent: AbstractAgent, dependencies: List[tuple[str, Optional[dict]]] = None):
         agent.start()
+        self.agents[agent.name] = agent  # Add this
         self.active_workers[agent.task_id] = agent
         self.logger.info(f"Added and started agent {agent.name} for Task {agent.task_id}")
         self.memory.save(response=f"Added and started agent {agent.name} for Task {agent.task_id}")
+        self.graph[agent.name] = dependencies if dependencies is not None else []
+        if dependencies:
+            self.log_update(f"Added agent {agent.name} with dependencies {dependencies}")
         return agent
 
     def process_task(self, task: Task):
