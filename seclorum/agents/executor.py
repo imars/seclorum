@@ -24,7 +24,7 @@ class Executor(AbstractAgent):
             f.write(full_code)
 
         try:
-            output = subprocess.check_output(["python", temp_file], stderr=subprocess.STDOUT, text=True)
+            output = subprocess.check_output(["python", temp_file], stderr=subprocess.STDOUT, text=True, timeout=10)
             self.log_update(f"Execution output: {output}")
             if test_result.test_code:
                 result = TestResult(test_code=test_result.test_code, passed=True, output=output)
@@ -36,6 +36,10 @@ class Executor(AbstractAgent):
             self.log_update(f"Execution failed with error: {e.output}")
             result = TestResult(test_code=test_result.test_code, passed=False, output=e.output)
             status = "failed" if not test_result.test_code else "tested"
+        except Exception as e:
+            self.log_update(f"Unexpected execution error: {str(e)}")
+            result = TestResult(test_code=test_result.test_code, passed=False, output=str(e))
+            status = "tested"
         finally:
             if os.path.exists(temp_file):
                 os.remove(temp_file)
