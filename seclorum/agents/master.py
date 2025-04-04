@@ -54,7 +54,7 @@ class MasterNode(AbstractAggregate, RedisMixin, LifecycleMixin):
         self.add_agent(executor, [(tester.name, {"status": "tested"})])
         self.add_agent(debugger, [(executor.name, {"status": "tested", "passed": False})])
 
-    def orchestrate(self, task: Task) -> tuple[str, TestResult]:  # Update return type
+    def orchestrate(self, task: Task) -> tuple[str, Any]:
         task_id = task.task_id
         if task_id not in self.tasks:
             self.tasks[task_id] = {"task_id": task_id, "description": task.description, "status": "assigned", "result": None, "outputs": {}}
@@ -62,7 +62,7 @@ class MasterNode(AbstractAggregate, RedisMixin, LifecycleMixin):
         self.logger.info(f"Task {task_id} assigned or resumed with status {self.tasks[task_id]['status']}")
 
         processed = set()
-        final_result = None
+        latest_result = None
         while True:
             made_progress = False
             for agent_name, deps in self.graph.items():
@@ -81,14 +81,12 @@ class MasterNode(AbstractAggregate, RedisMixin, LifecycleMixin):
                     self._propagate(agent_name, status, result, task)
                     processed.add(agent_name)
                     made_progress = True
-                    if status == "tested" and isinstance(result, TestResult) and result.passed:
-                        final_result = result  # Keep successful TestResult
+                    latest_result = result  # Always update with latest
             if not made_progress:
                 break
 
         final_status = self.tasks[task_id]["status"]
-        final_result = final_result if final_result is not None else self.tasks[task_id]["result"]
-        return final_status, final_result
+        return final_status, latest_result
 
     def _propagate(self, current_agent: str, status: str, result: Any, task: Task):
         task_id = task.task_id
