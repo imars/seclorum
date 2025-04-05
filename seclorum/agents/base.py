@@ -1,106 +1,105 @@
 # seclorum/agents/base.py
 from abc import ABC, abstractmethod
-import os
-import logging
-from seclorum.core.filesystem import FileSystemManager
-from seclorum.agents.memory_manager import MemoryManager
-from seclorum.models import Task, AgentMessage
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from collections import defaultdict
+from seclorum.models import Task, TestResult, CodeOutput
+from seclorum.utils.logger import LoggerMixin
 
-logger = logging.getLogger("Agent")
-logging.basicConfig(
-    filename=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'log.txt')),
-    level=logging.INFO,
-    format='%(asctime)s - %(message)s',
-    filemode='a'
-)
-
-class AbstractAgent(ABC):
-    def __init__(self, name: str, session_id: str = "default_session", repo_path: str = "project"):
-        self.name = name
+class AbstractAgent(ABC, LoggerMixin):
+    def __init__(self, name: str, session_id: str):
+        self.name = name  # Set name first
+        super().__init__()  # Then init LoggerMixin
         self.session_id = session_id
-        self.repo_path = repo_path
-        self.memory = MemoryManager(session_id)
-        self.fs_manager = FileSystemManager(repo_path)
-        self.logger = logging.getLogger(f"Agent_{name}")
-        self.logger.setLevel(logging.DEBUG)
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-        self.logger.handlers = [handler]
-        self.logger.propagate = False
-        self.logger.info(f"Initialized {self.name} with session {self.session_id}")
+        self.active = False
 
-    def log_update(self, message: str):
-        self.logger.info(f"{self.name}: {message}")
-        self.memory.save(response=f"{self.name}: {message}")
+    @abstractmethod
+    def process_task(self, task: Task) -> Tuple[str, Any]:
+        pass
+
+    def start(self):
+        self.active = True
+        self.log_update(f"Starting {self.name}")
+
+    def stop(self):
+        self.active = False
+        self.log_update(f"Stopping {self.name}")
 
     def commit_changes(self, message: str):
-        self.fs_manager.save_file("changes.txt", f"{self.name}: {message}")
-        self.log_update(f"Committed changes: {message}")
-
-    def send_message(self, receiver: str, task: Task, content: str) -> str:
-        message = AgentMessage(sender=self.name, receiver=receiver, task=task, content=content)
-        return message.to_json()
-
-    def receive_message(self, json_message: str) -> AgentMessage:
-        return AgentMessage.from_json(json_message)
-
-    @abstractmethod
-    def process_task(self, task: Task) -> tuple[str, str]:
-        pass
-
-    @abstractmethod
-    def start(self):
-        pass
-
-    @abstractmethod
-    def stop(self):
-        pass
+        self.log_update(f"Committed changes: {message}")  # Placeholder
 
 
 class AbstractAggregate(AbstractAgent):
-    def __init__(self, name: str, session_id: str = "default_session", repo_path: str = "project"):
-        super().__init__(name, session_id, repo_path)
-        self.agents: Dict[str, AbstractAgent] = {}  # agent_id -> agent instance
-        self.graph: Dict[str, List[tuple[str, Optional[dict]]]] = defaultdict(list)  # agent_id -> [(next_agent_id, condition)]
+    def __init__(self, session_id: str):
+        super().__init__("Aggregate", session_id)
+        self.agents: Dict[str, AbstractAgent] = {}
+        self.graph: Dict[str, List[Tuple[str, Optional[Dict[str, Any]]]]] = defaultdict(list)
+        self.tasks: Dict[str, Dict[str, Any]] = {}
 
-    def add_agent(self, agent: AbstractAgent, dependencies: List[tuple[str, Optional[dict]]] = None):
-        """Add an agent and its dependencies to the graph."""
+    def add_agent(self, agent: AbstractAgent, dependencies: List[Tuple[str, Optional[Dict[str, Any]]]] = None):
         self.agents[agent.name] = agent
-        if dependencies:
-            self.graph[agent.name] = dependencies  # e.g., [("Tester_test1", {"status": "generated"})]
+        self.graph[agent.name] = dependencies if dependencies is not None else []
         self.log_update(f"Added agent {agent.name} with dependencies {dependencies}")
 
-    def remove_agent(self, agent_name: str):
-        """Remove an agent and update the graph."""
-        if agent_name in self.agents:
-            self.agents[agent_name].stop()
-            del self.agents[agent_name]
-            self.graph.pop(agent_name, None)
-            for src in self.graph:
-                self.graph[src] = [(tgt, cond) for tgt, cond in self.graph[src] if tgt != agent_name]
-            self.log_update(f"Removed agent {agent_name}")
+    def _check_condition(self, status: str, result: Any, condition: Optional[Dict[str, Any]]) -> bool:
+        if not condition:
+            return True
+        if "status" in condition and condition["status"] != status:
+            return False
+        if "passed" in condition and isinstance(result, TestResult) and condition["passed"] != result.passed:
+            return False
+        return True
 
-    def update_agent(self, agent_name: str, new_agent: AbstractAgent):
-        """Update an existing agent."""
-        if agent_name in self.agents:
-            self.agents[agent_name].stop()
-            self.agents[agent_name] = new_agent
-            new_agent.start()
-            self.log_update(f"Updated agent {agent_name}")
+    def _propagate(self, current_agent: str, status: str, result: Any, task: Task):
+        task_id = task.task_id
+        self.tasks[task_id]["status"] = status
+        self.tasks[task_id]["result"] = result
+        if "outputs" not in self.tasks[task_id]:
+            self.tasks[task_id]["outputs"] = {}
+        if isinstance(result, CodeOutput):
+            self.tasks[task_id]["outputs"]["code_output"] = result.model_dump()
+        elif isinstance(result, TestResult):
+            self.tasks[task_id]["outputs"]["test_result"] = result.model_dump()
+        self.logger.debug(f"Updated task {task_id}: {self.tasks[task_id]}")
 
-    @abstractmethod
-    def orchestrate(self, task: Task) -> tuple[str, str]:
-        """Define how to traverse the agent graph and process the task."""
-        pass
+        for next_agent_name, condition in self.graph.get(current_agent, []):
+            if self._check_condition(status, result, condition):
+                next_agent = self.agents[next_agent_name]
+                params = self.tasks[task_id]["outputs"].copy()
+                if "error" in condition:
+                    params["error"] = condition["error"]
+                new_task = Task(task_id=task_id, description=task.description, parameters=params)
+                new_status, new_result = next_agent.process_task(new_task)
+                self._propagate(next_agent_name, new_status, new_result, task)
 
-    def start(self):
-        self.log_update("Starting aggregate")
-        for agent in self.agents.values():
-            agent.start()
+    def orchestrate(self, task: Task) -> Tuple[str, Any]:
+        task_id = task.task_id
+        if task_id not in self.tasks:
+            self.tasks[task_id] = {"task_id": task_id, "description": task.description, "status": "assigned", "result": None, "outputs": {}}
+        self.logger.info(f"Task {task_id} assigned or resumed with status {self.tasks[task_id]['status']}")
 
-    def stop(self):
-        self.log_update("Stopping aggregate")
-        for agent in self.agents.values():
-            agent.stop()
+        processed = set()
+        latest_result = None
+        while True:
+            made_progress = False
+            for agent_name, deps in self.graph.items():
+                if agent_name in processed:
+                    continue
+                deps_satisfied = True
+                for dep_agent, condition in deps:
+                    if dep_agent not in self.graph or dep_agent not in processed or not self._check_condition(self.tasks[task_id]["status"], self.tasks[task_id]["result"], condition):
+                        deps_satisfied = False
+                        break
+                if deps_satisfied:
+                    agent = self.agents[agent_name]
+                    params = self.tasks[task_id].get("outputs", {}).copy()
+                    new_task = Task(task_id=task_id, description=task.description, parameters=params)
+                    status, result = agent.process_task(new_task)
+                    self._propagate(agent_name, status, result, task)
+                    processed.add(agent_name)
+                    made_progress = True
+                    latest_result = result
+            if not made_progress:
+                break
+
+        final_status = self.tasks[task_id]["status"]
+        return final_status, latest_result
