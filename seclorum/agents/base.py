@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from collections import defaultdict
 from seclorum.models import Task, TestResult, CodeOutput
 from seclorum.utils.logger import LoggerMixin
+from seclorum.core.filesystem import FileSystemManager
 
 class AbstractAgent(ABC, LoggerMixin):
     def __init__(self, name: str, session_id: str):
@@ -11,6 +12,7 @@ class AbstractAgent(ABC, LoggerMixin):
         super().__init__()  # Then init LoggerMixin
         self.session_id = session_id
         self.active = False
+        self.fs_manager = FileSystemManager()  # Default to current dir
 
     @abstractmethod
     def process_task(self, task: Task) -> Tuple[str, Any]:
@@ -25,8 +27,7 @@ class AbstractAgent(ABC, LoggerMixin):
         self.log_update(f"Stopping {self.name}")
 
     def commit_changes(self, message: str):
-        self.log_update(f"Committed changes: {message}")  # Placeholder
-
+        self.fs_manager.commit_changes(message)
 
 class AbstractAggregate(AbstractAgent):
     def __init__(self, session_id: str):
