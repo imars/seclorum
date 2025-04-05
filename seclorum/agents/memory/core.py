@@ -108,7 +108,7 @@ class ConversationMemory:
             text = (prompt or "") + " " + (response or "")
             self.embedding_queue.append((text, doc_id, entry["timestamp"], task_id))
             if not quiet:
-                print(f"Agent: Task {task_id} result: {response or prompt}")
+               logger.info(f"Agent: Task {task_id} result: {response or prompt}")
 
     def process_embedding_queue(self):
         while self.embedding_queue:

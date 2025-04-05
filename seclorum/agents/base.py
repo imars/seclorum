@@ -5,14 +5,16 @@ from collections import defaultdict
 from seclorum.models import Task, TestResult, CodeOutput
 from seclorum.utils.logger import LoggerMixin
 from seclorum.core.filesystem import FileSystemManager
+from seclorum.agents.memory_manager import MemoryManager  # Direct import
 
 class AbstractAgent(ABC, LoggerMixin):
-    def __init__(self, name: str, session_id: str):
-        self.name = name  # Set name first
-        super().__init__()  # Then init LoggerMixin
+    def __init__(self, name: str, session_id: str, quiet: bool = False):
+        self.name = name
+        super().__init__()
         self.session_id = session_id
         self.active = False
-        self.fs_manager = FileSystemManager()  # Default to current dir
+        self.fs_manager = FileSystemManager()
+        self.memory = MemoryManager(session_id, quiet=quiet)
 
     @abstractmethod
     def process_task(self, task: Task) -> Tuple[str, Any]:
