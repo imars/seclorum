@@ -12,7 +12,6 @@ from seclorum.agents.tester import Tester
 from seclorum.agents.executor import Executor
 from seclorum.agents.learner import Learner
 
-# Set logging to INFO to reduce DEBUG noise
 logging.basicConfig(level=logging.INFO)
 
 class MockModelManager:
@@ -27,9 +26,9 @@ def test_aggregate_workflow():
     session_id = "test_session"
     task = Task(task_id="test1", description="create a Python script to list all Python files in a directory", parameters={"generate_tests": True})
     model_manager = MockModelManager()
-    master = MasterNode(session_id, require_redis=False)
-    master.graph.clear()
-    master.agents.clear()
+    master = MasterNode(session_id, require_redis=False)  # Default graph set here
+    master.graph.clear()  # Override default
+    master.agents.clear()  # Clear default agents
     generator = Generator("test1", session_id, model_manager)
     tester = Tester("test1", session_id, model_manager)
     executor = Executor("test1", session_id)
