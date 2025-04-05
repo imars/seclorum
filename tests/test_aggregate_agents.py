@@ -6,12 +6,15 @@ for module in list(sys.modules.keys()):
 
 import argparse
 import logging
+import os
 from seclorum.models import Task, CodeOutput, TestResult
 from seclorum.agents.master import MasterNode
 from seclorum.agents.generator import Generator
 from seclorum.agents.tester import Tester
 from seclorum.agents.executor import Executor
 from seclorum.agents.learner import Learner
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"  # Suppress tokenizers warning
 
 def setup_logging(quiet: bool):
     level = logging.WARNING if quiet else logging.INFO
