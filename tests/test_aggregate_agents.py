@@ -15,7 +15,9 @@ from seclorum.agents.learner import Learner
 
 def setup_logging(quiet: bool):
     level = logging.WARNING if quiet else logging.INFO
-    logging.basicConfig(level=level)
+    # Clear existing handlers to enforce level
+    logging.getLogger().handlers.clear()
+    logging.basicConfig(level=level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 class MockModelManager:
     def generate(self, prompt: str) -> str:

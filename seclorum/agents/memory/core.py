@@ -1,4 +1,4 @@
-# seclorum/memory/core.py
+# seclorum/agents/memory/core.py
 import os
 import json
 import logging
@@ -14,7 +14,6 @@ class ConversationMemory:
     def __init__(self, session_id="default_session", use_json=False):
         self.session_id = session_id
         self.use_json = use_json
-        # Use absolute path from repo root
         self.log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../logs/conversations"))
         os.makedirs(self.log_dir, exist_ok=True)
 
@@ -72,7 +71,7 @@ class ConversationMemory:
                         metadatas=[metadata]
                     )
 
-    def save(self, prompt=None, response=None, session_id=None, task_id=None):
+    def save(self, prompt=None, response=None, session_id=None, task_id=None, quiet=False):
         entry = {
             "timestamp": datetime.now().isoformat(),
             "prompt": prompt,
@@ -108,6 +107,8 @@ class ConversationMemory:
         if prompt or response:
             text = (prompt or "") + " " + (response or "")
             self.embedding_queue.append((text, doc_id, entry["timestamp"], task_id))
+            if not quiet:
+                print(f"Agent: Task {task_id} result: {response or prompt}")
 
     def process_embedding_queue(self):
         while self.embedding_queue:
@@ -116,7 +117,6 @@ class ConversationMemory:
             metadata = {"timestamp": timestamp, "session_id": self.session_id}
             if task_id is not None:
                 metadata["task_id"] = task_id
-            # Use upsert to update existing IDs
             self.collection.upsert(
                 documents=[text],
                 embeddings=[embedding],
