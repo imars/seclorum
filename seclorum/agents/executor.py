@@ -20,28 +20,28 @@ class Executor(AbstractAgent):
         self.log_update(f"Executing code:\n{full_code}")
 
         temp_file = f"temp_{task.task_id}.py"
+        self.log_update(f"Writing to {temp_file}")
         with open(temp_file, "w") as f:
             f.write(full_code)
 
         try:
-            output = subprocess.check_output(["python", temp_file], stderr=subprocess.STDOUT, text=True, timeout=10)
+            cmd = ["python", temp_file]
+            self.log_update(f"Running command: {' '.join(cmd)}")
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
             self.log_update(f"Execution output: {output}")
-            if test_result.test_code:
-                result = TestResult(test_code=test_result.test_code, passed=True, output=output)
-                status = "tested"
-            else:
-                result = TestResult(test_code="", passed=True, output=output)
-                status = "executed"
+            result = TestResult(test_code=test_result.test_code, passed=True, output=output)
+            status = "tested"
         except subprocess.CalledProcessError as e:
             self.log_update(f"Execution failed with error: {e.output}")
             result = TestResult(test_code=test_result.test_code, passed=False, output=e.output)
-            status = "failed" if not test_result.test_code else "tested"
+            status = "tested"
         except Exception as e:
             self.log_update(f"Unexpected execution error: {str(e)}")
             result = TestResult(test_code=test_result.test_code, passed=False, output=str(e))
             status = "tested"
         finally:
             if os.path.exists(temp_file):
+                self.log_update(f"Cleaning up {temp_file}")
                 os.remove(temp_file)
 
         self.memory.save(response=f"Task {task.task_id} result: {result.model_dump_json()}", task_id=task.task_id)

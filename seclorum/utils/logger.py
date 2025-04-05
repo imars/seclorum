@@ -1,6 +1,21 @@
 import json
 import os
 from datetime import datetime
+import logging
+import os
+
+class LoggerMixin:
+    def __init__(self):
+        self.logger = logging.getLogger(f"Agent_{self.name}")
+        self.logger.setLevel(logging.INFO)
+        if not self.logger.handlers:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+
+    def log_update(self, message: str):
+        self.logger.info(message)
 
 class ConversationLogger:
     def __init__(self, chat_id):

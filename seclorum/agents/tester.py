@@ -14,7 +14,7 @@ class Tester(AbstractAgent):
 
     def process_task(self, task: Task) -> tuple[str, TestResult]:
         self.log_update(f"Generating tests for Task {task.task_id}")
-        code_output = CodeOutput(**task.parameters)
+        code_output = CodeOutput(**task.parameters.get("code_output", {}))
 
         if code_output.tests:
             test_code = code_output.tests

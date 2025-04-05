@@ -1,6 +1,6 @@
 # seclorum/agents/learner.py
 from seclorum.agents.base import AbstractAgent
-from seclorum.models import TrainingSample, PredictionInput, PredictionOutput
+from seclorum.models import TrainingSample, PredictionInput, PredictionOutput, Task
 from seclorum.agents.memory_manager import MemoryManager
 # Placeholder for actual model (e.g., Hugging Face)
 from typing import List
