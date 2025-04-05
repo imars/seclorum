@@ -4,6 +4,7 @@ for module in list(sys.modules.keys()):
     if module.startswith("seclorum"):
         sys.modules.pop(module)
 
+import argparse
 import logging
 from seclorum.models import Task, CodeOutput, TestResult
 from seclorum.agents.master import MasterNode
@@ -12,7 +13,9 @@ from seclorum.agents.tester import Tester
 from seclorum.agents.executor import Executor
 from seclorum.agents.learner import Learner
 
-logging.basicConfig(level=logging.INFO)
+def setup_logging(quiet: bool):
+    level = logging.WARNING if quiet else logging.INFO
+    logging.basicConfig(level=level)
 
 class MockModelManager:
     def generate(self, prompt: str) -> str:
@@ -22,13 +25,13 @@ class MockModelManager:
             return "import os\ndef test_list_files():\n    files = [f for f in os.listdir('.') if f.endswith('.py')]\n    assert isinstance(files, list)"
         return "Mock response"
 
-def test_aggregate_workflow():
+def test_aggregate_workflow(quiet: bool = False):
     session_id = "test_session"
     task = Task(task_id="test1", description="create a Python script to list all Python files in a directory", parameters={"generate_tests": True})
     model_manager = MockModelManager()
-    master = MasterNode(session_id, require_redis=False)  # Default graph set here
-    master.graph.clear()  # Override default
-    master.agents.clear()  # Clear default agents
+    master = MasterNode(session_id, require_redis=False)
+    master.graph.clear()
+    master.agents.clear()
     generator = Generator("test1", session_id, model_manager)
     tester = Tester("test1", session_id, model_manager)
     executor = Executor("test1", session_id)
@@ -40,10 +43,11 @@ def test_aggregate_workflow():
     master.start()
     status, result = master.orchestrate(task)
 
-    print(f"Initial status: {status}")
-    print(f"Initial result: {result}")
-    history = master.memory.load_history(task_id=task.task_id)
-    print(f"Initial history: {history}")
+    if not quiet:
+        print(f"Initial status: {status}")
+        print(f"Initial result: {result}")
+        history = master.memory.load_history(task_id=task.task_id)
+        print(f"Initial history: {history}")
 
     assert status in ["generated", "tested"], f"Unexpected initial status: {status}"
     if status == "tested":
@@ -54,10 +58,11 @@ def test_aggregate_workflow():
     master.add_agent(learner, [(executor.name, {"status": "tested"})])
     status, result = master.orchestrate(task)
 
-    print(f"Final status: {status}")
-    print(f"Final result: {result}")
-    history = master.memory.load_history(task_id=task.task_id)
-    print(f"Final history: {history}")
+    if not quiet:
+        print(f"Final status: {status}")
+        print(f"Final result: {result}")
+        history = master.memory.load_history(task_id=task.task_id)
+        print(f"Final history: {history}")
 
     assert status in ["tested", "predicted"], f"Unexpected final status: {status}"
     if status == "tested":
@@ -69,5 +74,11 @@ def test_aggregate_workflow():
     master.stop()
 
 if __name__ == "__main__":
-    test_aggregate_workflow()
-    print("Aggregate agent workflow tests passed!")
+    parser = argparse.ArgumentParser(description="Run aggregate agent workflow tests")
+    parser.add_argument("--quiet", action="store_true", help="Suppress detailed output")
+    args = parser.parse_args()
+
+    setup_logging(args.quiet)
+    test_aggregate_workflow(quiet=args.quiet)
+    if not args.quiet:
+        print("Aggregate agent workflow tests passed!")
