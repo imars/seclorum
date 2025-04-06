@@ -16,9 +16,11 @@ class Executor(AbstractAgent):
         self.log_update(f"Executing for Task {task.task_id}")
         self.log_update(f"Task parameters: {task.parameters}")
 
-        # Extract code and test with specific keys
-        code_output = task.parameters.get("code_output", CodeOutput(code=""))
-        test_result = task.parameters.get("test_result", TestResult(test_code="", passed=False))
+        # Extract and deserialize code and test from parameters
+        code_output_data = task.parameters.get("code_output", {"code": ""})
+        code_output = CodeOutput(**code_output_data) if isinstance(code_output_data, dict) else code_output_data
+        test_result_data = task.parameters.get("test_result", {"test_code": "", "passed": False})
+        test_result = TestResult(**test_result_data) if isinstance(test_result_data, dict) else test_result_data
 
         full_code = f"{code_output.code}\n\n{test_result.test_code}" if test_result.test_code else code_output.code
         self.log_update(f"Full code to execute:\n{full_code}")
