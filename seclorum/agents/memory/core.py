@@ -93,21 +93,46 @@ class ConversationMemory:
                     metadatas=[metadata]
                 )
 
+    # seclorum/agents/memory/core.py
     def save(self, prompt=None, response=None, session_id=None, task_id=None):
         entry = {
             "timestamp": datetime.now().isoformat(),
             "prompt": prompt,
-            "response": response,
             "session_id": session_id or self.session_id,
             "task_id": task_id
         }
+
+        # Format response before saving
+        if response:
+            if hasattr(response, 'model_dump'):  # Pydantic model
+                data = response.model_dump()
+                formatted = []
+                if "code" in data:
+                    code = data["code"].replace("\\n", "\n").replace("```python\n", "").replace("```", "").strip()
+                    formatted.append("Code:\n" + code)
+                if "tests" in data and data["tests"]:
+                    tests = data["tests"].replace("\\n", "\n").replace("```python\n", "").replace("```", "").strip()
+                    formatted.append("Tests:\n" + tests)
+                if "test_code" in data:
+                    test_code = data["test_code"].replace("\\n", "\n").replace("```python\n", "").replace("```", "").strip()
+                    formatted.append("Test Code:\n" + test_code)
+                if "passed" in data:
+                    formatted.append(f"Passed: {data['passed']}")
+                if "output" in data and data["output"]:
+                    formatted.append(f"Output:\n{data['output']}")
+                formatted_response = "\n".join(formatted)
+            else:  # String
+                formatted_response = response.replace("```python\n", "").replace("```", "").strip()
+            entry["response"] = formatted_response
+        else:
+            entry["response"] = None
 
         if not self.use_json:
             with sqlite3.connect(self.db_file) as conn:
                 cursor = conn.execute("""
                     INSERT INTO conversations (timestamp, prompt, response, session_id, task_id)
                     VALUES (?, ?, ?, ?, ?)
-                """, (entry["timestamp"], prompt, response, entry["session_id"], task_id))
+                """, (entry["timestamp"], prompt, entry["response"], entry["session_id"], task_id))
                 conn.commit()
                 doc_id = f"{self.session_id}_{cursor.lastrowid}"
                 logger.debug(f"Saved to SQLite: {self.db_file}, rowid: {cursor.lastrowid}")
@@ -127,38 +152,10 @@ class ConversationMemory:
             doc_id = f"{self.session_id}_{len(data)-1}"
 
         if prompt or response:
-            text = (prompt or "") + " " + (response or "")
+            text = (prompt or "") + " " + (entry["response"] or "")
             self.embedding_queue.append((text, doc_id, entry["timestamp"], task_id))
-            if response:
-                try:
-                    if isinstance(response, str) and response.strip().startswith("{"):
-                        data = json.loads(response)
-                        formatted = []
-                        if "code" in data:
-                            code = data["code"].replace("\\n", "\n").strip()
-                            if code.startswith("```python"):
-                                code = code.replace("```python\n", "").replace("```", "").strip()
-                            formatted.append("Code:\n" + code)
-                        if "tests" in data and data["tests"]:
-                            tests = data["tests"].replace("\\n", "\n").strip()
-                            if tests.startswith("```python"):
-                                tests = tests.replace("```python\n", "").replace("```", "").strip()
-                            formatted.append("Tests:\n" + tests)
-                        if "test_code" in data:
-                            test_code = data["test_code"].replace("\\n", "\n").strip()
-                            if test_code.startswith("```python"):
-                                test_code = test_code.replace("```python\n", "").replace("```", "").strip()
-                            formatted.append("Test Code:\n" + test_code)
-                        if "passed" in data:
-                            formatted.append(f"Passed: {data['passed']}")
-                        if "output" in data and data["output"]:
-                            formatted.append(f"Output:\n{data['output']}")
-                        logger.info(f"Agent: Task {task_id} result:\n" + "\n".join(formatted))
-                    else:
-                        clean_response = response.replace("```python\n", "").replace("```", "").strip()
-                        logger.info(f"Agent: Task {task_id} result:\n{clean_response}")
-                except json.JSONDecodeError:
-                    logger.info(f"Agent: Task {task_id} result: {response}")
+            if entry["response"]:
+                logger.info(f"Agent: Task {task_id} result:\n{entry['response']}")
             elif prompt:
                 logger.info(f"Agent: Task {task_id} prompt: {prompt}")
 
