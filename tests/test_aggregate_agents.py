@@ -65,6 +65,7 @@ def test_aggregate_workflow():
 
     master.stop()
 
+# tests/test_aggregate_agents.py
 def test_aggregate_workflow_with_debugging():
     session_id = "debug_session"
     task = Task(task_id="debug1", description="create a Python script with a bug to debug", parameters={"generate_tests": True})
@@ -76,7 +77,7 @@ def test_aggregate_workflow_with_debugging():
             if "Generate Python code" in prompt:
                 return "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]  # Intentional IndexError"
             elif "Generate a Python unit test" in prompt:
-                return "import os\nfrom buggy_list_files import buggy_list_files\ndef test_buggy_list_files():\n    result = buggy_list_files()\n    assert isinstance(result, str)"
+                return "import os\ndef test_buggy_list_files():\n    result = buggy_list_files()\n    assert isinstance(result, str)"
             return "Mock debug response"
 
     debug_model_manager = DebugMockModelManager()

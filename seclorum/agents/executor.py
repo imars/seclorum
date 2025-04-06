@@ -14,8 +14,12 @@ class Executor(AbstractAgent):
 
     def process_task(self, task: Task) -> tuple[str, TestResult]:
         self.log_update(f"Executing for Task {task.task_id}")
-        code_output = CodeOutput(**task.parameters.get("code_output", {}))
-        test_result = TestResult(**task.parameters.get("test_result", {"test_code": "", "passed": False}))
+
+        # Extract code and test from previous agents
+        code_output = task.parameters.get("result") if isinstance(task.parameters.get("result"), CodeOutput) else CodeOutput(code="")
+        test_result = task.parameters.get("result") if isinstance(task.parameters.get("result"), TestResult) else TestResult(test_code="", passed=False)
+
+        # Combine code and test, ensuring test calls the function
         full_code = f"{code_output.code}\n\n{test_result.test_code}" if test_result.test_code else code_output.code
         self.log_update(f"Executing code:\n{full_code}")
 
