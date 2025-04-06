@@ -65,7 +65,6 @@ def test_aggregate_workflow():
 
     master.stop()
 
-# tests/test_aggregate_agents.py
 def test_aggregate_workflow_with_debugging():
     session_id = "debug_session"
     task = Task(task_id="debug1", description="create a Python script with a bug to debug", parameters={"generate_tests": True})
@@ -75,7 +74,7 @@ def test_aggregate_workflow_with_debugging():
             super().__init__(model_name)
         def generate(self, prompt: str, **kwargs) -> str:
             if "Generate Python code" in prompt:
-                return "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]  # Intentional IndexError"
+                return "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]"
             elif "Generate a Python unit test" in prompt:
                 return "import os\ndef test_buggy_list_files():\n    result = buggy_list_files()\n    assert isinstance(result, str)"
             return "Mock debug response"
@@ -106,7 +105,7 @@ def test_aggregate_workflow_with_debugging():
     assert "IndexError" in (result.output or ""), "Output should indicate IndexError"
 
     master.stop()
-    
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run aggregate agent workflow tests")
     parser.add_argument("--quiet", action="store_true", help="Suppress detailed output")

@@ -14,14 +14,20 @@ class Executor(AbstractAgent):
 
     def process_task(self, task: Task) -> tuple[str, TestResult]:
         self.log_update(f"Executing for Task {task.task_id}")
+        self.log_update(f"Task parameters: {task.parameters}")
 
-        # Extract code and test from previous agents
-        code_output = task.parameters.get("result") if isinstance(task.parameters.get("result"), CodeOutput) else CodeOutput(code="")
-        test_result = task.parameters.get("result") if isinstance(task.parameters.get("result"), TestResult) else TestResult(test_code="", passed=False)
+        # Extract code and test with specific keys
+        code_output = task.parameters.get("code_output", CodeOutput(code=""))
+        test_result = task.parameters.get("test_result", TestResult(test_code="", passed=False))
 
-        # Combine code and test
         full_code = f"{code_output.code}\n\n{test_result.test_code}" if test_result.test_code else code_output.code
         self.log_update(f"Full code to execute:\n{full_code}")
+
+        if not full_code.strip():
+            self.log_update("No code to execute")
+            result = TestResult(test_code=test_result.test_code, passed=False, output="No code provided")
+            self.memory.save(response=result, task_id=task.task_id)
+            return "tested", result
 
         temp_file = f"temp_{task.task_id}.py"
         self.log_update(f"Writing to {temp_file}")
