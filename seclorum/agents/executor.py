@@ -44,7 +44,7 @@ class Executor(AbstractAgent):
                 self.log_update(f"Cleaning up {temp_file}")
                 os.remove(temp_file)
 
-        self.memory.save(response=code, task_id=task.task_id)  # Pass CodeOutput object
+        self.memory.save(response=result, task_id=task.task_id)
         self.commit_changes(f"Executed code and tests for Task {task.task_id}")
         return status, result
 
