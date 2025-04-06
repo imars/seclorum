@@ -10,3 +10,17 @@ from .outsourcing import Outsourcing
 from .model_manager import ModelManager
 from .redis_mixin import RedisMixin
 from .lifecycle import LifecycleMixin
+from .developer import Developer
+from .architect import Architect
+
+__all__ = [
+    "AbstractAgent",
+    "AbstractAggregate",
+    "MasterNode",
+    "Generator",
+    "Tester",
+    "Executor",
+    "Learner",
+    "Developer",
+    "Architect"
+]

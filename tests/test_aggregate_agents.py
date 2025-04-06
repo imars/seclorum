@@ -65,7 +65,48 @@ def test_aggregate_workflow():
 
     master.stop()
 
-# MockModelManager moved to manager.py
+def test_aggregate_workflow_with_debugging():
+    session_id = "debug_session"
+    task = Task(task_id="debug1", description="create a Python script with a bug to debug", parameters={"generate_tests": True})
+    model_manager = create_model_manager(provider="mock")
+
+    # Mock a buggy response
+    class DebugMockModelManager(ModelManager):
+        def __init__(self, model_name: str = "debug_mock"):
+            super().__init__(model_name)
+        def generate(self, prompt: str, **kwargs) -> str:
+            if "Generate Python code" in prompt:
+                return "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]  # Intentional IndexError"
+            elif "Generate a Python unit test" in prompt:
+                return "import os\ndef test_buggy_list_files():\n    files = buggy_list_files()\n    assert isinstance(files, str)"
+            return "Mock debug response"
+
+    debug_model_manager = DebugMockModelManager()
+    master = MasterNode(session_id, require_redis=False)
+    master.graph.clear()
+    master.agents.clear()
+    generator = Generator("debug1", session_id, debug_model_manager)
+    tester = Tester("debug1", session_id, debug_model_manager)
+    executor = Executor("debug1", session_id)
+
+    master.add_agent(generator)
+    master.add_agent(tester, [(generator.name, {"status": "generated"})])
+    master.add_agent(executor, [(tester.name, {"status": "tested"})])
+
+    master.start()
+    status, result = master.orchestrate(task)
+
+    print(f"Debug status: {status}")
+    print(f"Debug result: {result}")
+    history = master.memory.load_history(task_id=task.task_id)
+    print(f"Debug history: {history}")
+
+    assert status == "tested", f"Expected 'tested' status, got {status}"
+    assert isinstance(result, TestResult), "Result should be TestResult"
+    assert not result.passed, "Test should fail due to bug"
+    assert "IndexError" in (result.output or ""), "Output should indicate IndexError"
+
+    master.stop()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run aggregate agent workflow tests")
@@ -74,4 +115,6 @@ if __name__ == "__main__":
 
     setup_logging(args.quiet)
     test_aggregate_workflow()
-    print("Aggregate agent workflow tests passed!")
+    test_aggregate_workflow_with_debugging()  # Add new test
+    if not args.quiet:
+        print("Aggregate agent workflow tests passed!")
