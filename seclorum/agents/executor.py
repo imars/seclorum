@@ -36,17 +36,14 @@ class Executor(AbstractAgent):
             passed = "Traceback" not in output and "AssertionError" not in output
             self.log_update(f"Determined passed: {passed}")
             result = TestResult(test_code=test_result.test_code, passed=passed, output=output)
-            status = "tested"
         except subprocess.CalledProcessError as e:
             self.log_update(f"Execution failed with error: {e.output}")
             result = TestResult(test_code=test_result.test_code, passed=False, output=e.output)
             self.log_update(f"Result after CalledProcessError: passed={result.passed}, output={result.output}")
-            status = "tested"
         except Exception as e:
             self.log_update(f"Unexpected execution error: {str(e)}")
             result = TestResult(test_code=test_result.test_code, passed=False, output=str(e))
             self.log_update(f"Result after unexpected error: passed={result.passed}, output={result.output}")
-            status = "tested"
         finally:
             if os.path.exists(temp_file):
                 self.log_update(f"Cleaning up {temp_file}")
@@ -55,7 +52,7 @@ class Executor(AbstractAgent):
         self.log_update(f"Final result: passed={result.passed}, output={result.output}")
         self.memory.save(response=result, task_id=task.task_id)
         self.commit_changes(f"Executed code and tests for Task {task.task_id}")
-        return status, result
+        return "tested", result
 
     def start(self):
         self.log_update("Starting executor")

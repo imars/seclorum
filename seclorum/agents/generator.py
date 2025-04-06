@@ -38,6 +38,7 @@ class Generator(AbstractAgent):
             self.log_update(f"Generated tests:\n{tests}")
         self.memory.save(response=code, task_id=task.task_id)
         self.commit_changes(f"Generated code and tests for {task.task_id}")
+        task.parameters["result"] = code
         return "generated", result
 
     def start(self):

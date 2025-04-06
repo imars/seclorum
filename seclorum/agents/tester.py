@@ -32,6 +32,7 @@ class Tester(AbstractAgent):
 
         result = TestResult(test_code=test_code, passed=False)
         self.memory.save(response=result, task_id=task.task_id)  # Pass TestResult object
+        task.parameters["result"] = result  # Pass test result downstream
         self.commit_changes(f"Generated tests for {task.task_id}")
         return "tested", result
 
