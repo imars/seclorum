@@ -71,7 +71,7 @@ class ConversationMemory:
                         metadatas=[metadata]
                     )
 
-    def save(self, prompt=None, response=None, session_id=None, task_id=None, quiet=False):
+    def save(self, prompt=None, response=None, session_id=None, task_id=None):
         entry = {
             "timestamp": datetime.now().isoformat(),
             "prompt": prompt,
@@ -107,8 +107,16 @@ class ConversationMemory:
         if prompt or response:
             text = (prompt or "") + " " + (response or "")
             self.embedding_queue.append((text, doc_id, entry["timestamp"], task_id))
-            if not quiet:
-               logger.info(f"Agent: Task {task_id} result: {response or prompt}")
+            # Clean up response for logging
+            if response:
+                if isinstance(response, str) and "```" in response:
+                    # Strip code block markers and extra newlines
+                    clean_response = response.replace("```python\n", "").replace("```\n", "").replace("```", "").strip()
+                    logger.info(f"Agent: Task {task_id} result:\n{clean_response}")
+                else:
+                    logger.info(f"Agent: Task {task_id} result: {response}")
+            elif prompt:
+                logger.info(f"Agent: Task {task_id} prompt: {prompt}")
 
     def process_embedding_queue(self):
         while self.embedding_queue:
