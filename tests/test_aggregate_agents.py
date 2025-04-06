@@ -74,5 +74,4 @@ if __name__ == "__main__":
 
     setup_logging(args.quiet)
     test_aggregate_workflow()
-    if not args.quiet:
-        print("Aggregate agent workflow tests passed!")
+    print("Aggregate agent workflow tests passed!")
