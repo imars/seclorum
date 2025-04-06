@@ -14,7 +14,7 @@ class AbstractAgent(ABC, LoggerMixin):
         self.session_id = session_id
         self.active = False
         self.fs_manager = FileSystemManager()
-        self.memory = MemoryManager(session_id, quiet=quiet)
+        self.memory = MemoryManager(session_id)
 
     @abstractmethod
     def process_task(self, task: Task) -> Tuple[str, Any]:

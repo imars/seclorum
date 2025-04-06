@@ -7,6 +7,8 @@ for module in list(sys.modules.keys()):
 import argparse
 import logging
 import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 from seclorum.models import Task, CodeOutput, TestResult
 from seclorum.agents.master import MasterNode
 from seclorum.agents.generator import Generator
@@ -14,23 +16,15 @@ from seclorum.agents.tester import Tester
 from seclorum.agents.executor import Executor
 from seclorum.agents.learner import Learner
 
-os.environ["TOKENIZERS_PARALLELISM"] = "false"  # Suppress tokenizers warning
-
 def setup_logging(quiet: bool):
     level = logging.WARNING if quiet else logging.INFO
-    # Clear existing handlers to enforce level
-    logging.getLogger().handlers.clear()
-    logging.basicConfig(level=level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.getLogger().setLevel(level)
+    for handler in logging.getLogger().handlers[:]:
+        handler.setLevel(level)
+    for logger_name in logging.Logger.manager.loggerDict:
+        logging.getLogger(logger_name).setLevel(level)
 
-class MockModelManager:
-    def generate(self, prompt: str) -> str:
-        if "Generate Python code" in prompt:
-            return "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]"
-        elif "Generate a Python unit test" in prompt:
-            return "import os\ndef test_list_files():\n    files = [f for f in os.listdir('.') if f.endswith('.py')]\n    assert isinstance(files, list)"
-        return "Mock response"
-
-def test_aggregate_workflow(quiet: bool = False):
+def test_aggregate_workflow():
     session_id = "test_session"
     task = Task(task_id="test1", description="create a Python script to list all Python files in a directory", parameters={"generate_tests": True})
     model_manager = MockModelManager()
@@ -48,11 +42,10 @@ def test_aggregate_workflow(quiet: bool = False):
     master.start()
     status, result = master.orchestrate(task)
 
-    if not quiet:
-        print(f"Initial status: {status}")
-        print(f"Initial result: {result}")
-        history = master.memory.load_history(task_id=task.task_id)
-        print(f"Initial history: {history}")
+    print(f"Initial status: {status}")
+    print(f"Initial result: {result}")
+    history = master.memory.load_history(task_id=task.task_id)
+    print(f"Initial history: {history}")
 
     assert status in ["generated", "tested"], f"Unexpected initial status: {status}"
     if status == "tested":
@@ -63,11 +56,10 @@ def test_aggregate_workflow(quiet: bool = False):
     master.add_agent(learner, [(executor.name, {"status": "tested"})])
     status, result = master.orchestrate(task)
 
-    if not quiet:
-        print(f"Final status: {status}")
-        print(f"Final result: {result}")
-        history = master.memory.load_history(task_id=task.task_id)
-        print(f"Final history: {history}")
+    print(f"Final status: {status}")
+    print(f"Final result: {result}")
+    history = master.memory.load_history(task_id=task.task_id)
+    print(f"Final history: {history}")
 
     assert status in ["tested", "predicted"], f"Unexpected final status: {status}"
     if status == "tested":
@@ -78,12 +70,20 @@ def test_aggregate_workflow(quiet: bool = False):
 
     master.stop()
 
+class MockModelManager:
+    def generate(self, prompt: str) -> str:
+        if "Generate Python code" in prompt:
+            return "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]"
+        elif "Generate a Python unit test" in prompt:
+            return "import os\ndef test_list_files():\n    files = [f for f in os.listdir('.') if f.endswith('.py')]\n    assert isinstance(files, list)"
+        return "Mock response"
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run aggregate agent workflow tests")
     parser.add_argument("--quiet", action="store_true", help="Suppress detailed output")
     args = parser.parse_args()
 
     setup_logging(args.quiet)
-    test_aggregate_workflow(quiet=args.quiet)
+    test_aggregate_workflow()
     if not args.quiet:
         print("Aggregate agent workflow tests passed!")

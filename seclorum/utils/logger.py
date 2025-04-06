@@ -7,12 +7,13 @@ import os
 class LoggerMixin:
     def __init__(self):
         self.logger = logging.getLogger(f"Agent_{self.name}")
-        self.logger.setLevel(logging.INFO)
+        # Don’t set level here; inherit from root
         if not self.logger.handlers:
             handler = logging.StreamHandler()
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-            handler.setFormatter(formatter)
+            handler.setLevel(logging.INFO)  # Default handler level
             self.logger.addHandler(handler)
+        self.logger.propagate = True  # Ensure propagation to root
 
     def log_update(self, message: str):
         self.logger.info(message)

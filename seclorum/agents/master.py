@@ -15,14 +15,14 @@ from seclorum.agents.debugger import Debugger
 from seclorum.models import Task, CodeOutput, TestResult
 from seclorum.agents.model_manager import ModelManager
 from seclorum.agents.memory_manager import MemoryManager
-
 import threading
 import time
 import json
 from typing import Optional, List, Any
 
-class MasterNode(AbstractAggregate, RedisMixin, LifecycleMixin):
-    def __init__(self, session_id="default_session", require_redis=True):
+class MasterNode(AbstractAggregate):
+    def __init__(self, session_id: str, require_redis: bool = False):
+        super().__init__(session_id)  # Pass quiet to AbstractAgent
         AbstractAggregate.__init__(self, session_id)
         RedisMixin.__init__(self, name="MasterNode")
         LifecycleMixin.__init__(self, name="MasterNode", pid_file="seclorum_master.pid")
@@ -48,7 +48,7 @@ class MasterNode(AbstractAggregate, RedisMixin, LifecycleMixin):
     def setup_default_graph(self):
         """Initialize the default agent graph."""
         model_manager = ModelManager()
-        generator = Generator("test1", self.session_id, model_manager)
+        generator = Generator("test1", self.session_id, model_manager)  # Default quiet=False
         tester = Tester("test1", self.session_id, model_manager)
         executor = Executor("test1", self.session_id)
         debugger = Debugger("test1", self.session_id, model_manager)
