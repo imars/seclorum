@@ -94,6 +94,9 @@ def test_aggregate_workflow_with_debugging():
     master.start()
     status, result = master.orchestrate(task)
 
+    # Force Executor to run with latest task state
+    status, result = executor.process_task(task)
+
     print(f"Debug status: {status}")
     print(f"Debug result: passed={result.passed}, output={result.output}")
     history = master.memory.load_history(task_id=task.task_id)

@@ -16,12 +16,13 @@ class Executor(AbstractAgent):
         self.log_update(f"Executing for Task {task.task_id}")
         self.log_update(f"Task parameters: {task.parameters}")
 
-        # Extract and deserialize code and test from parameters
+        # Extract and deserialize code and test
         code_output_data = task.parameters.get("code_output", {"code": ""})
         code_output = CodeOutput(**code_output_data) if isinstance(code_output_data, dict) else code_output_data
         test_result_data = task.parameters.get("test_result", {"test_code": "", "passed": False})
         test_result = TestResult(**test_result_data) if isinstance(test_result_data, dict) else test_result_data
 
+        # Combine code and test
         full_code = f"{code_output.code}\n\n{test_result.test_code}" if test_result.test_code else code_output.code
         self.log_update(f"Full code to execute:\n{full_code}")
 
@@ -37,7 +38,7 @@ class Executor(AbstractAgent):
             f.write(full_code)
 
         try:
-            cmd = ["python", temp_file]
+            cmd = ["python", "-B", temp_file]  # -B to avoid pyc files
             self.log_update(f"Running command: {' '.join(cmd)}")
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
             self.log_update(f"Execution output: {output}")
