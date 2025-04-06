@@ -2,7 +2,7 @@
 from seclorum.agents.base import AbstractAgent
 from seclorum.models import Task, CodeOutput, TestResult
 from seclorum.agents.memory_manager import MemoryManager
-from seclorum.agents.model_manager import ModelManager
+from seclorum.models import Task, TestResult, create_model_manager, ModelManager
 
 class Tester(AbstractAgent):
     def __init__(self, task_id: str, session_id: str, model_manager: ModelManager, memory: MemoryManager = None):

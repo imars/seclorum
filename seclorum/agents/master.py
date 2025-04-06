@@ -12,8 +12,7 @@ from seclorum.agents.generator import Generator
 from seclorum.agents.tester import Tester
 from seclorum.agents.executor import Executor
 from seclorum.agents.debugger import Debugger
-from seclorum.models import Task, CodeOutput, TestResult
-from seclorum.agents.model_manager import ModelManager
+from seclorum.models import Task, CodeOutput, TestResult, create_model_manager
 from seclorum.agents.memory_manager import MemoryManager
 import threading
 import time
@@ -38,7 +37,7 @@ class MasterNode(AbstractAggregate, RedisMixin):
 
     def setup_default_graph(self):
         """Initialize the default agent graph."""
-        model_manager = ModelManager()
+        model_manager = create_model_manager(provider="ollama", model_name="codellama")
         generator = Generator("test1", self.session_id, model_manager)
         tester = Tester("test1", self.session_id, model_manager)
         executor = Executor("test1", self.session_id)

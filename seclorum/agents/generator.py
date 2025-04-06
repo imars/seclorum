@@ -1,8 +1,8 @@
 # seclorum/agents/generator.py
 from seclorum.agents.base import AbstractAgent
-from seclorum.models import Task, CodeOutput
+from seclorum.models import Task, CodeOutput, create_model_manager, ModelManager
 from seclorum.agents.memory_manager import MemoryManager
-from seclorum.agents.model_manager import ModelManager
+
 
 class Generator(AbstractAgent):
     def __init__(self, task_id: str, session_id: str, model_manager: ModelManager, memory: MemoryManager = None):
@@ -10,7 +10,8 @@ class Generator(AbstractAgent):
         self.task_id = task_id
         self.model = model_manager
         self.memory = memory or MemoryManager(session_id)
-        self.log_update(f"Generator initialized for Task {task_id}")
+        self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="codellama")
+        self.log_update(f"Generator initialized for Task {task_id} with model {self.model_manager.model_name}")
 
     def process_task(self, task: Task) -> tuple[str, CodeOutput]:
         self.log_update(f"Generating code for Task {task.task_id}: {task.description}")

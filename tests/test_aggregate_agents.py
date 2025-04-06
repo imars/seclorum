@@ -3,18 +3,13 @@ import sys
 for module in list(sys.modules.keys()):
     if module.startswith("seclorum"):
         sys.modules.pop(module)
-
 import argparse
 import logging
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-from seclorum.models import Task, CodeOutput, TestResult
+from seclorum.models import Task, CodeOutput, TestResult, ModelManager, MockModelManager, create_model_manager
 from seclorum.agents.master import MasterNode
-from seclorum.agents.generator import Generator
-from seclorum.agents.tester import Tester
-from seclorum.agents.executor import Executor
-from seclorum.agents.learner import Learner
+from seclorum.agents import Generator, Tester, Executor
 
 def setup_logging(quiet: bool):
     level = logging.WARNING if quiet else logging.INFO
@@ -27,7 +22,7 @@ def setup_logging(quiet: bool):
 def test_aggregate_workflow():
     session_id = "test_session"
     task = Task(task_id="test1", description="create a Python script to list all Python files in a directory", parameters={"generate_tests": True})
-    model_manager = MockModelManager()
+    model_manager = create_model_manager(provider="mock")  # Use factory instead of direct instantiation
     master = MasterNode(session_id, require_redis=False)
     master.graph.clear()
     master.agents.clear()
@@ -70,13 +65,7 @@ def test_aggregate_workflow():
 
     master.stop()
 
-class MockModelManager:
-    def generate(self, prompt: str) -> str:
-        if "Generate Python code" in prompt:
-            return "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]"
-        elif "Generate a Python unit test" in prompt:
-            return "import os\ndef test_list_files():\n    files = [f for f in os.listdir('.') if f.endswith('.py')]\n    assert isinstance(files, list)"
-        return "Mock response"
+# MockModelManager moved to manager.py
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run aggregate agent workflow tests")
@@ -85,4 +74,5 @@ if __name__ == "__main__":
 
     setup_logging(args.quiet)
     test_aggregate_workflow()
-    print("Aggregate agent workflow tests passed!")
+    if not args.quiet:
+        print("Aggregate agent workflow tests passed!")
