@@ -129,10 +129,8 @@ class ConversationMemory:
         if prompt or response:
             text = (prompt or "") + " " + (response or "")
             self.embedding_queue.append((text, doc_id, entry["timestamp"], task_id))
-            # Format response for logging
             if response:
                 try:
-                    # Check if response is JSON-like
                     if isinstance(response, str) and response.strip().startswith("{"):
                         data = json.loads(response)
                         formatted = []
@@ -157,11 +155,9 @@ class ConversationMemory:
                             formatted.append(f"Output:\n{data['output']}")
                         logger.info(f"Agent: Task {task_id} result:\n" + "\n".join(formatted))
                     else:
-                        # Plain string response
                         clean_response = response.replace("```python\n", "").replace("```", "").strip()
                         logger.info(f"Agent: Task {task_id} result:\n{clean_response}")
                 except json.JSONDecodeError:
-                    # Not JSON, log as-is
                     logger.info(f"Agent: Task {task_id} result: {response}")
             elif prompt:
                 logger.info(f"Agent: Task {task_id} prompt: {prompt}")
@@ -195,7 +191,35 @@ class ConversationMemory:
                     if row[0]:
                         history.append(f"User: {row[0]}")
                     if row[1]:
-                        history.append(f"Agent: {row[1]}")
+                        try:
+                            if row[1].strip().startswith("{"):
+                                data = json.loads(row[1])
+                                formatted = []
+                                if "code" in data:
+                                    code = data["code"].replace("\\n", "\n").strip()
+                                    if code.startswith("```python"):
+                                        code = code.replace("```python\n", "").replace("```", "").strip()
+                                    formatted.append("Code:\n" + code)
+                                if "tests" in data and data["tests"]:
+                                    tests = data["tests"].replace("\\n", "\n").strip()
+                                    if tests.startswith("```python"):
+                                        tests = tests.replace("```python\n", "").replace("```", "").strip()
+                                    formatted.append("Tests:\n" + tests)
+                                if "test_code" in data:
+                                    test_code = data["test_code"].replace("\\n", "\n").strip()
+                                    if test_code.startswith("```python"):
+                                        test_code = test_code.replace("```python\n", "").replace("```", "").strip()
+                                    formatted.append("Test Code:\n" + test_code)
+                                if "passed" in data:
+                                    formatted.append(f"Passed: {data['passed']}")
+                                if "output" in data and data["output"]:
+                                    formatted.append(f"Output:\n{data['output']}")
+                                history.append("Agent: " + "\n".join(formatted))
+                            else:
+                                clean_response = row[1].replace("```python\n", "").replace("```", "").strip()
+                                history.append(f"Agent: {clean_response}")
+                        except json.JSONDecodeError:
+                            history.append(f"Agent: {row[1]}")
                 return "\n".join(history) or "No history yet"
         else:
             if not os.path.exists(self.json_file):
@@ -209,5 +233,33 @@ class ConversationMemory:
                 if entry.get("prompt"):
                     history.append(f"User: {entry['prompt']}")
                 if entry.get("response"):
-                    history.append(f"Agent: {entry['response']}")
+                    try:
+                        if entry["response"].strip().startswith("{"):
+                            data = json.loads(entry["response"])
+                            formatted = []
+                            if "code" in data:
+                                code = data["code"].replace("\\n", "\n").strip()
+                                if code.startswith("```python"):
+                                    code = code.replace("```python\n", "").replace("```", "").strip()
+                                formatted.append("Code:\n" + code)
+                            if "tests" in data and data["tests"]:
+                                tests = data["tests"].replace("\\n", "\n").strip()
+                                if tests.startswith("```python"):
+                                    tests = tests.replace("```python\n", "").replace("```", "").strip()
+                                formatted.append("Tests:\n" + tests)
+                            if "test_code" in data:
+                                test_code = data["test_code"].replace("\\n", "\n").strip()
+                                if test_code.startswith("```python"):
+                                    test_code = test_code.replace("```python\n", "").replace("```", "").strip()
+                                formatted.append("Test Code:\n" + test_code)
+                            if "passed" in data:
+                                formatted.append(f"Passed: {data['passed']}")
+                            if "output" in data and data["output"]:
+                                formatted.append(f"Output:\n{data['output']}")
+                            history.append("Agent: " + "\n".join(formatted))
+                        else:
+                            clean_response = entry["response"].replace("```python\n", "").replace("```", "").strip()
+                            history.append(f"Agent: {clean_response}")
+                    except json.JSONDecodeError:
+                        history.append(f"Agent: {entry['response']}")
             return "\n".join(history) or "No history yet"
