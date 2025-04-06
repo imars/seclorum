@@ -177,89 +177,77 @@ class ConversationMemory:
             )
             logger.debug(f"Upserted to ChromaDB: {doc_id} - {text}")
 
-    def load_conversation_history(self, task_id=None):
-        if not self.use_json:
-            with sqlite3.connect(self.db_file) as conn:
-                query = "SELECT prompt, response FROM conversations WHERE session_id = ?"
-                params = [self.session_id]
-                if task_id:
-                    query += " AND task_id = ?"
-                    params.append(task_id)
-                cursor = conn.execute(query, params)
-                history = []
-                for row in cursor:
-                    if row[0]:
-                        history.append(f"User: {row[0]}")
-                    if row[1]:
-                        try:
-                            if row[1].strip().startswith("{"):
-                                data = json.loads(row[1])
-                                formatted = []
-                                if "code" in data:
-                                    code = data["code"].replace("\\n", "\n").strip()
-                                    if code.startswith("```python"):
-                                        code = code.replace("```python\n", "").replace("```", "").strip()
-                                    formatted.append("Code:\n" + code)
-                                if "tests" in data and data["tests"]:
-                                    tests = data["tests"].replace("\\n", "\n").strip()
-                                    if tests.startswith("```python"):
-                                        tests = tests.replace("```python\n", "").replace("```", "").strip()
-                                    formatted.append("Tests:\n" + tests)
-                                if "test_code" in data:
-                                    test_code = data["test_code"].replace("\\n", "\n").strip()
-                                    if test_code.startswith("```python"):
-                                        test_code = test_code.replace("```python\n", "").replace("```", "").strip()
-                                    formatted.append("Test Code:\n" + test_code)
-                                if "passed" in data:
-                                    formatted.append(f"Passed: {data['passed']}")
-                                if "output" in data and data["output"]:
-                                    formatted.append(f"Output:\n{data['output']}")
-                                history.append("Agent: " + "\n".join(formatted))
-                            else:
-                                clean_response = row[1].replace("```python\n", "").replace("```", "").strip()
-                                history.append(f"Agent: {clean_response}")
-                        except json.JSONDecodeError:
-                            history.append(f"Agent: {row[1]}")
-                return "\n".join(history) or "No history yet"
-        else:
-            if not os.path.exists(self.json_file):
-                return ""
-            with open(self.json_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+def load_conversation_history(self, task_id=None):
+    if not self.use_json:
+        with sqlite3.connect(self.db_file) as conn:
+            query = "SELECT prompt, response FROM conversations WHERE session_id = ?"
+            params = [self.session_id]
+            if task_id:
+                query += " AND task_id = ?"
+                params.append(task_id)
+            cursor = conn.execute(query, params)
             history = []
-            for entry in data:
-                if task_id and entry.get("task_id") != task_id:
-                    continue
-                if entry.get("prompt"):
-                    history.append(f"User: {entry['prompt']}")
-                if entry.get("response"):
+            for row in cursor:
+                if row[0]:
+                    history.append(f"User: {row[0]}")
+                if row[1]:
                     try:
-                        if entry["response"].strip().startswith("{"):
-                            data = json.loads(entry["response"])
+                        if row[1].strip().startswith("{"):
+                            data = json.loads(row[1])
                             formatted = []
                             if "code" in data:
-                                code = data["code"].replace("\\n", "\n").strip()
-                                if code.startswith("```python"):
-                                    code = code.replace("```python\n", "").replace("```", "").strip()
+                                code = data["code"].replace("\\n", "\n").replace("```python\n", "").replace("```", "").strip()
                                 formatted.append("Code:\n" + code)
                             if "tests" in data and data["tests"]:
-                                tests = data["tests"].replace("\\n", "\n").strip()
-                                if tests.startswith("```python"):
-                                    tests = tests.replace("```python\n", "").replace("```", "").strip()
+                                tests = data["tests"].replace("\\n", "\n").replace("```python\n", "").replace("```", "").strip()
                                 formatted.append("Tests:\n" + tests)
                             if "test_code" in data:
-                                test_code = data["test_code"].replace("\\n", "\n").strip()
-                                if test_code.startswith("```python"):
-                                    test_code = test_code.replace("```python\n", "").replace("```", "").strip()
+                                test_code = data["test_code"].replace("\\n", "\n").replace("```python\n", "").replace("```", "").strip()
                                 formatted.append("Test Code:\n" + test_code)
                             if "passed" in data:
                                 formatted.append(f"Passed: {data['passed']}")
                             if "output" in data and data["output"]:
                                 formatted.append(f"Output:\n{data['output']}")
-                            history.append("Agent: " + "\n".join(formatted))
+                            history.append("Agent:\n" + "\n".join(formatted))
                         else:
-                            clean_response = entry["response"].replace("```python\n", "").replace("```", "").strip()
+                            clean_response = row[1].replace("```python\n", "").replace("```", "").strip()
                             history.append(f"Agent: {clean_response}")
                     except json.JSONDecodeError:
-                        history.append(f"Agent: {entry['response']}")
+                        history.append(f"Agent: {row[1]}")
             return "\n".join(history) or "No history yet"
+    else:
+        if not os.path.exists(self.json_file):
+            return ""
+        with open(self.json_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        history = []
+        for entry in data:
+            if task_id and entry.get("task_id") != task_id:
+                continue
+            if entry.get("prompt"):
+                history.append(f"User: {entry['prompt']}")
+            if entry.get("response"):
+                try:
+                    if entry["response"].strip().startswith("{"):
+                        data = json.loads(entry["response"])
+                        formatted = []
+                        if "code" in data:
+                            code = data["code"].replace("\\n", "\n").replace("```python\n", "").replace("```", "").strip()
+                            formatted.append("Code:\n" + code)
+                        if "tests" in data and data["tests"]:
+                            tests = data["tests"].replace("\\n", "\n").replace("```python\n", "").replace("```", "").strip()
+                            formatted.append("Tests:\n" + tests)
+                        if "test_code" in data:
+                            test_code = data["test_code"].replace("\\n", "\n").replace("```python\n", "").replace("```", "").strip()
+                            formatted.append("Test Code:\n" + test_code)
+                        if "passed" in data:
+                            formatted.append(f"Passed: {data['passed']}")
+                        if "output" in data and data["output"]:
+                            formatted.append(f"Output:\n{data['output']}")
+                        history.append("Agent:\n" + "\n".join(formatted))
+                    else:
+                        clean_response = entry["response"].replace("```python\n", "").replace("```", "").strip()
+                        history.append(f"Agent: {clean_response}")
+                except json.JSONDecodeError:
+                    history.append(f"Agent: {entry['response']}")
+        return "\n".join(history) or "No history yet"
