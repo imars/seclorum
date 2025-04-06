@@ -68,9 +68,7 @@ def test_aggregate_workflow():
 def test_aggregate_workflow_with_debugging():
     session_id = "debug_session"
     task = Task(task_id="debug1", description="create a Python script with a bug to debug", parameters={"generate_tests": True})
-    model_manager = create_model_manager(provider="mock")
 
-    # Mock a buggy response
     class DebugMockModelManager(ModelManager):
         def __init__(self, model_name: str = "debug_mock"):
             super().__init__(model_name)
@@ -78,7 +76,7 @@ def test_aggregate_workflow_with_debugging():
             if "Generate Python code" in prompt:
                 return "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]  # Intentional IndexError"
             elif "Generate a Python unit test" in prompt:
-                return "import os\ndef test_buggy_list_files():\n    files = buggy_list_files()\n    assert isinstance(files, str)"
+                return "import os\nfrom buggy_list_files import buggy_list_files\ndef test_buggy_list_files():\n    result = buggy_list_files()\n    assert isinstance(result, str)"
             return "Mock debug response"
 
     debug_model_manager = DebugMockModelManager()
