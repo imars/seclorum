@@ -71,6 +71,28 @@ class ConversationMemory:
                         metadatas=[metadata]
                     )
 
+    def _sync_from_json(self):
+        if not os.path.exists(self.json_file):
+            logger.debug(f"No existing JSON file at {self.json_file} to sync")
+            return
+        with open(self.json_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        existing_ids = set(self.collection.get()["ids"])
+        for i, entry in enumerate(data):
+            doc_id = f"{self.session_id}_{i}"
+            if doc_id not in existing_ids and (entry.get("prompt") or entry.get("response")):
+                text = (entry.get("prompt") or "") + " " + (entry.get("response") or "")
+                embedding = self.embedding_model.encode(text).tolist()
+                metadata = {"timestamp": entry["timestamp"], "session_id": self.session_id}
+                if "task_id" in entry and entry["task_id"] is not None:
+                    metadata["task_id"] = entry["task_id"]
+                self.collection.add(
+                    documents=[text],
+                    embeddings=[embedding],
+                    ids=[doc_id],
+                    metadatas=[metadata]
+                )
+
     def save(self, prompt=None, response=None, session_id=None, task_id=None):
         entry = {
             "timestamp": datetime.now().isoformat(),
@@ -107,13 +129,39 @@ class ConversationMemory:
         if prompt or response:
             text = (prompt or "") + " " + (response or "")
             self.embedding_queue.append((text, doc_id, entry["timestamp"], task_id))
-            # Clean up response for logging
+            # Format response for logging
             if response:
-                if isinstance(response, str) and "```" in response:
-                    # Strip code block markers and extra newlines
-                    clean_response = response.replace("```python\n", "").replace("```\n", "").replace("```", "").strip()
-                    logger.info(f"Agent: Task {task_id} result:\n{clean_response}")
-                else:
+                try:
+                    # Check if response is JSON-like
+                    if isinstance(response, str) and response.strip().startswith("{"):
+                        data = json.loads(response)
+                        formatted = []
+                        if "code" in data:
+                            code = data["code"].replace("\\n", "\n").strip()
+                            if code.startswith("```python"):
+                                code = code.replace("```python\n", "").replace("```", "").strip()
+                            formatted.append("Code:\n" + code)
+                        if "tests" in data and data["tests"]:
+                            tests = data["tests"].replace("\\n", "\n").strip()
+                            if tests.startswith("```python"):
+                                tests = tests.replace("```python\n", "").replace("```", "").strip()
+                            formatted.append("Tests:\n" + tests)
+                        if "test_code" in data:
+                            test_code = data["test_code"].replace("\\n", "\n").strip()
+                            if test_code.startswith("```python"):
+                                test_code = test_code.replace("```python\n", "").replace("```", "").strip()
+                            formatted.append("Test Code:\n" + test_code)
+                        if "passed" in data:
+                            formatted.append(f"Passed: {data['passed']}")
+                        if "output" in data and data["output"]:
+                            formatted.append(f"Output:\n{data['output']}")
+                        logger.info(f"Agent: Task {task_id} result:\n" + "\n".join(formatted))
+                    else:
+                        # Plain string response
+                        clean_response = response.replace("```python\n", "").replace("```", "").strip()
+                        logger.info(f"Agent: Task {task_id} result:\n{clean_response}")
+                except json.JSONDecodeError:
+                    # Not JSON, log as-is
                     logger.info(f"Agent: Task {task_id} result: {response}")
             elif prompt:
                 logger.info(f"Agent: Task {task_id} prompt: {prompt}")
