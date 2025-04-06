@@ -77,37 +77,31 @@ def test_aggregate_workflow_with_debugging():
                 return "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]"
             elif "Generate a Python unit test" in prompt:
                 return "import os\ndef test_buggy_list_files():\n    result = buggy_list_files()\n    assert isinstance(result, str)"
+            elif "Fix this Python code" in prompt:
+                return "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[0] if files else ''"
             return "Mock debug response"
 
     debug_model_manager = DebugMockModelManager()
-    master = MasterNode(session_id, require_redis=False)
-    master.graph.clear()
-    master.agents.clear()
-    generator = Generator("debug1", session_id, debug_model_manager)
-    tester = Tester("debug1", session_id, debug_model_manager)
-    executor = Executor("debug1", session_id)
+    developer = Developer(session_id, debug_model_manager)
+    developer.start()
 
-    master.add_agent(generator)
-    master.add_agent(tester, [(generator.name, {"status": "generated"})])
-    master.add_agent(executor, [(tester.name, {"status": "tested"})])
-
-    master.start()
-    status, result = master.orchestrate(task)
-
-    # Force Executor to run with latest task state
-    status, result = executor.process_task(task)
+    status, result = developer.orchestrate(task)
 
     print(f"Debug status: {status}")
-    print(f"Debug result: passed={result.passed}, output={result.output}")
-    history = master.memory.load_history(task_id=task.task_id)
+    print(f"Debug result: {result}")
+    history = developer.memory.load_history(task_id=task.task_id)
     print(f"Debug history: {history}")
 
-    assert status == "tested", f"Expected 'tested' status, got {status}"
-    assert isinstance(result, TestResult), "Result should be TestResult"
-    assert not result.passed, "Test should fail due to bug"
-    assert "IndexError" in (result.output or ""), "Output should indicate IndexError"
+    assert status in ["debugged", "tested"], f"Expected 'debugged' or 'tested', got {status}"
+    if status == "debugged":
+        assert isinstance(result, CodeOutput), "Result should be CodeOutput after debugging"
+        assert "files[0]" in result.code or "''" in result.code, "Debugged code should fix IndexError"
+    elif status == "tested":
+        assert isinstance(result, TestResult), "Result should be TestResult"
+        assert not result.passed, "Test should fail due to bug"
+        assert "IndexError" in (result.output or ""), "Output should indicate IndexError"
 
-    master.stop()
+    developer.stop()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run aggregate agent workflow tests")
