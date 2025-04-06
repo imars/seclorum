@@ -93,7 +93,6 @@ class ConversationMemory:
                     metadatas=[metadata]
                 )
 
-    # seclorum/agents/memory/core.py
     def save(self, prompt=None, response=None, session_id=None, task_id=None):
         entry = {
             "timestamp": datetime.now().isoformat(),
@@ -135,7 +134,7 @@ class ConversationMemory:
                 """, (entry["timestamp"], prompt, entry["response"], entry["session_id"], task_id))
                 conn.commit()
                 doc_id = f"{self.session_id}_{cursor.lastrowid}"
-                logger.debug(f"Saved to SQLite: {self.db_file}, rowid: {cursor.lastrowid}")
+                logger.info(f"Memory saved: Task {task_id} to {self.db_file}, rowid: {cursor.lastrowid}")  # Add memory log
         else:
             data = []
             if os.path.exists(self.json_file):
@@ -150,6 +149,7 @@ class ConversationMemory:
             with open(self.json_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
             doc_id = f"{self.session_id}_{len(data)-1}"
+            logger.info(f"Memory saved: Task {task_id} to {self.json_file}, index: {len(data)-1}")  # Add memory log
 
         if prompt or response:
             text = (prompt or "") + " " + (entry["response"] or "")
@@ -172,7 +172,7 @@ class ConversationMemory:
                 ids=[doc_id],
                 metadatas=[metadata]
             )
-            logger.debug(f"Upserted to ChromaDB: {doc_id} - {text}")
+            logger.info(f"Embedding updated: Task {task_id} - {doc_id}")
 
     def load_conversation_history(self, task_id=None):
         if not self.use_json:
