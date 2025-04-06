@@ -15,7 +15,7 @@ class Tester(AbstractAgent):
     def process_task(self, task: Task) -> tuple[str, TestResult]:
         self.log_update(f"Generating tests for Task {task.task_id}")
         code_output = CodeOutput(**task.parameters.get("code_output", {}))
-
+    
         if code_output.tests:
             test_code = code_output.tests
             self.log_update(f"Using provided test code:\n{test_code}")
@@ -31,7 +31,7 @@ class Tester(AbstractAgent):
         test_code = test_code.replace("```python", "").replace("```", "").strip()
 
         result = TestResult(test_code=test_code, passed=False)
-        self.memory.save(response=f"Task {task.task_id} test: {result.model_dump_json()}", task_id=task.task_id)
+        self.memory.save(response=result, task_id=task.task_id)  # Pass TestResult object
         self.commit_changes(f"Generated tests for {task.task_id}")
         return "tested", result
 

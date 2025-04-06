@@ -21,5 +21,5 @@ class Outsourcing(AbstractAgent):
         output = OutsourcedTaskOutput.from_json(response.text)
 
         result = f"Outsourced result: {output.result} (confidence: {output.confidence})"
-        self.memory.save(response=f"Task {task.task_id} result: {result}", task_id=task.task_id)
+        self.memory.save(response=result, task_id=task.task_id)  # Pass TestResult object
         return "outsourced", result

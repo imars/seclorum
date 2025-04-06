@@ -35,7 +35,7 @@ class Debugger(AbstractAgent):
 
         self.log_update(f"Fixed code:\n{fixed_code}")
         result = CodeOutput(code=fixed_code, tests=cleaned_tests)
-        self.memory.save(response=f"Task {task.task_id} fixed: {result.model_dump_json()}", task_id=task.task_id)
+        self.memory.save(response=result, task_id=task.task_id)  # Pass TestResult object
         self.commit_changes(f"Fixed code for Task {task.task_id}")
         return "debugged", result
 

@@ -35,7 +35,7 @@ class Generator(AbstractAgent):
         self.log_update(f"Generated code:\n{code}")
         if tests:
             self.log_update(f"Generated tests:\n{tests}")
-        self.memory.save(response=f"Task {task.task_id} result: {result.model_dump_json()}", task_id=task.task_id)
+        self.memory.save(response=code, task_id=task.task_id)
         self.commit_changes(f"Generated code and tests for {task.task_id}")
         return "generated", result
 

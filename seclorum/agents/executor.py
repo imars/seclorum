@@ -44,7 +44,7 @@ class Executor(AbstractAgent):
                 self.log_update(f"Cleaning up {temp_file}")
                 os.remove(temp_file)
 
-        self.memory.save(response=f"Task {task.task_id} result: {result.model_dump_json()}", task_id=task.task_id)
+        self.memory.save(response=code, task_id=task.task_id)  # Pass CodeOutput object
         self.commit_changes(f"Executed code and tests for Task {task.task_id}")
         return status, result
 

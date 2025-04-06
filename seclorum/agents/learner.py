@@ -22,7 +22,7 @@ class Learner(AbstractAgent):
         prediction_input = PredictionInput(prompt=task.description)
         # Placeholder: Use model to predict
         result = f"Predicted response for {prediction_input.prompt}"
-        self.memory.save(response=f"Task {task.task_id} result: {result}", task_id=task.task_id)
+        self.memory.save(response=result, task_id=task.task_id)
         return "predicted", result
 
     def start(self):
