@@ -19,7 +19,7 @@ class Executor(AbstractAgent):
         code_output = task.parameters.get("result") if isinstance(task.parameters.get("result"), CodeOutput) else CodeOutput(code="")
         test_result = task.parameters.get("result") if isinstance(task.parameters.get("result"), TestResult) else TestResult(test_code="", passed=False)
 
-        # Combine code and test, ensuring test calls the function
+        # Combine code and test
         full_code = f"{code_output.code}\n\n{test_result.test_code}" if test_result.test_code else code_output.code
         self.log_update(f"Executing code:\n{full_code}")
 
@@ -33,7 +33,9 @@ class Executor(AbstractAgent):
             self.log_update(f"Running command: {' '.join(cmd)}")
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
             self.log_update(f"Execution output: {output}")
-            result = TestResult(test_code=test_result.test_code, passed=True, output=output)
+            # Check if test actually passed (e.g., no assertion errors in output)
+            passed = "Traceback" not in output and "AssertionError" not in output
+            result = TestResult(test_code=test_result.test_code, passed=passed, output=output)
             status = "tested"
         except subprocess.CalledProcessError as e:
             self.log_update(f"Execution failed with error: {e.output}")
