@@ -20,7 +20,7 @@ import time
 import json
 from typing import Optional, List, Any
 
-class MasterNode(AbstractAggregate):
+class MasterNode(AbstractAggregate, RedisMixin):
     def __init__(self, session_id: str, require_redis: bool = False):
         super().__init__(session_id)  # Pass quiet to AbstractAgent
         AbstractAggregate.__init__(self, session_id)
@@ -28,17 +28,8 @@ class MasterNode(AbstractAggregate):
         LifecycleMixin.__init__(self, name="MasterNode", pid_file="seclorum_master.pid")
         self.name = "MasterNode"  # Override AbstractAggregate's default name
         self.memory = MemoryManager(session_id)  # Set memory first
-        self.redis_available = False
-        if require_redis:
-            try:
-                self.connect_redis()
-                self.redis_available = True
-                self.logger.info("Redis connected successfully")
-                self.memory.save(response="Redis connected successfully")
-            except redis.ConnectionError as e:
-                self.logger.error(f"Redis unavailable at startup: {str(e)}")
-        else:
-            self.logger.info("Running without Redis requirement")
+        self.redis_available = require_redis
+        self.setup_redis(require_redis)  # Call the mixin method
         self.tasks = self.load_tasks() or {}
         self.socketio = SocketIO()
         self.running = False
@@ -48,7 +39,7 @@ class MasterNode(AbstractAggregate):
     def setup_default_graph(self):
         """Initialize the default agent graph."""
         model_manager = ModelManager()
-        generator = Generator("test1", self.session_id, model_manager)  # Default quiet=False
+        generator = Generator("test1", self.session_id, model_manager)
         tester = Tester("test1", self.session_id, model_manager)
         executor = Executor("test1", self.session_id)
         debugger = Debugger("test1", self.session_id, model_manager)
@@ -208,10 +199,10 @@ class MasterNode(AbstractAggregate):
                     self.socketio.emit("task_update", task, namespace='/')
 
     def save_tasks(self):
-        if self.redis_available:
-            self.store_data("tasks", self.tasks)
-        else:
+        if not self.redis_available:  # Use redis_available from mixin
             self.logger.warning("Redis unavailable, tasks saved in memory only")
+        else:
+            self.store_data("tasks", self.tasks)
 
     def load_tasks(self):
         if self.redis_available:

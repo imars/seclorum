@@ -1,3 +1,4 @@
+# seclorum/agents/redis_mixin.py
 import redis
 import pickle
 import logging
@@ -6,7 +7,23 @@ class RedisMixin:
     def __init__(self, name):
         self.name = name
         self.redis_client = None
+        self.redis_available = False  # Moved here
         self.logger = logging.getLogger(self.name)
+
+    def setup_redis(self, require_redis: bool = False):
+        if require_redis:
+            try:
+                self.connect_redis()
+                self.redis_available = True
+                self.logger.info("Redis connected successfully")
+                if hasattr(self, 'memory'):  # Check if memory exists (for MasterNode)
+                    self.memory.save(response="Redis connected successfully")
+            except redis.ConnectionError as e:
+                self.logger.error(f"Redis unavailable at startup: {str(e)}")
+                self.redis_available = False
+        else:
+            self.logger.info("Running without Redis requirement")
+            self.redis_available = False
 
     def connect_redis(self):
         if self.redis_client is not None:
