@@ -9,7 +9,7 @@ import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 from seclorum.models import Task, CodeOutput, TestResult, ModelManager, MockModelManager, create_model_manager
 from seclorum.agents.master import MasterNode
-from seclorum.agents import Generator, Tester, Executor
+from seclorum.agents import Generator, Tester, Executor, Learner
 
 def setup_logging(quiet: bool):
     level = logging.WARNING if quiet else logging.INFO
