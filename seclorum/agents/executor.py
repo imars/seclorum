@@ -21,7 +21,7 @@ class Executor(AbstractAgent):
 
         # Combine code and test
         full_code = f"{code_output.code}\n\n{test_result.test_code}" if test_result.test_code else code_output.code
-        self.log_update(f"Executing code:\n{full_code}")
+        self.log_update(f"Full code to execute:\n{full_code}")
 
         temp_file = f"temp_{task.task_id}.py"
         self.log_update(f"Writing to {temp_file}")
@@ -33,23 +33,26 @@ class Executor(AbstractAgent):
             self.log_update(f"Running command: {' '.join(cmd)}")
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
             self.log_update(f"Execution output: {output}")
-            # Check if test actually passed (e.g., no assertion errors in output)
             passed = "Traceback" not in output and "AssertionError" not in output
+            self.log_update(f"Determined passed: {passed}")
             result = TestResult(test_code=test_result.test_code, passed=passed, output=output)
             status = "tested"
         except subprocess.CalledProcessError as e:
             self.log_update(f"Execution failed with error: {e.output}")
             result = TestResult(test_code=test_result.test_code, passed=False, output=e.output)
+            self.log_update(f"Result after CalledProcessError: passed={result.passed}, output={result.output}")
             status = "tested"
         except Exception as e:
             self.log_update(f"Unexpected execution error: {str(e)}")
             result = TestResult(test_code=test_result.test_code, passed=False, output=str(e))
+            self.log_update(f"Result after unexpected error: passed={result.passed}, output={result.output}")
             status = "tested"
         finally:
             if os.path.exists(temp_file):
                 self.log_update(f"Cleaning up {temp_file}")
                 os.remove(temp_file)
 
+        self.log_update(f"Final result: passed={result.passed}, output={result.output}")
         self.memory.save(response=result, task_id=task.task_id)
         self.commit_changes(f"Executed code and tests for Task {task.task_id}")
         return status, result
