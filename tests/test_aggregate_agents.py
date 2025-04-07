@@ -7,7 +7,7 @@ import argparse
 import logging
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-from seclorum.models import Task, CodeOutput, TestResult, ModelManager, MockModelManager, create_model_manager
+from seclorum.models import Task, CodeOutput, TestResult, ModelManager, create_model_manager
 from seclorum.agents.master import MasterNode
 from seclorum.agents import Generator, Tester, Executor, Learner, Developer
 
@@ -22,7 +22,7 @@ def setup_logging(quiet: bool):
 def test_aggregate_workflow():
     session_id = "test_session"
     task = Task(task_id="test1", description="create a Python script to list all Python files in a directory", parameters={"generate_tests": True})
-    model_manager = create_model_manager(provider="mock")  # Use factory instead of direct instantiation
+    model_manager = create_model_manager(provider="mock")
     master = MasterNode(session_id, require_redis=False)
     master.graph.clear()
     master.agents.clear()
@@ -74,11 +74,11 @@ def test_aggregate_workflow_with_debugging():
             super().__init__(model_name)
         def generate(self, prompt: str, **kwargs) -> str:
             if "Generate Python code" in prompt:
-                return "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]"
+                return "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]"  # Bug: Index out of range
             elif "Generate a Python unit test" in prompt:
-                return "import os\ndef test_buggy_list_files():\n    result = buggy_list_files()\n    assert isinstance(result, str)"
+                return "import os\ndef test_buggy_list_files():\n    result = buggy_list_files()\n    assert isinstance(result, str)"  # Test will fail due to IndexError
             elif "Fix this Python code" in prompt:
-                return "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[0] if files else ''"
+                return "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[0] if files else ''"  # Fixed code
             return "Mock debug response"
 
     debug_model_manager = DebugMockModelManager()
@@ -92,14 +92,12 @@ def test_aggregate_workflow_with_debugging():
     history = developer.memory.load_history(task_id=task.task_id)
     print(f"Debug history: {history}")
 
-    assert status in ["debugged", "tested"], f"Expected 'debugged' or 'tested', got {status}"
-    if status == "debugged":
-        assert isinstance(result, CodeOutput), "Result should be CodeOutput after debugging"
-        assert "files[0]" in result.code or "''" in result.code, "Debugged code should fix IndexError"
-    elif status == "tested":
-        assert isinstance(result, TestResult), "Result should be TestResult"
-        assert not result.passed, "Test should fail due to bug"
-        assert "IndexError" in (result.output or ""), "Output should indicate IndexError"
+    assert status == "debugged", f"Expected 'debugged' status after fixing bug, got {status}"
+    assert isinstance(result, CodeOutput), "Result should be CodeOutput after debugging"
+    assert "files[0]" in result.code or "''" in result.code, "Debugged code should fix IndexError"
+    # Verify debugging occurred in history
+    debug_entries = [entry for entry in history if "Fixed code" in str(entry.get("response", ""))]
+    assert len(debug_entries) > 0, "Debugging step should be recorded in history"
 
     developer.stop()
 
@@ -110,6 +108,5 @@ if __name__ == "__main__":
 
     setup_logging(args.quiet)
     test_aggregate_workflow()
-    test_aggregate_workflow_with_debugging()  # Add new test
-    if not args.quiet:
-        print("Aggregate agent workflow tests passed!")
+    test_aggregate_workflow_with_debugging()
+    print("Aggregate agent workflow tests passed!")
