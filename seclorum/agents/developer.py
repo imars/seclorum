@@ -45,3 +45,8 @@ class Developer(AbstractAggregate):
             self.log_update(f"Test failed, triggering debug for Task {task.task_id}")
             # Debugging is handled by the Debugger agent in the graph
         return status, result
+
+    def process_task(self, task: Task) -> Tuple[str, Any]:
+        """Process a task by orchestrating the agent workflow."""
+        self.log_update(f"Developer processing Task {task.task_id}")
+        return self.orchestrate(task)
