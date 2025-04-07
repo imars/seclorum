@@ -40,7 +40,7 @@ def test_aggregate_workflow():
     print(f"Initial status: {status}")
     print(f"Initial result: {result}")
     history = master.memory.load_history(task_id=task.task_id)
-    print(f"Initial history: {history}")
+    #print(f"Initial history: {history}")
     print(f"Initial formatted history:\n{master.memory.format_history(task_id=task.task_id)}")
 
     assert status in ["generated", "tested"], f"Unexpected initial status: {status}"
@@ -91,7 +91,7 @@ def test_aggregate_workflow_with_debugging():
     print(f"Debug status: {status}")
     print(f"Debug result: {result}")
     history = developer.memory.load_history(task_id=task.task_id)
-    print(f"Debug raw history: {history}")
+    #print(f"Debug raw history: {history}")
     print(f"Debug formatted history:\n{developer.memory.format_history(task_id=task.task_id)}")
     debug_entries = [entry for entry in history if "Fixed code" in (entry["response"] or "")]
     print(f"Debug entries: {debug_entries}")
