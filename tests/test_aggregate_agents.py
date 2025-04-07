@@ -65,6 +65,7 @@ def test_aggregate_workflow():
 
     master.stop()
 
+# tests/test_aggregate_agents.py (snippet)
 def test_aggregate_workflow_with_debugging():
     session_id = "debug_session"
     task = Task(task_id="debug1", description="create a Python script with a bug to debug", parameters={"generate_tests": True})
@@ -95,8 +96,8 @@ def test_aggregate_workflow_with_debugging():
     assert status == "debugged", f"Expected 'debugged' status after fixing bug, got {status}"
     assert isinstance(result, CodeOutput), "Result should be CodeOutput after debugging"
     assert "files[0]" in result.code or "''" in result.code, "Debugged code should fix IndexError"
-    # Verify debugging occurred in history
-    debug_entries = [entry for entry in history if "Fixed code" in str(entry.get("response", ""))]
+    # Verify debugging occurred in history by checking raw string content
+    debug_entries = [entry for entry in history if "Fixed code" in str(entry)]
     assert len(debug_entries) > 0, "Debugging step should be recorded in history"
 
     developer.stop()
