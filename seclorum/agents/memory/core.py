@@ -36,7 +36,7 @@ class ConversationMemory:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     timestamp TEXT NOT NULL,
                     prompt TEXT,
-                    response TEXT,  -- Store as JSON string for structured data
+                    response TEXT,
                     session_id TEXT NOT NULL,
                     task_id TEXT
                 )
@@ -67,7 +67,6 @@ class ConversationMemory:
             "task_id": task_id
         }
 
-        # Store response as raw JSON if Pydantic, else as-is
         if response:
             if hasattr(response, 'model_dump'):  # Pydantic model
                 entry["response"] = json.dumps(response.model_dump())
@@ -83,7 +82,6 @@ class ConversationMemory:
                     VALUES (?, ?, ?, ?, ?)
                 """, (entry["timestamp"], prompt, entry["response"], entry["session_id"], task_id))
                 conn.commit()
-                doc_id = f"{self.session_id}_{cursor.lastrowid}"
                 logger.info(f"Memory saved: Task {task_id} to {self.db_file}, rowid: {cursor.lastrowid}")
         else:
             data = []
@@ -95,11 +93,10 @@ class ConversationMemory:
             data.append(entry)
             with open(self.json_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
-            doc_id = f"{self.session_id}_{len(data)-1}"
 
         if prompt or response:
             text = (prompt or "") + " " + (entry["response"] or "")
-            self.embedding_queue.append((text, doc_id, entry["timestamp"], task_id))
+            self.embedding_queue.append((text, f"{self.session_id}_{cursor.lastrowid if not self.use_json else len(data)-1}", entry["timestamp"], task_id))
             if entry["response"]:
                 logger.info(f"Agent raw saved: Task {task_id} - {entry['response']}")
 
@@ -114,7 +111,6 @@ class ConversationMemory:
             logger.info(f"Embedding updated: Task {task_id} - {doc_id}")
 
     def load_conversation_history(self, task_id=None) -> list[dict]:
-        """Return raw history as a list of dicts."""
         if not self.use_json:
             with sqlite3.connect(self.db_file) as conn:
                 query = "SELECT timestamp, prompt, response, task_id FROM conversations WHERE session_id = ?"
@@ -123,11 +119,10 @@ class ConversationMemory:
                     query += " AND task_id = ?"
                     params.append(task_id)
                 cursor = conn.execute(query, params)
-                history = [
+                return [
                     {"timestamp": row[0], "prompt": row[1], "response": row[2], "task_id": row[3]}
                     for row in cursor
                 ]
-                return history
         else:
             if not os.path.exists(self.json_file):
                 return []
@@ -136,29 +131,32 @@ class ConversationMemory:
             return [entry for entry in data if not task_id or entry.get("task_id") == task_id]
 
     def format_history(self, history: list[dict]) -> str:
-        """Format raw history for display."""
+        """Format raw history for display with proper newlines."""
         formatted = []
         for entry in history:
             if entry["prompt"]:
                 formatted.append(f"User: {entry['prompt']}")
             if entry["response"]:
                 try:
-                    # If response is JSON (from Pydantic), parse and format
-                    data = json.loads(entry["response"]) if entry["response"].strip().startswith("{") else {"text": entry["response"]}
-                    lines = []
-                    if "code" in data:
-                        lines.append("Code:\n" + data["code"].strip())
-                    if "tests" in data and data["tests"]:
-                        lines.append("Tests:\n" + data["tests"].strip())
-                    if "test_code" in data:
-                        lines.append("Test Code:\n" + data["test_code"].strip())
-                    if "passed" in data:
-                        lines.append(f"Passed: {data['passed']}")
-                    if "output" in data and data["output"]:
-                        lines.append(f"Output:\n{data['output']}")
-                    if "text" in data:
-                        lines.append(data["text"].strip())
-                    formatted.append("Agent:\n" + "\n".join(lines))
+                    # Parse JSON if present, otherwise treat as raw string
+                    if entry["response"].strip().startswith("{"):
+                        data = json.loads(entry["response"])
+                        lines = []
+                        if "code" in data:
+                            lines.append("Code:\n" + data["code"].replace("\\n", "\n").strip())
+                        if "tests" in data and data["tests"]:
+                            lines.append("Tests:\n" + data["tests"].replace("\\n", "\n").strip())
+                        if "test_code" in data:
+                            lines.append("Test Code:\n" + data["test_code"].replace("\\n", "\n").strip())
+                        if "passed" in data:
+                            lines.append(f"Passed: {data['passed']}")
+                        if "output" in data and data["output"]:
+                            lines.append(f"Output:\n{data['output']}")
+                        formatted.append("Agent:\n" + "\n".join(lines))
+                    else:
+                        # Unescape newlines in raw string responses
+                        clean_response = entry["response"].replace("\\n", "\n").strip()
+                        formatted.append(f"Agent:\n{clean_response}")
                 except json.JSONDecodeError:
-                    formatted.append(f"Agent: {entry['response']}")
+                    formatted.append(f"Agent:\n{entry['response']}")
         return "\n\n".join(formatted) or "No history yet"

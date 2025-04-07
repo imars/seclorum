@@ -41,6 +41,7 @@ def test_aggregate_workflow():
     print(f"Initial result: {result}")
     history = master.memory.load_history(task_id=task.task_id)
     print(f"Initial history: {history}")
+    print(f"Initial formatted history:\n{master.memory.format_history(task_id=task.task_id)}")
 
     assert status in ["generated", "tested"], f"Unexpected initial status: {status}"
     if status == "tested":
