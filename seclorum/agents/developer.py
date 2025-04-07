@@ -41,9 +41,22 @@ class Developer(AbstractAggregate):
 
     def orchestrate(self, task: Task) -> Tuple[str, Any]:
         status, result = super().orchestrate(task)
-        if status == "tested" and isinstance(result, TestResult) and not result.passed:
-            self.log_update(f"Test failed, triggering debug for Task {task.task_id}")
-            # Debugging is handled by the Debugger agent in the graph
+        if status == "tested" and isinstance(result, TestResult):
+            if result.passed:
+                self.log_update(f"Task {task.task_id} passed tests, workflow complete")
+                return status, result  # Stop here if tests pass
+            else:
+                self.log_update(f"Test failed for Task {task.task_id}, triggering debug")
+                debugger = self.agents.get("Debugger_dev_task")
+                if debugger and task.task_id in self.tasks:
+                    new_task = Task(
+                        task_id=task.task_id,
+                        description=task.description,
+                        parameters=self.tasks[task.task_id]["outputs"]
+                    )
+                    debug_status, debug_result = debugger.process_task(new_task)
+                    self._propagate(debugger.name, debug_status, debug_result, task)
+                    status, result = debug_status, debug_result
         return status, result
 
     def process_task(self, task: Task) -> Tuple[str, Any]:

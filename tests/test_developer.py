@@ -24,8 +24,8 @@ def setup_logging(quiet: bool = False):
         logging.getLogger(logger_name).setLevel(level)
 
 class TestDeveloper(unittest.TestCase):
+# tests/test_developer.py (snippet)
     def test_developer_workflow_success(self):
-        """Test Developer's workflow with a successful code generation and test."""
         session_id = "dev_success_session"
         task = Task(
             task_id="dev_success_1",
@@ -52,7 +52,8 @@ class TestDeveloper(unittest.TestCase):
         print(f"Success status: {status}")
         print(f"Success result: {result}")
         history = developer.memory.load_history(task_id=task.task_id)
-        print(f"Success history:\n{history}")
+        print(f"Success raw history: {history}")
+        print(f"Success formatted history:\n{developer.memory.format_history(task_id=task.task_id)}")
 
         self.assertEqual(status, "tested", f"Expected 'tested' status, got {status}")
         self.assertIsInstance(result, TestResult, "Result should be TestResult")
