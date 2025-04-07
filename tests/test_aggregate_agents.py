@@ -87,15 +87,14 @@ def test_aggregate_workflow_with_debugging():
     developer.start()
 
     status, result = developer.orchestrate(task)
-
     print(f"Debug status: {status}")
     print(f"Debug result: {result}")
     history = developer.memory.load_history(task_id=task.task_id)
-    print(f"Debug history: {history}")
-    debug_entries = [entry for entry in history if "Fixed code" in str(entry)]
-    print(f"Debug entries: {debug_entries}")  # Add this to see what matches
+    print(f"Debug raw history: {history}")
+    print(f"Debug formatted history:\n{developer.memory.format_history(task_id=task.task_id)}")
+    debug_entries = [entry for entry in history if "Fixed code" in (entry["response"] or "")]
+    print(f"Debug entries: {debug_entries}")
     assert len(debug_entries) > 0, "Debugging step should be recorded in history"
-
     developer.stop()
 
 if __name__ == "__main__":
