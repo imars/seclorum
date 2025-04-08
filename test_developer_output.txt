@@ -1,0 +1,499 @@
+test_developer_workflow_success (__main__.TestDeveloper.test_developer_workflow_success)
+Test Developer's workflow with a successful code generation and test. ... Success status: tested
+Success result: test_code='import os\ndef test_list_py_files():\n    files = list_py_files()\n    assert isinstance(files, list)' passed=False output=None
+Success raw history: [{'timestamp': '2025-04-08T01:42:37.455391', 'prompt': None, 'response': 'Task plan:\nMock response', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T01:48:12.169896', 'prompt': None, 'response': 'Task plan:\nMock response', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T01:48:13.256351', 'prompt': None, 'response': "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]", 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T01:57:00.284077', 'prompt': None, 'response': 'Task plan:\nMock response', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T01:57:01.437607', 'prompt': None, 'response': "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]", 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T01:57:01.587641', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T01:57:01.639488', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T01:57:01.689251', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:02:22.218497', 'prompt': None, 'response': 'Task plan:\nMock response', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:02:23.315300', 'prompt': None, 'response': "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]", 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:02:23.434747', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:02:23.474835', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:02:23.511980', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:06:16.858944', 'prompt': None, 'response': 'Task plan:\nMock response', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:06:19.953425', 'prompt': None, 'response': "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]", 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:06:20.248301', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:06:20.378992', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:06:20.453374', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:37:16.242048', 'prompt': None, 'response': 'Task plan:\nMock response', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:37:17.937335', 'prompt': None, 'response': "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]", 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:37:18.125821', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:37:18.175620', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:37:18.214710', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:40:23.161893', 'prompt': None, 'response': 'Task plan:\nMock response', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:40:24.576216', 'prompt': None, 'response': "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]", 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:40:24.670846', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:40:24.715872', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:40:24.755871', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:52:34.633796', 'prompt': None, 'response': 'Task plan:\nMock response', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:52:36.360387', 'prompt': None, 'response': "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]", 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:52:36.533386', 'prompt': None, 'response': '{"test_code": "import os\\ndef test_list_py_files():\\n    files = list_py_files()\\n    assert isinstance(files, list)", "passed": false, "output": null}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:52:36.632685', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T02:52:36.675743', 'prompt': None, 'response': '{"test_code": "import os\\ndef test_list_py_files():\\n    files = list_py_files()\\n    assert isinstance(files, list)", "passed": false, "output": null}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T03:25:10.206339', 'prompt': None, 'response': 'Task plan:\nMock response', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T03:25:11.683821', 'prompt': None, 'response': "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]", 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T03:25:11.839907', 'prompt': None, 'response': '{"test_code": "import os\\ndef test_list_py_files():\\n    files = list_py_files()\\n    assert isinstance(files, list)", "passed": false, "output": null}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T03:25:11.930752', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_success_1'}, {'timestamp': '2025-04-08T03:25:11.972952', 'prompt': None, 'response': '{"test_code": "import os\\ndef test_list_py_files():\\n    files = list_py_files()\\n    assert isinstance(files, list)", "passed": false, "output": null}', 'task_id': 'dev_success_1'}]
+Success formatted history:
+Agent:
+Task plan:
+Mock response
+
+Agent:
+Task plan:
+Mock response
+
+Agent:
+import os
+def list_py_files():
+    return [f for f in os.listdir('.') if f.endswith('.py')]
+
+Agent:
+Task plan:
+Mock response
+
+Agent:
+import os
+def list_py_files():
+    return [f for f in os.listdir('.') if f.endswith('.py')]
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Task plan:
+Mock response
+
+Agent:
+import os
+def list_py_files():
+    return [f for f in os.listdir('.') if f.endswith('.py')]
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Task plan:
+Mock response
+
+Agent:
+import os
+def list_py_files():
+    return [f for f in os.listdir('.') if f.endswith('.py')]
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Task plan:
+Mock response
+
+Agent:
+import os
+def list_py_files():
+    return [f for f in os.listdir('.') if f.endswith('.py')]
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Task plan:
+Mock response
+
+Agent:
+import os
+def list_py_files():
+    return [f for f in os.listdir('.') if f.endswith('.py')]
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Task plan:
+Mock response
+
+Agent:
+import os
+def list_py_files():
+    return [f for f in os.listdir('.') if f.endswith('.py')]
+
+Agent:
+Test Code:
+import os
+def test_list_py_files():
+    files = list_py_files()
+    assert isinstance(files, list)
+Passed: False
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+import os
+def test_list_py_files():
+    files = list_py_files()
+    assert isinstance(files, list)
+Passed: False
+
+Agent:
+Task plan:
+Mock response
+
+Agent:
+import os
+def list_py_files():
+    return [f for f in os.listdir('.') if f.endswith('.py')]
+
+Agent:
+Test Code:
+import os
+def test_list_py_files():
+    files = list_py_files()
+    assert isinstance(files, list)
+Passed: False
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+import os
+def test_list_py_files():
+    files = list_py_files()
+    assert isinstance(files, list)
+Passed: False
+FAIL
+test_developer_workflow_with_debugging (__main__.TestDeveloper.test_developer_workflow_with_debugging)
+Test Developer's workflow with a buggy script that requires debugging. ... Debug status: tested
+Debug result: test_code='import os\ndef test_buggy_list_files():\n    result = buggy_list_files()\n    assert isinstance(result, str)' passed=False output=None
+Debug raw history: [{'timestamp': '2025-04-08T01:42:52.510812', 'prompt': None, 'response': 'Task plan:\nMock debug response', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T01:48:28.630871', 'prompt': None, 'response': 'Task plan:\nMock debug response', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T01:48:28.665346', 'prompt': None, 'response': "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]", 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T01:57:16.217945', 'prompt': None, 'response': 'Task plan:\nMock debug response', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T01:57:16.257707', 'prompt': None, 'response': "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]", 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T01:57:16.343442', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T01:57:16.391226', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T01:57:16.439344', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:02:39.248286', 'prompt': None, 'response': 'Task plan:\nMock debug response', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:02:39.285408', 'prompt': None, 'response': "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]", 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:02:39.370458', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:02:39.408201', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:02:39.444736', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:06:37.332632', 'prompt': None, 'response': 'Task plan:\nMock debug response', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:06:37.373286', 'prompt': None, 'response': "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]", 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:06:37.516891', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:06:37.570651', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:06:37.619313', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:37:32.385342', 'prompt': None, 'response': 'Task plan:\nMock debug response', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:37:32.428118', 'prompt': None, 'response': "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]", 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:37:32.512164', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:37:32.553764', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:37:32.592292', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:40:39.745030', 'prompt': None, 'response': 'Task plan:\nMock debug response', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:40:39.778075', 'prompt': None, 'response': "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]", 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:40:39.846675', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:40:39.881246', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:40:39.913270', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:52:49.774600', 'prompt': None, 'response': 'Task plan:\nMock debug response', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:52:49.820266', 'prompt': None, 'response': "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]", 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:52:49.919445', 'prompt': None, 'response': '{"test_code": "import os\\ndef test_buggy_list_files():\\n    result = buggy_list_files()\\n    assert isinstance(result, str)", "passed": false, "output": null}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:52:50.016035', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T02:52:50.062281', 'prompt': None, 'response': '{"test_code": "import os\\ndef test_buggy_list_files():\\n    result = buggy_list_files()\\n    assert isinstance(result, str)", "passed": false, "output": null}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T03:25:27.296069', 'prompt': None, 'response': 'Task plan:\nMock debug response', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T03:25:27.342139', 'prompt': None, 'response': "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]", 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T03:25:27.425981', 'prompt': None, 'response': '{"test_code": "import os\\ndef test_buggy_list_files():\\n    result = buggy_list_files()\\n    assert isinstance(result, str)", "passed": false, "output": null}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T03:25:27.520604', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'dev_debug_1'}, {'timestamp': '2025-04-08T03:25:27.562244', 'prompt': None, 'response': '{"test_code": "import os\\ndef test_buggy_list_files():\\n    result = buggy_list_files()\\n    assert isinstance(result, str)", "passed": false, "output": null}', 'task_id': 'dev_debug_1'}]
+Debug formatted history:
+Agent:
+Task plan:
+Mock debug response
+
+Agent:
+Task plan:
+Mock debug response
+
+Agent:
+import os
+def buggy_list_files():
+    files = os.listdir('.')
+    return files[999]
+
+Agent:
+Task plan:
+Mock debug response
+
+Agent:
+import os
+def buggy_list_files():
+    files = os.listdir('.')
+    return files[999]
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Task plan:
+Mock debug response
+
+Agent:
+import os
+def buggy_list_files():
+    files = os.listdir('.')
+    return files[999]
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Task plan:
+Mock debug response
+
+Agent:
+import os
+def buggy_list_files():
+    files = os.listdir('.')
+    return files[999]
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Task plan:
+Mock debug response
+
+Agent:
+import os
+def buggy_list_files():
+    files = os.listdir('.')
+    return files[999]
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Task plan:
+Mock debug response
+
+Agent:
+import os
+def buggy_list_files():
+    files = os.listdir('.')
+    return files[999]
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Task plan:
+Mock debug response
+
+Agent:
+import os
+def buggy_list_files():
+    files = os.listdir('.')
+    return files[999]
+
+Agent:
+Test Code:
+import os
+def test_buggy_list_files():
+    result = buggy_list_files()
+    assert isinstance(result, str)
+Passed: False
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+import os
+def test_buggy_list_files():
+    result = buggy_list_files()
+    assert isinstance(result, str)
+Passed: False
+
+Agent:
+Task plan:
+Mock debug response
+
+Agent:
+import os
+def buggy_list_files():
+    files = os.listdir('.')
+    return files[999]
+
+Agent:
+Test Code:
+import os
+def test_buggy_list_files():
+    result = buggy_list_files()
+    assert isinstance(result, str)
+Passed: False
+
+Agent:
+Test Code:
+
+Passed: False
+Output:
+No code provided
+
+Agent:
+Test Code:
+import os
+def test_buggy_list_files():
+    result = buggy_list_files()
+    assert isinstance(result, str)
+Passed: False
+Debug entries: []
+FAIL
+
+======================================================================
+FAIL: test_developer_workflow_success (__main__.TestDeveloper.test_developer_workflow_success)
+Test Developer's workflow with a successful code generation and test.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/ian/dev/projects/agents/local/seclorum/tests/test_developer.py", line 57, in test_developer_workflow_success
+    self.assertTrue(result.passed, f"Tests failed: {result.output}")
+AssertionError: False is not true : Tests failed: None
+
+======================================================================
+FAIL: test_developer_workflow_with_debugging (__main__.TestDeveloper.test_developer_workflow_with_debugging)
+Test Developer's workflow with a buggy script that requires debugging.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/ian/dev/projects/agents/local/seclorum/tests/test_developer.py", line 97, in test_developer_workflow_with_debugging
+    self.assertEqual(status, "debugged", f"Expected 'debugged', got {status}")
+AssertionError: 'tested' != 'debugged'
+- tested
++ debugged
+ : Expected 'debugged', got tested
+
+----------------------------------------------------------------------
+Ran 2 tests in 32.607s
+
+FAILED (failures=2)
