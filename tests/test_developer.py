@@ -8,22 +8,39 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import logging
 import unittest
 from io import StringIO
+import json
 from seclorum.models import Task, CodeOutput, TestResult, ModelManager
 from seclorum.agents.developer import Developer
 
 def setup_logging(quiet: bool = False):
     level = logging.WARNING if quiet else logging.INFO
-    # Configure seclorum logger
     logging.getLogger("seclorum").setLevel(level)
     for handler in logging.getLogger().handlers[:]:
         handler.setLevel(level)
     for logger_name in logging.Logger.manager.loggerDict:
         if logger_name.startswith("seclorum"):
             logging.getLogger(logger_name).setLevel(level)
-
-    # Suppress sentence_transformers logs below WARNING
     logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
     logging.getLogger("transformers").setLevel(logging.WARNING)
+
+def format_history(history):
+    """Format history entries for readable output."""
+    if not history:
+        return "No history available"
+    formatted = "Recent History:\n"
+    for entry in history[-3:]:  # Last 3 entries
+        timestamp = entry.get("timestamp", "Unknown")
+        response = entry.get("response", "No response")
+        try:
+            # Try to parse as JSON for TestResult/CodeOutput
+            parsed = json.loads(response) if response.startswith("{") else response
+            if isinstance(parsed, dict):
+                formatted += f"- {timestamp}:\n  {json.dumps(parsed, indent=2)}\n"
+            else:
+                formatted += f"- {timestamp}:\n  {parsed.strip()}\n"
+        except json.JSONDecodeError:
+            formatted += f"- {timestamp}:\n  {response.strip()}\n"
+    return formatted
 
 class MockModelManager(ModelManager):
     def __init__(self, model_name: str = "mock"):
@@ -40,7 +57,8 @@ class MockModelManager(ModelManager):
 class TestDeveloper(unittest.TestCase):
     def setUp(self):
         self.session_id = "test_session"
-        self.task_id = "test_task_1"
+        # Unique task_id per test to avoid history overlap
+        self.task_id = f"test_task_{unittest.TestCase.id(self).split('.')[-1]}"
         self.model_manager = MockModelManager()
         self.task = Task(task_id=self.task_id, description="List files", parameters={})
 
@@ -50,7 +68,7 @@ class TestDeveloper(unittest.TestCase):
         status, result = developer.orchestrate(self.task, stop_at="Generator_dev_task")
         history = developer.memory.load_history(self.task_id)
         print(f"Status: {status}, Result: {result}")
-        print(f"History: {history}")
+        print(format_history(history))
         self.assertEqual(status, "generated")
         self.assertIsInstance(result, CodeOutput)
         self.assertIn("list_files", result.code)
@@ -61,7 +79,7 @@ class TestDeveloper(unittest.TestCase):
         status, result = developer.orchestrate(self.task, stop_at="Tester_dev_task")
         history = developer.memory.load_history(self.task_id)
         print(f"Status: {status}, Result: {result}")
-        print(f"History: {history}")
+        print(format_history(history))
         self.assertEqual(status, "tested")
         self.assertIsInstance(result, TestResult)
         self.assertIn("test_list_files", result.test_code)
@@ -72,7 +90,7 @@ class TestDeveloper(unittest.TestCase):
         status, result = developer.orchestrate(self.task, stop_at="Executor_dev_task")
         history = developer.memory.load_history(self.task_id)
         print(f"Status: {status}, Result: {result}")
-        print(f"History: {history}")
+        print(format_history(history))
         self.assertEqual(status, "tested")
         self.assertIsInstance(result, TestResult)
         self.assertTrue(result.passed, f"Execution failed: {result.output}")
@@ -80,20 +98,20 @@ class TestDeveloper(unittest.TestCase):
     def test_executor_to_debugger(self):
         self.task.description = "Generate buggy code"
         self.model_manager.generate = lambda prompt, **kwargs: (
-            "import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]"  # Explicit buggy code
+            "import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]"
             if "Generate Python code" in prompt else
-            "import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')"  # Ensure failure
+            "import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')"
             if "Generate a Python unit test" in prompt else
-            "import os\ndef buggy_files():\n    return os.listdir('.')[0] if os.listdir('.') else ''"  # Fixed version
+            "import os\ndef buggy_files():\n    return os.listdir('.')[0] if os.listdir('.') else ''"
             if "Fix this Python code" in prompt else
             "Mock debug response"
         )
         developer = Developer(self.session_id, self.model_manager)
         developer.start()
-        status, result = developer.orchestrate(self.task)  # No stop_at for full flow
+        status, result = developer.orchestrate(self.task)
         history = developer.memory.load_history(self.task_id)
         print(f"Status: {status}, Result: {result}")
-        print(f"History: {history}")
+        print(format_history(history))
         self.assertEqual(status, "debugged")
         self.assertIsInstance(result, CodeOutput)
         self.assertIn("buggy_files", result.code)
