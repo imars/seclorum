@@ -80,7 +80,6 @@ class AbstractAggregate(AbstractAgent):
         self.log_update(f"Orchestrating task {task_id} with {len(self.agents)} agents")
         status, result = None, None
 
-        # Process agents in dependency order
         pending_agents = set(self.agents.keys())
         while pending_agents:
             made_progress = False
@@ -101,6 +100,7 @@ class AbstractAggregate(AbstractAgent):
                 if not deps_satisfied:
                     continue
                 agent = self.agents[agent_name]
+                self.log_update(f"Building parameters for {agent_name}: {agent_outputs}")
                 new_task = Task(
                     task_id=task_id,
                     description=task.description,
