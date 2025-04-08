@@ -23,10 +23,10 @@ class Developer(AbstractAggregate):
         debugger = Debugger("dev_task", self.session_id, self.model_manager)
 
         self.add_agent(architect)
-        self.add_agent(generator, [(architect.name, {"status": "planned"})])
-        self.add_agent(tester, [(generator.name, {"status": "generated"})])
-        self.add_agent(executor, [(tester.name, {"status": "tested"})])
-        self.add_agent(debugger, [(executor.name, {"status": "tested", "passed": False})])
+        self.add_agent(generator, [("Architect_dev_task", {"status": "planned"})])
+        self.add_agent(tester, [("Generator_dev_task", {"status": "generated"})])
+        self.add_agent(executor, [("Tester_dev_task", {"status": "tested"})])
+        self.add_agent(debugger, [("Executor_dev_task", {"status": "tested", "passed": False})])
 
     def process_task(self, task: Task) -> Tuple[str, Any]:
         self.log_update(f"Developer processing Task {task.task_id}")

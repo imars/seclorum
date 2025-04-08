@@ -69,6 +69,7 @@ class AbstractAggregate(AbstractAgent):
                 if "error" in condition:
                     params["error"] = condition["error"]
                 new_task = Task(task_id=task_id, description=task.description, parameters=params)
+                self.log_update(f"Propagating to {next_agent_name} with params: {params}")
                 new_status, new_result = next_agent.process_task(new_task)
                 self._propagate(next_agent_name, new_status, new_result, task)
 
@@ -83,7 +84,9 @@ class AbstractAggregate(AbstractAgent):
         pending_agents = set(self.agents.keys())
         while pending_agents:
             made_progress = False
-            for agent_name in list(pending_agents):
+            for agent_name in list(pending_agents):  # Fixed: list(pending_agents) instead of list.to_bytes
+                if agent_name in self.tasks[task_id]["processed"]:
+                    continue
                 deps = self.graph[agent_name]
                 deps_satisfied = True
                 agent_outputs = {}
@@ -109,7 +112,7 @@ class AbstractAggregate(AbstractAgent):
                 self.log_update(f"Processing {agent_name} for Task {task_id}")
                 status, result = agent.process_task(new_task)
                 self._propagate(agent_name, status, result, task)
-                pending_agents.remove(agent_name)
+                self.tasks[task_id]["processed"].add(agent_name)
                 made_progress = True
                 if status in ["tested", "debugged"] and isinstance(result, (TestResult, CodeOutput)):
                     if isinstance(result, TestResult) and result.passed:
