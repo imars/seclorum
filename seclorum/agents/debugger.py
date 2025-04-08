@@ -14,18 +14,23 @@ class Debugger(AbstractAgent):
 
     def process_task(self, task: Task) -> tuple[str, CodeOutput]:
         self.log_update(f"Debugging for Task {task.task_id}")
-        code_output = CodeOutput(**task.parameters.get("code_output", {}))
-        test_result = TestResult(**task.parameters.get("test_result", {"test_code": "", "passed": False}))
-        error = task.parameters.get("error", "Unknown error")
+        generator_output = task.parameters.get("Generator_dev_task", {}).get("result")
+        executor_output = task.parameters.get("Executor_dev_task", {}).get("result")
+
+        if not isinstance(generator_output, CodeOutput) or not isinstance(executor_output, TestResult):
+            self.log_update("Missing code or test result")
+            return "debugged", CodeOutput(code="", tests=None)
+
+        code_output = generator_output
+        test_result = executor_output
+        error = test_result.output or "Unknown error"
 
         self.log_update(f"Original code:\n{code_output.code}")
         self.log_update(f"Original error: {error}")
 
-        # Clean Markdown and comments
         cleaned_code = self._clean_code(code_output.code)
         cleaned_tests = self._clean_code(code_output.tests) if code_output.tests else None
 
-        # Debug prompt
         debug_prompt = (
             f"Fix this Python code that failed with error:\n{error}\n"
             f"Original code:\n{cleaned_code}\n"
@@ -35,7 +40,6 @@ class Debugger(AbstractAgent):
 
         self.log_update(f"Fixed code:\n{fixed_code}")
         result = CodeOutput(code=fixed_code, tests=cleaned_tests)
-        # Save an explicit debugging record
         self.memory.save(response=f"Fixed code:\n{fixed_code}", task_id=task.task_id)
         self.commit_changes(f"Fixed code for Task {task.task_id}")
         return "debugged", result
@@ -43,7 +47,6 @@ class Debugger(AbstractAgent):
     def _clean_code(self, code: str) -> str:
         if not code:
             return ""
-        # Remove Markdown, comments, and extra text
         lines = code.split("\n")
         cleaned = []
         in_code_block = False
@@ -55,14 +58,6 @@ class Debugger(AbstractAgent):
             elif line.startswith("```") and in_code_block:
                 in_code_block = False
                 continue
-            elif in_code_block:
-                cleaned.append(line)
-            elif not line.startswith("#") and not line.startswith("Error:") and not line.startswith("Original error:"):
+            elif in_code_block or (not line.startswith("#") and not line.startswith("Error:")):
                 cleaned.append(line)
         return "\n".join(cleaned).strip()
-
-    def start(self):
-        self.log_update("Starting debugger")
-
-    def stop(self):
-        self.log_update("Stopping debugger")
