@@ -33,26 +33,4 @@ class Developer(AbstractAggregate):
         return self.orchestrate(task)
 
     def orchestrate(self, task: Task) -> Tuple[str, Any]:
-        status, result = super().orchestrate(task)
-        task_id = task.task_id
-        # Check the latest task state
-        if task_id in self.tasks:
-            latest_status = self.tasks[task_id]["status"]
-            latest_result = self.tasks[task_id]["result"]
-            if latest_status == "tested" and isinstance(latest_result, TestResult):
-                if latest_result.passed:
-                    self.log_update(f"Task {task_id} passed tests, workflow complete")
-                    return "tested", latest_result  # Return passing result immediately
-                else:
-                    self.log_update(f"Test failed for Task {task_id}, triggering debug")
-                    debugger = self.agents.get("Debugger_dev_task")
-                    if debugger:
-                        new_task = Task(
-                            task_id=task_id,
-                            description=task.description,
-                            parameters=self.tasks[task_id]["outputs"]
-                        )
-                        debug_status, debug_result = debugger.process_task(new_task)
-                        self._propagate(debugger.name, debug_status, debug_result, task)
-                        return debug_status, debug_result
-        return status, result
+        return super().orchestrate(task)  # Rely on AbstractAggregate's logic

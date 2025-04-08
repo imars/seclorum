@@ -5,7 +5,7 @@ from collections import defaultdict
 from seclorum.models import Task, TestResult, CodeOutput
 from seclorum.utils.logger import LoggerMixin
 from seclorum.core.filesystem import FileSystemManager
-from seclorum.agents.memory_manager import MemoryManager  # Direct import
+from seclorum.agents.memory_manager import MemoryManager
 
 class AbstractAgent(ABC, LoggerMixin):
     def __init__(self, name: str, session_id: str, quiet: bool = False):
@@ -54,14 +54,13 @@ class AbstractAggregate(AbstractAgent):
 
     def _propagate(self, current_agent: str, status: str, result: Any, task: Task):
         task_id = task.task_id
+        if task_id not in self.tasks:
+            self.log_update(f"Initializing task {task_id} in tasks")
+            self.tasks[task_id] = {"status": None, "result": None, "outputs": {}, "processed": set()}
         self.tasks[task_id]["status"] = status
         self.tasks[task_id]["result"] = result
-        if "outputs" not in self.tasks[task_id]:
-            self.tasks[task_id]["outputs"] = {}
-        if isinstance(result, CodeOutput):
-            self.tasks[task_id]["outputs"]["code_output"] = result.model_dump()
-        elif isinstance(result, TestResult):
-            self.tasks[task_id]["outputs"]["test_result"] = result.model_dump()
+        # Store output under the agent's name to match dependency keys
+        self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result}
         self.logger.debug(f"Updated task {task_id}: {self.tasks[task_id]}")
 
         for next_agent_name, condition in self.graph.get(current_agent, []):
@@ -77,32 +76,50 @@ class AbstractAggregate(AbstractAgent):
     def orchestrate(self, task: Task) -> Tuple[str, Any]:
         task_id = task.task_id
         if task_id not in self.tasks:
-            self.tasks[task_id] = {"task_id": task_id, "description": task.description, "status": "assigned", "result": None, "outputs": {}}
-        self.logger.info(f"Task {task_id} assigned or resumed with status {self.tasks[task_id]['status']}")
-
-        processed = set()
-        latest_result = None
+            self.log_update(f"Initializing task {task_id} at orchestration start")
+            self.tasks[task_id] = {"status": None, "result": None, "outputs": {}, "processed": set()}
+        self.log_update(f"Orchestrating task {task_id} with {len(self.agents)} agents")
+        status, result = None, None
         while True:
             made_progress = False
-            for agent_name, deps in self.graph.items():
-                if agent_name in processed:
+            for agent_name, deps in list(self.graph.items()):
+                if agent_name in self.tasks[task_id]["processed"]:
                     continue
                 deps_satisfied = True
-                for dep_agent, condition in deps:
-                    if dep_agent not in self.graph or dep_agent not in processed or not self._check_condition(self.tasks[task_id]["status"], self.tasks[task_id]["result"], condition):
+                agent_outputs = {}
+                for dep_name, dep_conditions in deps:
+                    if dep_name not in self.tasks[task_id]["outputs"]:
                         deps_satisfied = False
                         break
-                if deps_satisfied:
-                    agent = self.agents[agent_name]
-                    params = self.tasks[task_id].get("outputs", {}).copy()
-                    new_task = Task(task_id=task_id, description=task.description, parameters=params)
-                    status, result = agent.process_task(new_task)
-                    self._propagate(agent_name, status, result, task)
-                    processed.add(agent_name)
-                    made_progress = True
-                    latest_result = result
+                    dep_output = self.tasks[task_id]["outputs"][dep_name]
+                    agent_outputs[dep_name] = dep_output
+                    for key, value in dep_conditions.items():
+                        if dep_output.get(key) != value:
+                            deps_satisfied = False
+                            break
+                if not deps_satisfied:
+                    continue
+                agent = self.agents[agent_name]
+                new_task = Task(
+                    task_id=task_id,
+                    description=task.description,
+                    parameters=agent_outputs
+                )
+                self.log_update(f"Processing {agent_name} for Task {task_id}")
+                status, result = agent.process_task(new_task)
+                self._propagate(agent_name, status, result, task)
+                self.tasks[task_id]["processed"].add(agent_name)
+                made_progress = True
+                if status in ["tested", "debugged"] and isinstance(result, (TestResult, CodeOutput)):
+                    if isinstance(result, TestResult) and result.passed:
+                        self.log_update(f"Agent {agent_name} passed tests, terminating workflow")
+                        return status, result
+                    elif status == "debugged":
+                        self.log_update(f"Agent {agent_name} debugged, terminating workflow")
+                        return status, result
             if not made_progress:
+                self.log_update(f"No progress made, exiting orchestration for Task {task_id}")
                 break
-
-        final_status = self.tasks[task_id]["status"]
-        return final_status, latest_result
+        if status is None or result is None:
+            raise ValueError(f"No agent processed task {task_id}")
+        return status, result
