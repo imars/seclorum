@@ -1,12 +1,13 @@
 # seclorum/agents/developer.py
-from typing import Tuple, Any, Optional  # Added Optional
-from seclorum.agents.base import AbstractAggregate, AbstractAgent
-from seclorum.models import Task, CodeOutput, TestResult, create_model_manager
+from typing import Tuple, Any
+from seclorum.agents.base import AbstractAggregate
+from seclorum.models import Task, create_model_manager
 from seclorum.agents.generator import Generator
 from seclorum.agents.tester import Tester
 from seclorum.agents.executor import Executor
 from seclorum.agents.architect import Architect
 from seclorum.agents.debugger import Debugger
+from typing import Any, Dict, List, Optional, Tuple, Set
 
 class Developer(AbstractAggregate):
     def __init__(self, session_id: str, model_manager=None):
@@ -25,7 +26,10 @@ class Developer(AbstractAggregate):
         self.add_agent(architect)
         self.add_agent(generator, [("Architect_dev_task", {"status": "planned"})])
         self.add_agent(tester, [("Generator_dev_task", {"status": "generated"})])
-        self.add_agent(executor, [("Tester_dev_task", {"status": "tested"})])
+        self.add_agent(executor, [
+            ("Tester_dev_task", {"status": "tested"}),
+            ("Generator_dev_task", {"status": "generated"})
+        ])
         self.add_agent(debugger, [("Executor_dev_task", {"status": "tested", "passed": False})])
 
     def process_task(self, task: Task) -> Tuple[str, Any]:
