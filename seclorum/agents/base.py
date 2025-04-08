@@ -77,7 +77,7 @@ class AbstractAggregate(AbstractAgent):
                 self.log_update(f"Propagating to {next_agent_name} with params: {params}")
                 new_task = Task(task_id=task_id, description=task.description, parameters=params)
                 new_status, new_result = next_agent.process_task(new_task)
-                self.tasks[task_id]["processed"].add(next_agent_name)  # Mark here to prevent loops
+                self.tasks[task_id]["processed"].add(next_agent_name)
                 final_status, final_result = self._propagate(next_agent_name, new_status, new_result, task, stop_at)
         return final_status, final_result
 
@@ -99,14 +99,13 @@ class AbstractAggregate(AbstractAgent):
                     continue
                 deps = self.graph[agent_name]
                 deps_satisfied = True
-                agent_outputs: Dict[str, Any] = {}
+                agent_outputs: Dict[str, Any] = self.tasks[task_id]["outputs"].copy()  # Pass all outputs
                 for dep_name, dep_conditions in deps:
-                    if dep_name not in self.tasks[task_id]["outputs"]:
+                    if dep_name not in agent_outputs:
                         self.log_update(f"Dependency {dep_name} not satisfied for {agent_name}")
                         deps_satisfied = False
                         break
-                    dep_output = self.tasks[task_id]["outputs"][dep_name]
-                    agent_outputs[dep_name] = dep_output
+                    dep_output = agent_outputs[dep_name]
                     for key, value in dep_conditions.items():
                         if dep_output.get(key) != value:
                             self.log_update(f"Condition {key}={value} not met for {dep_name} in {agent_name}")
