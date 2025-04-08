@@ -16,11 +16,18 @@ class Executor(AbstractAgent):
         self.log_update(f"Executing for Task {task.task_id}")
         self.log_update(f"Task parameters: {task.parameters}")
 
-        # Extract and deserialize code and test
-        code_output_data = task.parameters.get("code_output", {"code": ""})
-        code_output = CodeOutput(**code_output_data) if isinstance(code_output_data, dict) else code_output_data
-        test_result_data = task.parameters.get("test_result", {"test_code": "", "passed": False})
-        test_result = TestResult(**test_result_data) if isinstance(test_result_data, dict) else test_result_data
+        # Extract from dependency outputs
+        generator_output = task.parameters.get("Generator_dev_task", {}).get("result")
+        tester_output = task.parameters.get("Tester_dev_task", {}).get("result")
+
+        if not generator_output or not isinstance(generator_output, CodeOutput):
+            self.log_update("No valid code from Generator")
+            result = TestResult(test_code="", passed=False, output="No code provided")
+            self.memory.save(response=result, task_id=task.task_id)
+            return "tested", result
+
+        code_output = generator_output
+        test_result = tester_output if tester_output and isinstance(tester_output, TestResult) else TestResult(test_code="", passed=False)
 
         # Combine code and test
         full_code = f"{code_output.code}\n\n{test_result.test_code}" if test_result.test_code else code_output.code
@@ -38,21 +45,18 @@ class Executor(AbstractAgent):
             f.write(full_code)
 
         try:
-            cmd = ["python", "-B", temp_file]  # -B to avoid pyc files
+            cmd = ["python", "-B", temp_file]
             self.log_update(f"Running command: {' '.join(cmd)}")
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
             self.log_update(f"Execution output: {output}")
             passed = "Traceback" not in output and "AssertionError" not in output
-            self.log_update(f"Determined passed: {passed}")
             result = TestResult(test_code=test_result.test_code, passed=passed, output=output)
         except subprocess.CalledProcessError as e:
             self.log_update(f"Execution failed with error: {e.output}")
             result = TestResult(test_code=test_result.test_code, passed=False, output=e.output)
-            self.log_update(f"Result after CalledProcessError: passed={result.passed}, output={result.output}")
         except Exception as e:
             self.log_update(f"Unexpected execution error: {str(e)}")
             result = TestResult(test_code=test_result.test_code, passed=False, output=str(e))
-            self.log_update(f"Result after unexpected error: passed={result.passed}, output={result.output}")
         finally:
             if os.path.exists(temp_file):
                 self.log_update(f"Cleaning up {temp_file}")
