@@ -59,7 +59,6 @@ class AbstractAggregate(AbstractAgent):
             self.tasks[task_id] = {"status": None, "result": None, "outputs": {}, "processed": set()}
         self.tasks[task_id]["status"] = status
         self.tasks[task_id]["result"] = result
-        # Store output under the agent's name to match dependency keys
         self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result}
         self.logger.debug(f"Updated task {task_id}: {self.tasks[task_id]}")
 
@@ -80,11 +79,13 @@ class AbstractAggregate(AbstractAgent):
             self.tasks[task_id] = {"status": None, "result": None, "outputs": {}, "processed": set()}
         self.log_update(f"Orchestrating task {task_id} with {len(self.agents)} agents")
         status, result = None, None
-        while True:
+
+        # Process agents in dependency order
+        pending_agents = set(self.agents.keys())
+        while pending_agents:
             made_progress = False
-            for agent_name, deps in list(self.graph.items()):
-                if agent_name in self.tasks[task_id]["processed"]:
-                    continue
+            for agent_name in list(pending_agents):
+                deps = self.graph[agent_name]
                 deps_satisfied = True
                 agent_outputs = {}
                 for dep_name, dep_conditions in deps:
@@ -108,7 +109,7 @@ class AbstractAggregate(AbstractAgent):
                 self.log_update(f"Processing {agent_name} for Task {task_id}")
                 status, result = agent.process_task(new_task)
                 self._propagate(agent_name, status, result, task)
-                self.tasks[task_id]["processed"].add(agent_name)
+                pending_agents.remove(agent_name)
                 made_progress = True
                 if status in ["tested", "debugged"] and isinstance(result, (TestResult, CodeOutput)):
                     if isinstance(result, TestResult) and result.passed:
@@ -118,8 +119,9 @@ class AbstractAggregate(AbstractAgent):
                         self.log_update(f"Agent {agent_name} debugged, terminating workflow")
                         return status, result
             if not made_progress:
-                self.log_update(f"No progress made, exiting orchestration for Task {task_id}")
+                self.log_update(f"No progress made with remaining agents {pending_agents}, exiting orchestration")
                 break
+
         if status is None or result is None:
             raise ValueError(f"No agent processed task {task_id}")
         return status, result

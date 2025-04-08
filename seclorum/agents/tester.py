@@ -14,8 +14,14 @@ class Tester(AbstractAgent):
 
     def process_task(self, task: Task) -> tuple[str, TestResult]:
         self.log_update(f"Generating tests for Task {task.task_id}")
-        code_output = CodeOutput(**task.parameters.get("code_output", {}))
-    
+        code_output_data = task.parameters.get("Generator_dev_task", {}).get("result", {})
+        if not code_output_data or "code" not in code_output_data:
+            self.log_update("No code output available, returning empty test result")
+            result = TestResult(test_code="", passed=False, output="No code provided")
+            self.memory.save(response=result, task_id=task.task_id)
+            return "tested", result
+
+        code_output = CodeOutput(**code_output_data)
         if code_output.tests:
             test_code = code_output.tests
             self.log_update(f"Using provided test code:\n{test_code}")
@@ -27,12 +33,10 @@ class Tester(AbstractAgent):
             test_code = self.model.generate(test_prompt).strip()
             self.log_update(f"Generated new test code:\n{test_code}")
 
-        # Clean residual Markdown
         test_code = test_code.replace("```python", "").replace("```", "").strip()
-
         result = TestResult(test_code=test_code, passed=False)
-        self.memory.save(response=result, task_id=task.task_id)  # Pass TestResult object
-        task.parameters["test_result"] = result  # Pass test result downstream
+        self.memory.save(response=result, task_id=task.task_id)
+        task.parameters["test_result"] = result
         self.commit_changes(f"Generated tests for {task.task_id}")
         return "tested", result
 
