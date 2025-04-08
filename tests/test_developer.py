@@ -1,8 +1,4 @@
 # tests/test_developer.py
-"""
-Unit tests for the Developer agent in Seclorum.
-Ensures the Developer orchestrates its workflow correctly, including debugging failed tests.
-"""
 import sys
 for module in list(sys.modules.keys()):
     if module.startswith("seclorum"):
@@ -11,6 +7,7 @@ import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"  # Avoid tokenizer parallelism warnings
 import logging
 import unittest
+from io import StringIO
 from seclorum.models import Task, CodeOutput, TestResult, ModelManager, create_model_manager
 from seclorum.agents.developer import Developer
 
@@ -24,8 +21,8 @@ def setup_logging(quiet: bool = False):
         logging.getLogger(logger_name).setLevel(level)
 
 class TestDeveloper(unittest.TestCase):
-# tests/test_developer.py (snippet)
     def test_developer_workflow_success(self):
+        """Test Developer's workflow with a successful code generation and test."""
         session_id = "dev_success_session"
         task = Task(
             task_id="dev_success_1",
@@ -76,11 +73,11 @@ class TestDeveloper(unittest.TestCase):
                 super().__init__(model_name)
             def generate(self, prompt: str, **kwargs) -> str:
                 if "Generate Python code" in prompt:
-                    return "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]"  # Intentional IndexError
+                    return "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[999]"
                 elif "Generate a Python unit test" in prompt:
                     return "import os\ndef test_buggy_list_files():\n    result = buggy_list_files()\n    assert isinstance(result, str)"
                 elif "Fix this Python code" in prompt:
-                    return "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[0] if files else ''"  # Fixed version
+                    return "import os\ndef buggy_list_files():\n    files = os.listdir('.')\n    return files[0] if files else ''"
                 return "Mock debug response"
 
         model_manager = DebugMockModelManager()
@@ -92,17 +89,15 @@ class TestDeveloper(unittest.TestCase):
         print(f"Debug status: {status}")
         print(f"Debug result: {result}")
         history = developer.memory.load_history(task_id=task.task_id)
-        print(f"Debug history:\n{history}")
+        print(f"Debug raw history: {history}")
+        print(f"Debug formatted history:\n{developer.memory.format_history(task_id=task.task_id)}")
+        debug_entries = [entry for entry in history if "Fixed code" in (entry["response"] or "")]
+        print(f"Debug entries: {debug_entries}")
 
-        # After debugging, we expect either the fixed code or the failed test result
-        self.assertIn(status, ["debugged", "tested"], f"Expected 'debugged' or 'tested', got {status}")
-        if status == "debugged":
-            self.assertIsInstance(result, CodeOutput, "Result should be CodeOutput after debugging")
-            self.assertTrue("files[0]" in result.code or "''" in result.code, "Debugged code should fix IndexError")
-        elif status == "tested":
-            self.assertIsInstance(result, TestResult, "Result should be TestResult")
-            self.assertFalse(result.passed, "Test should fail due to bug")
-            self.assertIn("IndexError", result.output or "", "Output should indicate IndexError")
+        self.assertEqual(status, "debugged", f"Expected 'debugged', got {status}")
+        self.assertIsInstance(result, CodeOutput, "Result should be CodeOutput after debugging")
+        self.assertTrue("files[0]" in result.code or "''" in result.code, "Debugged code should fix IndexError")
+        self.assertTrue(len(debug_entries) > 0, "Debugging step should be in history")
 
         developer.stop()
 
@@ -113,4 +108,24 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     setup_logging(args.quiet)
-    unittest.main(argv=[sys.argv[0]] + (["-q"] if args.quiet else []), verbosity=2 if not args.quiet else 0)
+
+    # Capture output to a file
+    output_file = "test_developer_output.txt"
+    original_stdout = sys.stdout  # Save original stdout
+    with open(output_file, "w") as f:
+        # Use StringIO to capture output, then write to both file and console
+        buffer = StringIO()
+        sys.stdout = buffer
+
+        # Run tests
+        runner = unittest.TextTestRunner(stream=buffer, verbosity=2 if not args.quiet else 0)
+        result = unittest.main(testRunner=runner, exit=False, argv=[sys.argv[0]] + (["-q"] if args.quiet else []))
+
+        # Restore stdout and write to file and console
+        sys.stdout = original_stdout
+        test_output = buffer.getvalue()
+        print(test_output)  # Print to console
+        f.write(test_output)  # Write to file
+
+    # Indicate where the output was saved
+    print(f"Test output saved to {output_file}")
