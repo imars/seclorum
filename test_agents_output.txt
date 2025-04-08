@@ -1,0 +1,10 @@
+test_architect (__main__.TestAgents.test_architect) ... ok
+test_debugger (__main__.TestAgents.test_debugger) ... ok
+test_executor (__main__.TestAgents.test_executor) ... ok
+test_generator (__main__.TestAgents.test_generator) ... ok
+test_tester (__main__.TestAgents.test_tester) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 14.864s
+
+OK
