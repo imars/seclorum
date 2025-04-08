@@ -45,11 +45,15 @@ class AbstractAggregate(AbstractAgent):
 
     def _check_condition(self, status: str, result: Any, condition: Optional[Dict[str, Any]]) -> bool:
         if not condition:
+            self.log_update("No condition to check, returning True")
             return True
         if "status" in condition and condition["status"] != status:
+            self.log_update(f"Status mismatch: expected {condition['status']}, got {status}")
             return False
         if "passed" in condition and isinstance(result, TestResult) and condition["passed"] != result.passed:
+            self.log_update(f"Passed mismatch: expected {condition['passed']}, got {result.passed}")
             return False
+        self.log_update("Condition satisfied")
         return True
 
     def _propagate(self, current_agent: str, status: str, result: Any, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
@@ -67,10 +71,13 @@ class AbstractAggregate(AbstractAgent):
             return status, result
 
         final_status, final_result = status, result
-        for next_agent_name, condition in self.graph.get(current_agent, []):
+        dependents = self.graph.get(current_agent, [])
+        self.log_update(f"Checking dependents for {current_agent}: {dependents}")
+        for next_agent_name, condition in dependents:
             if next_agent_name in self.tasks[task_id]["processed"]:
                 self.log_update(f"Skipping already processed {next_agent_name}")
                 continue
+            self.log_update(f"Evaluating condition for {next_agent_name}: {condition}")
             if self._check_condition(status, result, condition):
                 next_agent = self.agents[next_agent_name]
                 params: Dict[str, Any] = self.tasks[task_id]["outputs"].copy()
