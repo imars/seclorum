@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
     setup_logging(args.quiet)
 
-    output_file = "test_developer_output.txt"
+    output_file = "test_developer_output.log"
     original_stdout = sys.stdout
     with open(output_file, "w") as f:
         buffer = StringIO()
