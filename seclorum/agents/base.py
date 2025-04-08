@@ -73,6 +73,7 @@ class AbstractAggregate(AbstractAgent):
                 self.log_update(f"Propagating to {next_agent_name} with params: {params}")
                 new_status, new_result = next_agent.process_task(new_task)
                 final_status, final_result = self._propagate(next_agent_name, new_status, new_result, task)
+                self.log_update(f"Chained result from {next_agent_name}: {final_status}, {final_result}")
         return final_status, final_result
 
     def orchestrate(self, task: Task) -> Tuple[str, Any]:
