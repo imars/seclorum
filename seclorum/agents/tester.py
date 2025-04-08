@@ -1,8 +1,8 @@
 # seclorum/agents/tester.py
 from seclorum.agents.base import AbstractAgent
-from seclorum.models import Task, CodeOutput, TestResult
+from seclorum.models import Task, TestResult, CodeOutput
 from seclorum.agents.memory_manager import MemoryManager
-from seclorum.models import Task, TestResult, create_model_manager, ModelManager
+from seclorum.agents.model_manager import ModelManager
 
 class Tester(AbstractAgent):
     def __init__(self, task_id: str, session_id: str, model_manager: ModelManager, memory: MemoryManager = None):
@@ -33,9 +33,12 @@ class Tester(AbstractAgent):
             test_code = self.model.generate(test_prompt).strip()
             self.log_update(f"Generated new test code:\n{test_code}")
 
-        test_code = test_code.replace("```python", "").replace("```", "").strip()
-        result = TestResult(test_code=test_code, passed=False)
+        # Make test self-executing
+        test_function_name = test_code.split('def ')[1].split('(')[0]
+        full_test_code = f"{test_code}\n\n{test_function_name}()"
+        self.log_update(f"Full executable test code:\n{full_test_code}")
+
+        result = TestResult(test_code=full_test_code, passed=False)
         self.memory.save(response=result, task_id=task.task_id)
-        task.parameters["test_result"] = result
         self.commit_changes(f"Generated tests for {task.task_id}")
         return "tested", result
