@@ -52,7 +52,7 @@ class AbstractAggregate(AbstractAgent):
             return False
         return True
 
-    def _propagate(self, current_agent: str, status: str, result: Any, task: Task) -> Tuple[str, Any]:
+    def _propagate(self, current_agent: str, status: str, result: Any, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
         task_id = task.task_id
         if task_id not in self.tasks:
             self.log_update(f"Initializing task {task_id} in tasks")
@@ -63,6 +63,10 @@ class AbstractAggregate(AbstractAgent):
         self.logger.debug(f"Task state after {current_agent}: {self.tasks[task_id]}")
 
         final_status, final_result = status, result
+        if stop_at == current_agent:
+            self.log_update(f"Stopping at {current_agent} as requested")
+            return final_status, final_result
+
         for next_agent_name, condition in self.graph.get(current_agent, []):
             if self._check_condition(status, result, condition):
                 next_agent = self.agents[next_agent_name]
@@ -70,15 +74,15 @@ class AbstractAggregate(AbstractAgent):
                 self.log_update(f"Propagating to {next_agent_name} with params: {params}")
                 new_task = Task(task_id=task_id, description=task.description, parameters=params)
                 new_status, new_result = next_agent.process_task(new_task)
-                final_status, final_result = self._propagate(next_agent_name, new_status, new_result, task)
+                final_status, final_result = self._propagate(next_agent_name, new_status, new_result, task, stop_at)
         return final_status, final_result
 
-    def orchestrate(self, task: Task) -> Tuple[str, Any]:
+    def orchestrate(self, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
         task_id = task.task_id
         if task_id not in self.tasks:
             self.log_update(f"Initializing task {task_id} at orchestration start")
             self.tasks[task_id] = {"status": None, "result": None, "outputs": {}, "processed": set()}
-        self.log_update(f"Orchestrating task {task_id} with {len(self.agents)} agents")
+        self.log_update(f"Orchestrating task {task_id} with {len(self.agents)} agents, stopping at {stop_at}")
 
         status, result = None, None
         pending_agents = set(self.agents.keys())
@@ -113,7 +117,7 @@ class AbstractAggregate(AbstractAgent):
                 )
                 self.log_update(f"Processing {agent_name} for Task {task_id}")
                 status, result = agent.process_task(new_task)
-                status, result = self._propagate(agent_name, status, result, task)
+                status, result = self._propagate(agent_name, status, result, task, stop_at)
                 self.tasks[task_id]["processed"].add(agent_name)
                 made_progress = True
                 if status in ["tested", "debugged"] and isinstance(result, (TestResult, CodeOutput)):

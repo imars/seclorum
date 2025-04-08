@@ -1,5 +1,5 @@
 # seclorum/agents/developer.py
-from typing import Tuple, Any
+from typing import Tuple, Any, Optional  # Added Optional
 from seclorum.agents.base import AbstractAggregate, AbstractAgent
 from seclorum.models import Task, CodeOutput, TestResult, create_model_manager
 from seclorum.agents.generator import Generator
@@ -32,5 +32,5 @@ class Developer(AbstractAggregate):
         self.log_update(f"Developer processing Task {task.task_id}")
         return self.orchestrate(task)
 
-    def orchestrate(self, task: Task) -> Tuple[str, Any]:
-        return super().orchestrate(task)  # Rely on AbstractAggregate's logic
+    def orchestrate(self, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
+        return super().orchestrate(task, stop_at)
