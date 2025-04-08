@@ -62,6 +62,7 @@ class AbstractAggregate(AbstractAgent):
         self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result}
         self.logger.debug(f"Updated task {task_id}: {self.tasks[task_id]}")
 
+        # Chain to dependent agents
         for next_agent_name, condition in self.graph.get(current_agent, []):
             if self._check_condition(status, result, condition):
                 next_agent = self.agents[next_agent_name]
@@ -79,12 +80,13 @@ class AbstractAggregate(AbstractAgent):
             self.log_update(f"Initializing task {task_id} at orchestration start")
             self.tasks[task_id] = {"status": None, "result": None, "outputs": {}, "processed": set()}
         self.log_update(f"Orchestrating task {task_id} with {len(self.agents)} agents")
-        status, result = None, None
 
+        # Start with no-dependency agents
+        status, result = None, None
         pending_agents = set(self.agents.keys())
         while pending_agents:
             made_progress = False
-            for agent_name in list(pending_agents):  # Fixed: list(pending_agents) instead of list.to_bytes
+            for agent_name in list(pending_agents):
                 if agent_name in self.tasks[task_id]["processed"]:
                     continue
                 deps = self.graph[agent_name]

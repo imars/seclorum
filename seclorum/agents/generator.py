@@ -32,7 +32,7 @@ class Generator(AbstractAgent):
         if tests:
             tests = tests.replace("```python", "").replace("```", "").strip()
 
-        result = CodeOutput(code=code, tests=tests)
+        result = CodeOutput(code=code, tests=None)
         self.log_update(f"Generated code:\n{code}")
         if tests:
             self.log_update(f"Generated tests:\n{tests}")

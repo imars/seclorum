@@ -14,14 +14,14 @@ class Tester(AbstractAgent):
 
     def process_task(self, task: Task) -> tuple[str, TestResult]:
         self.log_update(f"Generating tests for Task {task.task_id}")
-        code_output_data = task.parameters.get("Generator_dev_task", {}).get("result", {})
-        if not code_output_data or "code" not in code_output_data:
-            self.log_update("No code output available, returning empty test result")
+        generator_output = task.parameters.get("Generator_dev_task")
+        if not generator_output or not isinstance(generator_output["result"], CodeOutput):
+            self.log_update("No valid Generator output, returning empty test result")
             result = TestResult(test_code="", passed=False, output="No code provided")
             self.memory.save(response=result, task_id=task.task_id)
             return "tested", result
 
-        code_output = CodeOutput(**code_output_data)
+        code_output = generator_output["result"]
         if code_output.tests:
             test_code = code_output.tests
             self.log_update(f"Using provided test code:\n{test_code}")
@@ -39,9 +39,3 @@ class Tester(AbstractAgent):
         task.parameters["test_result"] = result
         self.commit_changes(f"Generated tests for {task.task_id}")
         return "tested", result
-
-    def start(self):
-        self.log_update("Starting tester")
-
-    def stop(self):
-        self.log_update("Stopping tester")
