@@ -1,0 +1,36 @@
+test_architect_to_generator (__main__.TestDeveloper.test_architect_to_generator) ... Status: generated, Result: code="import os\ndef list_files():\n    return os.listdir('.')" tests=None
+Recent History (last 3): [{'timestamp': '2025-04-08T06:34:58.783438', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'test_task_1'}, {'timestamp': '2025-04-08T06:48:23.995944', 'prompt': None, 'response': 'Task plan:\nMock response', 'task_id': 'test_task_1'}, {'timestamp': '2025-04-08T06:48:25.552926', 'prompt': None, 'response': "import os\ndef list_files():\n    return os.listdir('.')", 'task_id': 'test_task_1'}]
+ok
+test_executor_to_debugger (__main__.TestDeveloper.test_executor_to_debugger) ... Status: tested, Result: test_code='import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)' passed=False output=None
+Recent History (last 3): [{'timestamp': '2025-04-08T06:48:39.809012', 'prompt': None, 'response': '{"test_code": "import os\\ndef test_buggy_files():\\n    result = buggy_files()\\n    assert isinstance(result, str)", "passed": false, "output": null}', 'task_id': 'test_task_1'}, {'timestamp': '2025-04-08T06:48:39.902089', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'test_task_1'}, {'timestamp': '2025-04-08T06:48:39.944175', 'prompt': None, 'response': '{"test_code": "import os\\ndef test_buggy_files():\\n    result = buggy_files()\\n    assert isinstance(result, str)", "passed": false, "output": null}', 'task_id': 'test_task_1'}]
+FAIL
+test_generator_to_tester (__main__.TestDeveloper.test_generator_to_tester) ... Status: tested, Result: test_code='import os\ndef test_list_files():\n    result = list_files()\n    assert isinstance(result, list)' passed=False output=None
+Recent History (last 3): [{'timestamp': '2025-04-08T06:48:54.711867', 'prompt': None, 'response': 'Task plan:\nMock response', 'task_id': 'test_task_1'}, {'timestamp': '2025-04-08T06:48:54.751826', 'prompt': None, 'response': "import os\ndef list_files():\n    return os.listdir('.')", 'task_id': 'test_task_1'}, {'timestamp': '2025-04-08T06:48:54.848940', 'prompt': None, 'response': '{"test_code": "import os\\ndef test_list_files():\\n    result = list_files()\\n    assert isinstance(result, list)", "passed": false, "output": null}', 'task_id': 'test_task_1'}]
+ok
+test_tester_to_executor (__main__.TestDeveloper.test_tester_to_executor) ... Status: tested, Result: test_code='' passed=False output='No code provided'
+Recent History (last 3): [{'timestamp': '2025-04-08T06:49:09.858887', 'prompt': None, 'response': "import os\ndef list_files():\n    return os.listdir('.')", 'task_id': 'test_task_1'}, {'timestamp': '2025-04-08T06:49:09.938813', 'prompt': None, 'response': '{"test_code": "import os\\ndef test_list_files():\\n    result = list_files()\\n    assert isinstance(result, list)", "passed": false, "output": null}', 'task_id': 'test_task_1'}, {'timestamp': '2025-04-08T06:49:10.051695', 'prompt': None, 'response': '{"test_code": "", "passed": false, "output": "No code provided"}', 'task_id': 'test_task_1'}]
+FAIL
+
+======================================================================
+FAIL: test_executor_to_debugger (__main__.TestDeveloper.test_executor_to_debugger)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/ian/dev/projects/agents/local/seclorum/tests/test_developer.py", line 92, in test_executor_to_debugger
+    self.assertEqual(status, "debugged")
+AssertionError: 'tested' != 'debugged'
+- tested
++ debugged
+
+
+======================================================================
+FAIL: test_tester_to_executor (__main__.TestDeveloper.test_tester_to_executor)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/ian/dev/projects/agents/local/seclorum/tests/test_developer.py", line 73, in test_tester_to_executor
+    self.assertTrue(result.passed, f"Execution failed: {result.output}")
+AssertionError: False is not true : Execution failed: No code provided
+
+----------------------------------------------------------------------
+Ran 4 tests in 61.642s
+
+FAILED (failures=2)
