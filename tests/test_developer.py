@@ -8,11 +8,11 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import logging
 import unittest
 from io import StringIO
+from typing import Optional, Tuple, Any
 from seclorum.models import Task, CodeOutput, TestResult, ModelManager
 from seclorum.agents.developer import Developer
-from typing import Any, Dict, List, Optional, Tuple
 
-def setup_logging(quiet: bool = False):
+def setup_logging(quiet: bool = False) -> None:
     level = logging.WARNING if quiet else logging.INFO
     logging.getLogger().setLevel(level)
     for handler in logging.getLogger().handlers[:]:
@@ -33,48 +33,46 @@ class MockModelManager(ModelManager):
         return "Mock response"
 
 class TestDeveloper(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.session_id = "test_session"
         self.task_id = "test_task_1"
         self.model_manager = MockModelManager()
         self.task = Task(task_id=self.task_id, description="List files", parameters={})
 
-    def test_architect_to_generator(self):
+    def test_architect_to_generator(self) -> None:
         developer = Developer(self.session_id, self.model_manager)
         developer.start()
         status, result = developer.orchestrate(self.task, stop_at="Generator_dev_task")
-        history = developer.memory.load_history(self.task_id)
+        history = developer.memory.load_history(self.task_id)[-3:]  # Last 3 entries
         print(f"Status: {status}, Result: {result}")
-        print(f"History: {history}")
+        print(f"Recent History (last 3): {history}")
         self.assertEqual(status, "generated")
         self.assertIsInstance(result, CodeOutput)
         self.assertIn("list_files", result.code)
 
-    def test_generator_to_tester(self):
+    def test_generator_to_tester(self) -> None:
         developer = Developer(self.session_id, self.model_manager)
         developer.start()
         status, result = developer.orchestrate(self.task, stop_at="Tester_dev_task")
-        history = developer.memory.load_history(self.task_id)
+        history = developer.memory.load_history(self.task_id)[-3:]
         print(f"Status: {status}, Result: {result}")
-        print(f"History: {history}")
+        print(f"Recent History (last 3): {history}")
         self.assertEqual(status, "tested")
         self.assertIsInstance(result, TestResult)
         self.assertIn("test_list_files", result.test_code)
 
-    def test_tester_to_executor(self):
+    def test_tester_to_executor(self) -> None:
         developer = Developer(self.session_id, self.model_manager)
         developer.start()
         status, result = developer.orchestrate(self.task, stop_at="Executor_dev_task")
-        history = developer.memory.load_history(self.task_id)
-        executor_logs = [log for log in developer.get_logs() if "Executor" in log["message"]]
+        history = developer.memory.load_history(self.task_id)[-3:]
         print(f"Status: {status}, Result: {result}")
-        print(f"History: {history}")
-        print(f" {executor_logs}")
+        print(f"Recent History (last 3): {history}")
         self.assertEqual(status, "tested")
         self.assertIsInstance(result, TestResult)
         self.assertTrue(result.passed, f"Execution failed: {result.output}")
 
-    def test_executor_to_debugger(self):
+    def test_executor_to_debugger(self) -> None:
         self.task.description = "Generate buggy code"
         self.model_manager.generate = lambda prompt, **kwargs: (
             "import os\ndef buggy_files():\n    return os.listdir('.')[999]"
@@ -87,12 +85,10 @@ class TestDeveloper(unittest.TestCase):
         )
         developer = Developer(self.session_id, self.model_manager)
         developer.start()
-        status, result = developer.orchestrate(self.task)  # No stop_at for full flow
-        history = developer.memory.load_history(self.task_id)
-        executor_logs = [log for log in developer.get_logs() if "Executor" in log["message"]]
+        status, result = developer.orchestrate(self.task)  # Full flow
+        history = developer.memory.load_history(self.task_id)[-3:]
         print(f"Status: {status}, Result: {result}")
-        print(f"History: {history}")
-        print(f"Executor logs: {executor_logs}")
+        print(f"Recent History (last 3): {history}")
         self.assertEqual(status, "debugged")
         self.assertIsInstance(result, CodeOutput)
         self.assertIn("buggy_files", result.code)
