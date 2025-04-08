@@ -62,11 +62,11 @@ class AbstractAggregate(AbstractAgent):
         self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result}
         self.logger.debug(f"Task state after {current_agent}: {self.tasks[task_id]}")
 
-        final_status, final_result = status, result
         if stop_at == current_agent:
             self.log_update(f"Stopping at {current_agent} as requested")
-            return final_status, final_result
+            return status, result
 
+        final_status, final_result = status, result
         for next_agent_name, condition in self.graph.get(current_agent, []):
             if self._check_condition(status, result, condition):
                 next_agent = self.agents[next_agent_name]
@@ -120,6 +120,9 @@ class AbstractAggregate(AbstractAgent):
                 status, result = self._propagate(agent_name, status, result, task, stop_at)
                 self.tasks[task_id]["processed"].add(agent_name)
                 made_progress = True
+                if agent_name == stop_at:
+                    self.log_update(f"Reached stop_at agent {stop_at}, terminating workflow")
+                    return status, result
                 if status in ["tested", "debugged"] and isinstance(result, (TestResult, CodeOutput)):
                     if isinstance(result, TestResult) and result.passed:
                         self.log_update(f"Agent {agent_name} passed tests, terminating workflow")
