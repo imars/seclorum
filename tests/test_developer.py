@@ -8,17 +8,22 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import logging
 import unittest
 from io import StringIO
-from typing import Optional, Tuple, Any
 from seclorum.models import Task, CodeOutput, TestResult, ModelManager
 from seclorum.agents.developer import Developer
 
-def setup_logging(quiet: bool = False) -> None:
+def setup_logging(quiet: bool = False):
     level = logging.WARNING if quiet else logging.INFO
-    logging.getLogger().setLevel(level)
+    # Configure seclorum logger
+    logging.getLogger("seclorum").setLevel(level)
     for handler in logging.getLogger().handlers[:]:
         handler.setLevel(level)
     for logger_name in logging.Logger.manager.loggerDict:
-        logging.getLogger(logger_name).setLevel(level)
+        if logger_name.startswith("seclorum"):
+            logging.getLogger(logger_name).setLevel(level)
+
+    # Suppress sentence_transformers logs below WARNING
+    logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
+    logging.getLogger("transformers").setLevel(logging.WARNING)
 
 class MockModelManager(ModelManager):
     def __init__(self, model_name: str = "mock"):
@@ -29,45 +34,45 @@ class MockModelManager(ModelManager):
         elif "Generate a Python unit test" in prompt:
             return "import os\ndef test_list_files():\n    result = list_files()\n    assert isinstance(result, list)"
         elif "Fix this Python code" in prompt:
-            return "import os\ndef list_files():\n    return os.listdir('.') if os.listdir('.') else []"
+            return "import os\ndef list_files():\n    return os.listdir('.') if os.listdir('.') else ''"
         return "Mock response"
 
 class TestDeveloper(unittest.TestCase):
-    def setUp(self) -> None:
+    def setUp(self):
         self.session_id = "test_session"
         self.task_id = "test_task_1"
         self.model_manager = MockModelManager()
         self.task = Task(task_id=self.task_id, description="List files", parameters={})
 
-    def test_architect_to_generator(self) -> None:
+    def test_architect_to_generator(self):
         developer = Developer(self.session_id, self.model_manager)
         developer.start()
         status, result = developer.orchestrate(self.task, stop_at="Generator_dev_task")
-        history = developer.memory.load_history(self.task_id)[-3:]  # Last 3 entries
+        history = developer.memory.load_history(self.task_id)
         print(f"Status: {status}, Result: {result}")
-        print(f"Recent History (last 3): {history}")
+        print(f"History: {history}")
         self.assertEqual(status, "generated")
         self.assertIsInstance(result, CodeOutput)
         self.assertIn("list_files", result.code)
 
-    def test_generator_to_tester(self) -> None:
+    def test_generator_to_tester(self):
         developer = Developer(self.session_id, self.model_manager)
         developer.start()
         status, result = developer.orchestrate(self.task, stop_at="Tester_dev_task")
-        history = developer.memory.load_history(self.task_id)[-3:]
+        history = developer.memory.load_history(self.task_id)
         print(f"Status: {status}, Result: {result}")
-        print(f"Recent History (last 3): {history}")
+        print(f"History: {history}")
         self.assertEqual(status, "tested")
         self.assertIsInstance(result, TestResult)
         self.assertIn("test_list_files", result.test_code)
 
-    def test_tester_to_executor(self) -> None:
+    def test_tester_to_executor(self):
         developer = Developer(self.session_id, self.model_manager)
         developer.start()
         status, result = developer.orchestrate(self.task, stop_at="Executor_dev_task")
-        history = developer.memory.load_history(self.task_id)[-3:]
+        history = developer.memory.load_history(self.task_id)
         print(f"Status: {status}, Result: {result}")
-        print(f"Recent History (last 3): {history}")
+        print(f"History: {history}")
         self.assertEqual(status, "tested")
         self.assertIsInstance(result, TestResult)
         self.assertTrue(result.passed, f"Execution failed: {result.output}")
@@ -103,7 +108,7 @@ if __name__ == "__main__":
 
     setup_logging(args.quiet)
 
-    output_file = "test_developer_output.log"
+    output_file = "test_developer_output.txt"
     original_stdout = sys.stdout
     with open(output_file, "w") as f:
         buffer = StringIO()
