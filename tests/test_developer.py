@@ -12,7 +12,6 @@ from seclorum.models import Task, CodeOutput, TestResult, ModelManager
 from seclorum.agents.developer import Developer
 from typing import Any, Dict, List, Optional, Tuple
 
-
 def setup_logging(quiet: bool = False):
     level = logging.WARNING if quiet else logging.INFO
     logging.getLogger().setLevel(level)
@@ -40,34 +39,38 @@ class TestDeveloper(unittest.TestCase):
         self.model_manager = MockModelManager()
         self.task = Task(task_id=self.task_id, description="List files", parameters={})
 
-    def _run_test(self, stop_at: Optional[str] = None):
+    def test_architect_to_generator(self):
         developer = Developer(self.session_id, self.model_manager)
         developer.start()
-        status, result = developer.orchestrate(self.task, stop_at=stop_at)
+        status, result = developer.orchestrate(self.task, stop_at="Generator_dev_task")
         history = developer.memory.load_history(self.task_id)
-        latest_entry = history[-1] if history else {}
-        print(f"Status: {status}")
-        print(f"Result: {result}")
-        print(f"Latest History Entry: {latest_entry}")
-        return developer, status, result, latest_entry
-
-    def test_architect_to_generator(self):
-        developer, status, result, latest = self._run_test(stop_at="Generator_dev_task")
-        self.assertEqual(status, "generated", f"Expected 'generated', got {status}")
+        print(f"Status: {status}, Result: {result}")
+        print(f"History: {history}")
+        self.assertEqual(status, "generated")
         self.assertIsInstance(result, CodeOutput)
         self.assertIn("list_files", result.code)
 
     def test_generator_to_tester(self):
-        developer, status, result, latest = self._run_test(stop_at="Tester_dev_task")
-        self.assertEqual(status, "tested", f"Expected 'tested', got {status}")
+        developer = Developer(self.session_id, self.model_manager)
+        developer.start()
+        status, result = developer.orchestrate(self.task, stop_at="Tester_dev_task")
+        history = developer.memory.load_history(self.task_id)
+        print(f"Status: {status}, Result: {result}")
+        print(f"History: {history}")
+        self.assertEqual(status, "tested")
         self.assertIsInstance(result, TestResult)
         self.assertIn("test_list_files", result.test_code)
 
     def test_tester_to_executor(self):
-        developer, status, result, latest = self._run_test(stop_at="Executor_dev_task")
-        executor_logs = [log for log in developer.logger.logs if "Executor" in log["message"]]
-        print(f"Executor Logs: {executor_logs}")
-        self.assertEqual(status, "tested", f"Expected 'tested', got {status}")
+        developer = Developer(self.session_id, self.model_manager)
+        developer.start()
+        status, result = developer.orchestrate(self.task, stop_at="Executor_dev_task")
+        history = developer.memory.load_history(self.task_id)
+        executor_logs = [log for log in developer.get_logs() if "Executor" in log["message"]]
+        print(f"Status: {status}, Result: {result}")
+        print(f"History: {history}")
+        print(f" {executor_logs}")
+        self.assertEqual(status, "tested")
         self.assertIsInstance(result, TestResult)
         self.assertTrue(result.passed, f"Execution failed: {result.output}")
 
@@ -82,13 +85,18 @@ class TestDeveloper(unittest.TestCase):
             if "Fix this Python code" in prompt else
             "Mock debug response"
         )
-        developer, status, result, latest = self._run_test()
-        executor_logs = [log for log in developer.logger.logs if "Executor" in log["message"]]
-        print(f"Executor Logs: {executor_logs}")
-        self.assertEqual(status, "debugged", f"Expected 'debugged', got {status}")
+        developer = Developer(self.session_id, self.model_manager)
+        developer.start()
+        status, result = developer.orchestrate(self.task)  # No stop_at for full flow
+        history = developer.memory.load_history(self.task_id)
+        executor_logs = [log for log in developer.get_logs() if "Executor" in log["message"]]
+        print(f"Status: {status}, Result: {result}")
+        print(f"History: {history}")
+        print(f"Executor logs: {executor_logs}")
+        self.assertEqual(status, "debugged")
         self.assertIsInstance(result, CodeOutput)
         self.assertIn("buggy_files", result.code)
-        debug_entries = [e for e in developer.memory.load_history(self.task_id) if "Fixed code" in str(e["response"])]
+        debug_entries = [e for e in history if "Fixed code" in str(e["response"])]
         self.assertTrue(len(debug_entries) > 0)
 
 if __name__ == "__main__":

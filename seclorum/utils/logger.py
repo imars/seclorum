@@ -2,21 +2,32 @@ import json
 import os
 from datetime import datetime
 import logging
+from typing import List, Dict
 import os
 
 class LoggerMixin:
     def __init__(self):
         self.logger = logging.getLogger(f"Agent_{self.name}")
-        # Don’t set level here; inherit from root
+        self.logs: List[Dict[str, str]] = []  # Store logs as dicts
         if not self.logger.handlers:
             handler = logging.StreamHandler()
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-            handler.setLevel(logging.INFO)  # Default handler level
+            handler.setLevel(logging.INFO)
             self.logger.addHandler(handler)
-        self.logger.propagate = True  # Ensure propagation to root
+        self.logger.propagate = True
 
     def log_update(self, message: str):
+        log_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "name": self.logger.name,
+            "level": "INFO",
+            "message": message
+        }
+        self.logs.append(log_entry)
         self.logger.info(message)
+
+    def get_logs(self) -> List[Dict[str, str]]:
+        return self.logs
 
 class ConversationLogger:
     def __init__(self, chat_id):
