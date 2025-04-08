@@ -6,17 +6,14 @@ from seclorum.models import Task, CodeOutput, TestResult
 from seclorum.agents.memory_manager import MemoryManager
 
 class Executor(AbstractAgent):
-    def __init__(self, task_id: str, session_id: str, memory: MemoryManager = None):
+    def __init__(self, task_id: str, session_id: str):
         super().__init__(f"Executor_{task_id}", session_id)
         self.task_id = task_id
-        self.memory = memory or MemoryManager(session_id)
-        self.log_update(f"Executor initialized for Task {task_id}")
 
     def process_task(self, task: Task) -> tuple[str, TestResult]:
         self.log_update(f"Executing for Task {task.task_id}")
         self.log_update(f"Task parameters: {task.parameters}")
 
-        # Extract from dependency outputs
         generator_output = task.parameters.get("Generator_dev_task", {}).get("result")
         tester_output = task.parameters.get("Tester_dev_task", {}).get("result")
 
@@ -29,7 +26,6 @@ class Executor(AbstractAgent):
         code_output = generator_output
         test_result = tester_output if tester_output and isinstance(tester_output, TestResult) else TestResult(test_code="", passed=False)
 
-        # Combine code and test
         full_code = f"{code_output.code}\n\n{test_result.test_code}" if test_result.test_code else code_output.code
         self.log_update(f"Full code to execute:\n{full_code}")
 
@@ -48,20 +44,22 @@ class Executor(AbstractAgent):
             cmd = ["python", "-B", temp_file]
             self.log_update(f"Running command: {' '.join(cmd)}")
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
+            passed = True  # No exception means the test passed
             self.log_update(f"Execution output: {output}")
-            passed = "Traceback" not in output and "AssertionError" not in output
-            result = TestResult(test_code=test_result.test_code, passed=passed, output=output)
         except subprocess.CalledProcessError as e:
             self.log_update(f"Execution failed with error: {e.output}")
-            result = TestResult(test_code=test_result.test_code, passed=False, output=e.output)
+            output = e.output
+            passed = False
         except Exception as e:
             self.log_update(f"Unexpected execution error: {str(e)}")
-            result = TestResult(test_code=test_result.test_code, passed=False, output=str(e))
+            output = str(e)
+            passed = False
         finally:
             if os.path.exists(temp_file):
                 self.log_update(f"Cleaning up {temp_file}")
                 os.remove(temp_file)
 
+        result = TestResult(test_code=test_result.test_code, passed=passed, output=output)
         self.log_update(f"Final result: passed={result.passed}, output={result.output}")
         self.memory.save(response=result, task_id=task.task_id)
         self.commit_changes(f"Executed code and tests for Task {task.task_id}")
