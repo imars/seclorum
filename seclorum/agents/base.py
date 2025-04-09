@@ -44,32 +44,31 @@ class AbstractAggregate(AbstractAgent):
         self.logger.info(f"Added agent {agent.name} with dependencies {dependencies}")
 
     def _check_condition(self, status: str, result: Any, condition: Optional[Dict[str, Any]]) -> bool:
-        self.logger.info(f"Checking condition: status={status}, result={result}, condition={condition}")
+        self.logger.info(f"Evaluating condition: status={status}, result={result}, condition={condition}")
         if not condition:
-            self.logger.info("No condition specified, assuming satisfied")
+            self.logger.info("No condition provided, defaulting to True")
             return True
 
-        # Check status first
+        # Status check
         if "status" in condition:
             if condition["status"] != status:
                 self.logger.info(f"Status mismatch: expected {condition['status']}, got {status}")
                 return False
-            self.logger.info(f"Status matched: {status}")
+            self.logger.info(f"Status satisfied: {status}")
 
-        # Check passed if present
+        # Passed check
         if "passed" in condition and isinstance(result, TestResult):
-            expected_passed = condition["passed"]
-            actual_passed = result.passed
-            self.logger.info(f"Comparing passed: expected={expected_passed}, got={actual_passed}")
-            if expected_passed == actual_passed:
-                self.logger.info("Passed condition satisfied")
+            expected = condition["passed"]
+            actual = result.passed
+            self.logger.info(f"Checking passed: expected={expected}, got={actual}")
+            if expected == actual:
+                self.logger.info("Passed condition met")
                 return True
             else:
-                self.logger.info(f"Passed condition failed: expected {expected_passed}, got {actual_passed}")
+                self.logger.info(f"Passed condition not met: expected {expected}, got {actual}")
                 return False
 
-        # If we get here and no "passed" to check, assume status match is enough
-        self.logger.info("No 'passed' in condition, returning True if status matched")
+        self.logger.info("All conditions checked, defaulting to True")
         return True
 
     def _propagate(self, current_agent: str, status: str, result: Any, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
@@ -133,17 +132,18 @@ class AbstractAggregate(AbstractAgent):
                 deps_satisfied = True
                 agent_outputs: Dict[str, Any] = self.tasks[task_id]["outputs"].copy()
                 self.logger.info(f"Dependencies for {agent_name}: {deps}")
-                for dep_name, dep_conditions in deps:
+                for dep_name, condition in deps:
                     if dep_name not in agent_outputs:
                         self.logger.info(f"Dependency {dep_name} not satisfied for {agent_name}")
                         deps_satisfied = False
                         break
                     dep_output = agent_outputs[dep_name]
-                    for key, value in dep_conditions.items():
-                        if dep_output.get(key) != value:
-                            self.logger.info(f"Condition {key}={value} not met for {dep_name} in {agent_name}")
-                            deps_satisfied = False
-                            break
+                    # Use _check_condition instead of manual comparison
+                    if not self._check_condition(dep_output["status"], dep_output["result"], condition):
+                        self.logger.info(f"Condition not met for {dep_name} in {agent_name}")
+                        deps_satisfied = False
+                        break
+                    # No need to add to agent_outputs here; it’s already populated
                 if not deps_satisfied:
                     continue
                 agent = self.agents[agent_name]
