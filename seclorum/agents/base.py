@@ -46,20 +46,31 @@ class AbstractAggregate(AbstractAgent):
     def _check_condition(self, status: str, result: Any, condition: Optional[Dict[str, Any]]) -> bool:
         self.logger.info(f"Checking condition: status={status}, result={result}, condition={condition}")
         if not condition:
-            self.logger.info("No condition to check, returning True")
+            self.logger.info("No condition specified, assuming satisfied")
             return True
-        if "status" in condition and condition["status"] != status:
-            self.logger.info(f"Status mismatch: expected {condition['status']}, got {status}")
-            return False
+
+        # Check status first
+        if "status" in condition:
+            if condition["status"] != status:
+                self.logger.info(f"Status mismatch: expected {condition['status']}, got {status}")
+                return False
+            self.logger.info(f"Status matched: {status}")
+
+        # Check passed if present
         if "passed" in condition and isinstance(result, TestResult):
-            if condition["passed"] == result.passed:
-                self.logger.info(f"Passed condition satisfied: expected {condition['passed']}, got {result.passed}")
+            expected_passed = condition["passed"]
+            actual_passed = result.passed
+            self.logger.info(f"Comparing passed: expected={expected_passed}, got={actual_passed}")
+            if expected_passed == actual_passed:
+                self.logger.info("Passed condition satisfied")
                 return True
             else:
-                self.logger.info(f"Passed mismatch: expected {condition['passed']}, got {result.passed}")
+                self.logger.info(f"Passed condition failed: expected {expected_passed}, got {actual_passed}")
                 return False
-        self.logger.info("Condition not fully satisfied")
-        return False
+
+        # If we get here and no "passed" to check, assume status match is enough
+        self.logger.info("No 'passed' in condition, returning True if status matched")
+        return True
 
     def _propagate(self, current_agent: str, status: str, result: Any, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
         task_id: str = task.task_id

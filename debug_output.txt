@@ -16,12 +16,12 @@ Starting debug with task_id: debug_task
 [INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): huggingface.co:443
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
-[DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): us.i.posthog.com:443
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
-[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+[DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): us.i.posthog.com:443
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
@@ -50,8 +50,8 @@ Architect initialized for Task dev_task
 [INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
-[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
@@ -65,9 +65,9 @@ Architect initialized for Task dev_task
 [INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
-[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
@@ -81,11 +81,11 @@ Generator initialized for Task dev_task with model mock
 [INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
 [INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
-[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
@@ -98,12 +98,12 @@ Generator initialized for Task dev_task with model mock
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
-[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6759
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6759
 [INFO] Seclorum: ConversationMemory initialized for session test_session with SQLite storage
@@ -113,8 +113,23 @@ Tester initialized for Task dev_task
 [INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
 [INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
-[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6759
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6759
+[INFO] Seclorum: ConversationMemory initialized for session test_session with SQLite storage
+[DEBUG] chromadb.api.segment: Collection conversations already exists, returning existing collection.
+[INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
+[INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
@@ -130,24 +145,9 @@ Tester initialized for Task dev_task
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
-[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
-[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
-[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
-[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
-[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6759
-[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6759
-[INFO] Seclorum: ConversationMemory initialized for session test_session with SQLite storage
-[DEBUG] chromadb.api.segment: Collection conversations already exists, returning existing collection.
-[INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
-[INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
-[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
-[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
-[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
-[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
@@ -175,20 +175,16 @@ Initializing task debug_task at orchestration start
 [INFO] Agent_Aggregate: Initializing task debug_task at orchestration start
 Orchestrating task debug_task with 5 agents, stopping at None
 [INFO] Agent_Aggregate: Orchestrating task debug_task with 5 agents, stopping at None
-Initial pending agents: {'Executor_dev_task', 'Debugger_dev_task', 'Generator_dev_task', 'Tester_dev_task', 'Architect_dev_task'}
-[INFO] Agent_Aggregate: Initial pending agents: {'Executor_dev_task', 'Debugger_dev_task', 'Generator_dev_task', 'Tester_dev_task', 'Architect_dev_task'}
-Dependencies for Executor_dev_task: [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
-[INFO] Agent_Aggregate: Dependencies for Executor_dev_task: [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
-Dependency Tester_dev_task not satisfied for Executor_dev_task
-[INFO] Agent_Aggregate: Dependency Tester_dev_task not satisfied for Executor_dev_task
-Dependencies for Debugger_dev_task: [('Executor_dev_task', {'status': 'tested', 'passed': False})]
-[INFO] Agent_Aggregate: Dependencies for Debugger_dev_task: [('Executor_dev_task', {'status': 'tested', 'passed': False})]
-Dependency Executor_dev_task not satisfied for Debugger_dev_task
-[INFO] Agent_Aggregate: Dependency Executor_dev_task not satisfied for Debugger_dev_task
+Initial pending agents: {'Generator_dev_task', 'Executor_dev_task', 'Tester_dev_task', 'Architect_dev_task', 'Debugger_dev_task'}
+[INFO] Agent_Aggregate: Initial pending agents: {'Generator_dev_task', 'Executor_dev_task', 'Tester_dev_task', 'Architect_dev_task', 'Debugger_dev_task'}
 Dependencies for Generator_dev_task: [('Architect_dev_task', {'status': 'planned'})]
 [INFO] Agent_Aggregate: Dependencies for Generator_dev_task: [('Architect_dev_task', {'status': 'planned'})]
 Dependency Architect_dev_task not satisfied for Generator_dev_task
 [INFO] Agent_Aggregate: Dependency Architect_dev_task not satisfied for Generator_dev_task
+Dependencies for Executor_dev_task: [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
+[INFO] Agent_Aggregate: Dependencies for Executor_dev_task: [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
+Dependency Tester_dev_task not satisfied for Executor_dev_task
+[INFO] Agent_Aggregate: Dependency Tester_dev_task not satisfied for Executor_dev_task
 Dependencies for Tester_dev_task: [('Generator_dev_task', {'status': 'generated'})]
 [INFO] Agent_Aggregate: Dependencies for Tester_dev_task: [('Generator_dev_task', {'status': 'generated'})]
 Dependency Generator_dev_task not satisfied for Tester_dev_task
@@ -201,29 +197,25 @@ Processing Architect_dev_task for Task debug_task
 [INFO] Agent_Aggregate: Processing Architect_dev_task for Task debug_task
 Planning Task debug_task: Generate buggy code
 [INFO] Agent_Architect_dev_task: Planning Task debug_task: Generate buggy code
-[INFO] Seclorum: Memory saved: Task debug_task to /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversations_test_session.db, rowid: 1149
+[INFO] Seclorum: Memory saved: Task debug_task to /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversations_test_session.db, rowid: 1153
 [INFO] Seclorum: Agent raw saved: Task debug_task - Task plan:
 Mock debug response
 [DEBUG PRINT] Graph setup: defaultdict(<class 'list'>, {'Architect_dev_task': [], 'Generator_dev_task': [('Architect_dev_task', {'status': 'planned'})], 'Tester_dev_task': [('Generator_dev_task', {'status': 'generated'})], 'Executor_dev_task': [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})], 'Debugger_dev_task': [('Executor_dev_task', {'status': 'tested', 'passed': False})]})
 Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  1.36it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  1.36it/s]
 [DEBUG] chromadb.config: Starting component PersistentLocalHnswSegment
-[INFO] Seclorum: Embedding updated: Task debug_task - test_session_1149
+[INFO] Seclorum: Embedding updated: Task debug_task - test_session_1153
 Task state after Architect_dev_task: {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={}), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}}, 'processed': set()}
 [INFO] Agent_Aggregate: Task state after Architect_dev_task: {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={}), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}}, 'processed': set()}
 Checking dependents for Architect_dev_task: []
 [INFO] Agent_Aggregate: Checking dependents for Architect_dev_task: []
 Returning from _propagate for Architect_dev_task: status=planned
 [INFO] Agent_Aggregate: Returning from _propagate for Architect_dev_task: status=planned
-Updated pending agents: {'Executor_dev_task', 'Debugger_dev_task', 'Generator_dev_task', 'Tester_dev_task'}
-[INFO] Agent_Aggregate: Updated pending agents: {'Executor_dev_task', 'Debugger_dev_task', 'Generator_dev_task', 'Tester_dev_task'}
-Dependencies for Executor_dev_task: [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
-[INFO] Agent_Aggregate: Dependencies for Executor_dev_task: [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
-Dependency Tester_dev_task not satisfied for Executor_dev_task
-[INFO] Agent_Aggregate: Dependency Tester_dev_task not satisfied for Executor_dev_task
 Dependencies for Debugger_dev_task: [('Executor_dev_task', {'status': 'tested', 'passed': False})]
 [INFO] Agent_Aggregate: Dependencies for Debugger_dev_task: [('Executor_dev_task', {'status': 'tested', 'passed': False})]
 Dependency Executor_dev_task not satisfied for Debugger_dev_task
 [INFO] Agent_Aggregate: Dependency Executor_dev_task not satisfied for Debugger_dev_task
+Updated pending agents: {'Generator_dev_task', 'Executor_dev_task', 'Tester_dev_task', 'Debugger_dev_task'}
+[INFO] Agent_Aggregate: Updated pending agents: {'Generator_dev_task', 'Executor_dev_task', 'Tester_dev_task', 'Debugger_dev_task'}
 Dependencies for Generator_dev_task: [('Architect_dev_task', {'status': 'planned'})]
 [INFO] Agent_Aggregate: Dependencies for Generator_dev_task: [('Architect_dev_task', {'status': 'planned'})]
 Building parameters for Generator_dev_task: {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}}
@@ -242,7 +234,7 @@ import os
 def buggy_files():
     files = os.listdir('.')
     return files[999]
-[INFO] Seclorum: Memory saved: Task debug_task to /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversations_test_session.db, rowid: 1150
+[INFO] Seclorum: Memory saved: Task debug_task to /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversations_test_session.db, rowid: 1154
 [INFO] Seclorum: Agent raw saved: Task debug_task - import os
 def buggy_files():
     files = os.listdir('.')
@@ -250,175 +242,5 @@ def buggy_files():
 [DEBUG PRINT] Task state after Architect_dev_task: {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={}), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}}, 'processed': set()}
 [DEBUG PRINT] Checking dependents for Architect_dev_task: []
 [DEBUG PRINT] Returning from _propagate for Architect_dev_task: status=planned
-Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 34.90it/s]
-[INFO] Seclorum: Embedding updated: Task debug_task - test_session_1150
-Committed changes: Generated code and tests for debug_task
-[INFO] Agent_FileSystemManager: Committed changes: Generated code and tests for debug_task
-Task state after Generator_dev_task: {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}}, 'processed': {'Architect_dev_task'}}
-[INFO] Agent_Aggregate: Task state after Generator_dev_task: {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}}, 'processed': {'Architect_dev_task'}}
-Checking dependents for Generator_dev_task: [('Architect_dev_task', {'status': 'planned'})]
-[INFO] Agent_Aggregate: Checking dependents for Generator_dev_task: [('Architect_dev_task', {'status': 'planned'})]
-Skipping already processed Architect_dev_task
-[INFO] Agent_Aggregate: Skipping already processed Architect_dev_task
-Returning from _propagate for Generator_dev_task: status=generated
-[INFO] Agent_Aggregate: Returning from _propagate for Generator_dev_task: status=generated
-Dependencies for Tester_dev_task: [('Generator_dev_task', {'status': 'generated'})]
-[INFO] Agent_Aggregate: Dependencies for Tester_dev_task: [('Generator_dev_task', {'status': 'generated'})]
-Building parameters for Tester_dev_task: {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}}
-[INFO] Agent_Aggregate: Building parameters for Tester_dev_task: {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}}
-Processing Tester_dev_task for Task debug_task
-[INFO] Agent_Aggregate: Processing Tester_dev_task for Task debug_task
-Generating tests for Task debug_task
-[INFO] Agent_Tester_dev_task: Generating tests for Task debug_task
-Generated new test code:
-import os
-def test_buggy_files():
-    result = buggy_files()
-    assert isinstance(result, str)
-    print('This should not print')
-
-test_buggy_files()
-[INFO] Agent_Tester_dev_task: Generated new test code:
-import os
-def test_buggy_files():
-    result = buggy_files()
-    assert isinstance(result, str)
-    print('This should not print')
-
-test_buggy_files()
-Full executable test code:
-import os
-def test_buggy_files():
-    result = buggy_files()
-    assert isinstance(result, str)
-    print('This should not print')
-
-test_buggy_files()
-
-test_buggy_files()
-[INFO] Agent_Tester_dev_task: Full executable test code:
-import os
-def test_buggy_files():
-    result = buggy_files()
-    assert isinstance(result, str)
-    print('This should not print')
-
-test_buggy_files()
-
-test_buggy_files()
-[INFO] Seclorum: Memory saved: Task debug_task to /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversations_test_session.db, rowid: 1151
-[INFO] Seclorum: Agent raw saved: Task debug_task - {"test_code": "import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", "passed": false, "output": null}
-[DEBUG PRINT] Task state after Generator_dev_task: {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}}, 'processed': {'Architect_dev_task'}}
-[DEBUG PRINT] Checking dependents for Generator_dev_task: [('Architect_dev_task', {'status': 'planned'})]
-[DEBUG PRINT] Returning from _propagate for Generator_dev_task: status=generated
-Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 28.13it/s]
-[INFO] Seclorum: Embedding updated: Task debug_task - test_session_1151
-Committed changes: Generated tests for debug_task
-[INFO] Agent_FileSystemManager: Committed changes: Generated tests for debug_task
-Task state after Tester_dev_task: {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}}, 'processed': {'Generator_dev_task', 'Architect_dev_task'}}
-[INFO] Agent_Aggregate: Task state after Tester_dev_task: {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}}, 'processed': {'Generator_dev_task', 'Architect_dev_task'}}
-Checking dependents for Tester_dev_task: [('Generator_dev_task', {'status': 'generated'})]
-[INFO] Agent_Aggregate: Checking dependents for Tester_dev_task: [('Generator_dev_task', {'status': 'generated'})]
-Skipping already processed Generator_dev_task
-[INFO] Agent_Aggregate: Skipping already processed Generator_dev_task
-Returning from _propagate for Tester_dev_task: status=tested
-[INFO] Agent_Aggregate: Returning from _propagate for Tester_dev_task: status=tested
-Updated pending agents: {'Executor_dev_task', 'Debugger_dev_task'}
-[INFO] Agent_Aggregate: Updated pending agents: {'Executor_dev_task', 'Debugger_dev_task'}
-Dependencies for Executor_dev_task: [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
-[INFO] Agent_Aggregate: Dependencies for Executor_dev_task: [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
-Building parameters for Executor_dev_task: {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}}
-[INFO] Agent_Aggregate: Building parameters for Executor_dev_task: {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}}
-Processing Executor_dev_task for Task debug_task
-[INFO] Agent_Aggregate: Processing Executor_dev_task for Task debug_task
-Executing for Task debug_task
-[INFO] Agent_Executor_dev_task: Executing for Task debug_task
-Task parameters: {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}}
-[INFO] Agent_Executor_dev_task: Task parameters: {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}}
-Full code to execute:
-import os
-def buggy_files():
-    files = os.listdir('.')
-    return files[999]
-
-import os
-def test_buggy_files():
-    result = buggy_files()
-    assert isinstance(result, str)
-    print('This should not print')
-
-test_buggy_files()
-
-test_buggy_files()
-[INFO] Agent_Executor_dev_task: Full code to execute:
-import os
-def buggy_files():
-    files = os.listdir('.')
-    return files[999]
-
-import os
-def test_buggy_files():
-    result = buggy_files()
-    assert isinstance(result, str)
-    print('This should not print')
-
-test_buggy_files()
-
-test_buggy_files()
-Writing to temp_debug_task.py
-[INFO] Agent_Executor_dev_task: Writing to temp_debug_task.py
-Running command: python -B temp_debug_task.py
-[INFO] Agent_Executor_dev_task: Running command: python -B temp_debug_task.py
-Execution failed with error: Traceback (most recent call last):
-  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>
-    test_buggy_files()
-  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files
-    result = buggy_files()
-             ^^^^^^^^^^^^^
-  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files
-    return files[999]
-           ~~~~~^^^^^
-IndexError: list index out of range
-
-[INFO] Agent_Executor_dev_task: Execution failed with error: Traceback (most recent call last):
-  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>
-    test_buggy_files()
-  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files
-    result = buggy_files()
-             ^^^^^^^^^^^^^
-  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files
-    return files[999]
-           ~~~~~^^^^^
-IndexError: list index out of range
-
-Cleaning up temp_debug_task.py
-[INFO] Agent_Executor_dev_task: Cleaning up temp_debug_task.py
-Final result: passed=False, output=Traceback (most recent call last):
-  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>
-    test_buggy_files()
-  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files
-    result = buggy_files()
-             ^^^^^^^^^^^^^
-  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files
-    return files[999]
-           ~~~~~^^^^^
-IndexError: list index out of range
-
-[INFO] Agent_Executor_dev_task: Final result: passed=False, output=Traceback (most recent call last):
-  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>
-    test_buggy_files()
-  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files
-    result = buggy_files()
-             ^^^^^^^^^^^^^
-  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files
-    return files[999]
-           ~~~~~^^^^^
-IndexError: list index out of range
-
-[INFO] Seclorum: Memory saved: Task debug_task to /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversations_test_session.db, rowid: 1152
-[INFO] Seclorum: Agent raw saved: Task debug_task - {"test_code": "import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", "passed": false, "output": "Traceback (most recent call last):\n  File \"/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py\", line 12, in <module>\n    test_buggy_files()\n  File \"/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py\", line 8, in test_buggy_files\n    result = buggy_files()\n             ^^^^^^^^^^^^^\n  File \"/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py\", line 4, in buggy_files\n    return files[999]\n           ~~~~~^^^^^\nIndexError: list index out of range\n"}
-[DEBUG PRINT] Task state after Tester_dev_task: {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}}, 'processed': {'Generator_dev_task', 'Architect_dev_task'}}
-[DEBUG PRINT] Checking dependents for Tester_dev_task: [('Generator_dev_task', {'status': 'generated'})]
-[DEBUG PRINT] Returning from _propagate for Tester_dev_task: status=tested
-Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 14.00it/s]
-[INFO] Seclorum: Embedding updated: Task debug_task - test_session_1152
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 45.84it/s]
+[INFO] Seclorum: Embedding updated: Task debug_task - test_session_1154
