@@ -51,11 +51,11 @@ class AbstractAggregate(AbstractAgent):
         if "status" in condition and condition["status"] != status:
             self.logger.info(f"Status mismatch: expected {condition['status']}, got {status}")
             return False
-        if "passed" in condition and isinstance(result, TestResult) and condition["passed"] != result.passed:
-            self.logger.info(f"Passed mismatch: expected {condition['passed']}, got {result.passed}")
-            return False
-        self.logger.info("Condition satisfied")
-        return True
+        if "passed" in condition and isinstance(result, TestResult) and condition["passed"] == result.passed:  # Changed != to ==
+            self.logger.info("Passed condition satisfied")
+            return True
+        self.logger.info("Condition not fully satisfied")
+        return False
 
     def _propagate(self, current_agent: str, status: str, result: Any, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
         task_id: str = task.task_id
