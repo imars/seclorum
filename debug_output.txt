@@ -1,0 +1,240 @@
+Logging initialized
+Starting debug with task_id: debug_task
+[DEBUG] urllib3.util.retry: Converted retries value: 2 -> Retry(total=2, connect=None, read=None, redirect=None, status=None)
+[INFO] chromadb.telemetry.product.posthog: Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+[DEBUG] chromadb.config: Starting component System
+[DEBUG] chromadb.config: Starting component Posthog
+[DEBUG] chromadb.config: Starting component OpenTelemetryClient
+[DEBUG] chromadb.config: Starting component SqliteDB
+[DEBUG] chromadb.config: Starting component SimpleQuotaEnforcer
+[DEBUG] chromadb.config: Starting component SimpleRateLimitEnforcer
+[DEBUG] chromadb.config: Starting component LocalSegmentManager
+[DEBUG] chromadb.config: Starting component LocalExecutor
+[DEBUG] chromadb.config: Starting component SegmentAPI
+[DEBUG] chromadb.api.segment: Collection conversations already exists, returning existing collection.
+[INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
+[INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+[DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): huggingface.co:443
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): us.i.posthog.com:443
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6759
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6759
+[INFO] Seclorum: ConversationMemory initialized for session test_session with SQLite storage
+[DEBUG] chromadb.api.segment: Collection conversations already exists, returning existing collection.
+[INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
+[INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6759
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6759
+[INFO] Seclorum: ConversationMemory initialized for session test_session with SQLite storage
+Architect initialized for Task dev_task
+[INFO] Agent_Architect_dev_task: Architect initialized for Task dev_task
+[DEBUG] chromadb.api.segment: Collection conversations already exists, returning existing collection.
+[INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
+[INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6759
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6759
+[INFO] Seclorum: ConversationMemory initialized for session test_session with SQLite storage
+[DEBUG] chromadb.api.segment: Collection conversations already exists, returning existing collection.
+[INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
+[INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6759
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6759
+[INFO] Seclorum: ConversationMemory initialized for session test_session with SQLite storage
+Generator initialized for Task dev_task with model mock
+[INFO] Agent_Generator_dev_task: Generator initialized for Task dev_task with model mock
+[DEBUG] chromadb.api.segment: Collection conversations already exists, returning existing collection.
+[INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
+[INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6759
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6759
+[INFO] Seclorum: ConversationMemory initialized for session test_session with SQLite storage
+[DEBUG] chromadb.api.segment: Collection conversations already exists, returning existing collection.
+[INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
+[INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6759
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6759
+[INFO] Seclorum: ConversationMemory initialized for session test_session with SQLite storage
+Tester initialized for Task dev_task
+[INFO] Agent_Tester_dev_task: Tester initialized for Task dev_task
+[DEBUG] chromadb.api.segment: Collection conversations already exists, returning existing collection.
+[INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
+[INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6759
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6759
+[INFO] Seclorum: ConversationMemory initialized for session test_session with SQLite storage
+[DEBUG] chromadb.api.segment: Collection conversations already exists, returning existing collection.
+[INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
+[INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6759
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6759
+[INFO] Seclorum: ConversationMemory initialized for session test_session with SQLite storage
+[DEBUG] chromadb.api.segment: Collection conversations already exists, returning existing collection.
+[INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
+[INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://us.i.posthog.com:443 "POST /batch/ HTTP/1.1" 200 15
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/1.1" 404 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/1.1" 200 6759
+[DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/1.1" 200 6759
+[INFO] Seclorum: ConversationMemory initialized for session test_session with SQLite storage
+Debugger initialized for Task dev_task
+[INFO] Agent_Debugger_dev_task: Debugger initialized for Task dev_task
+Added agent Architect_dev_task with dependencies None
+[INFO] Agent_Aggregate: Added agent Architect_dev_task with dependencies None
+Added agent Generator_dev_task with dependencies [('Architect_dev_task', {'status': 'planned'})]
+[INFO] Agent_Aggregate: Added agent Generator_dev_task with dependencies [('Architect_dev_task', {'status': 'planned'})]
+Added agent Tester_dev_task with dependencies [('Generator_dev_task', {'status': 'generated'})]
+[INFO] Agent_Aggregate: Added agent Tester_dev_task with dependencies [('Generator_dev_task', {'status': 'generated'})]
+Added agent Executor_dev_task with dependencies [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
+[INFO] Agent_Aggregate: Added agent Executor_dev_task with dependencies [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
+Added agent Debugger_dev_task with dependencies [('Executor_dev_task', {'status': 'tested', 'passed': False})]
+[INFO] Agent_Aggregate: Added agent Debugger_dev_task with dependencies [('Executor_dev_task', {'status': 'tested', 'passed': False})]
+Starting Developer
+[INFO] Agent_Aggregate: Starting Developer
+Developer graph: defaultdict(<class 'list'>, {'Architect_dev_task': [], 'Generator_dev_task': [('Architect_dev_task', {'status': 'planned'})], 'Tester_dev_task': [('Generator_dev_task', {'status': 'generated'})], 'Executor_dev_task': [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})], 'Debugger_dev_task': [('Executor_dev_task', {'status': 'tested', 'passed': False})]})
+Graph setup: defaultdict(<class 'list'>, {'Architect_dev_task': [], 'Generator_dev_task': [('Architect_dev_task', {'status': 'planned'})], 'Tester_dev_task': [('Generator_dev_task', {'status': 'generated'})], 'Executor_dev_task': [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})], 'Debugger_dev_task': [('Executor_dev_task', {'status': 'tested', 'passed': False})]})
+[INFO] Agent_Aggregate: Graph setup: defaultdict(<class 'list'>, {'Architect_dev_task': [], 'Generator_dev_task': [('Architect_dev_task', {'status': 'planned'})], 'Tester_dev_task': [('Generator_dev_task', {'status': 'generated'})], 'Executor_dev_task': [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})], 'Debugger_dev_task': [('Executor_dev_task', {'status': 'tested', 'passed': False})]})
+Initializing task debug_task at orchestration start
+[INFO] Agent_Aggregate: Initializing task debug_task at orchestration start
+Orchestrating task debug_task with 5 agents, stopping at None
+[INFO] Agent_Aggregate: Orchestrating task debug_task with 5 agents, stopping at None
+Initial pending agents: {'Debugger_dev_task', 'Executor_dev_task', 'Architect_dev_task', 'Tester_dev_task', 'Generator_dev_task'}
+[INFO] Agent_Aggregate: Initial pending agents: {'Debugger_dev_task', 'Executor_dev_task', 'Architect_dev_task', 'Tester_dev_task', 'Generator_dev_task'}
+Dependencies for Debugger_dev_task: [('Executor_dev_task', {'status': 'tested', 'passed': False})]
+[INFO] Agent_Aggregate: Dependencies for Debugger_dev_task: [('Executor_dev_task', {'status': 'tested', 'passed': False})]
+Dependency Executor_dev_task not satisfied for Debugger_dev_task
+[INFO] Agent_Aggregate: Dependency Executor_dev_task not satisfied for Debugger_dev_task
+Dependencies for Executor_dev_task: [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
+[INFO] Agent_Aggregate: Dependencies for Executor_dev_task: [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
+Dependency Tester_dev_task not satisfied for Executor_dev_task
+[INFO] Agent_Aggregate: Dependency Tester_dev_task not satisfied for Executor_dev_task
+Dependencies for Architect_dev_task: []
+[INFO] Agent_Aggregate: Dependencies for Architect_dev_task: []
+Building parameters for Architect_dev_task: {}
+[INFO] Agent_Aggregate: Building parameters for Architect_dev_task: {}
+Processing Architect_dev_task for Task debug_task
+[INFO] Agent_Aggregate: Processing Architect_dev_task for Task debug_task
+Planning Task debug_task: Generate buggy code
+[INFO] Agent_Architect_dev_task: Planning Task debug_task: Generate buggy code
+[INFO] Seclorum: Memory saved: Task debug_task to /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversations_test_session.db, rowid: 1137
+[INFO] Seclorum: Agent raw saved: Task debug_task - Task plan:
+Mock debug response
+[DEBUG PRINT] Graph setup: defaultdict(<class 'list'>, {'Architect_dev_task': [], 'Generator_dev_task': [('Architect_dev_task', {'status': 'planned'})], 'Tester_dev_task': [('Generator_dev_task', {'status': 'generated'})], 'Executor_dev_task': [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})], 'Debugger_dev_task': [('Executor_dev_task', {'status': 'tested', 'passed': False})]})
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  1.35it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  1.35it/s]
+[DEBUG] chromadb.config: Starting component PersistentLocalHnswSegment
+[INFO] Seclorum: Embedding updated: Task debug_task - test_session_1137
+Task state after Architect_dev_task: {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={}), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}}, 'processed': set()}
+[INFO] Agent_Aggregate: Task state after Architect_dev_task: {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={}), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}}, 'processed': set()}
+Checking dependents for Architect_dev_task: []
+[INFO] Agent_Aggregate: Checking dependents for Architect_dev_task: []
+Returning from _propagate for Architect_dev_task: status=planned
+[INFO] Agent_Aggregate: Returning from _propagate for Architect_dev_task: status=planned
+Dependencies for Tester_dev_task: [('Generator_dev_task', {'status': 'generated'})]
+[INFO] Agent_Aggregate: Dependencies for Tester_dev_task: [('Generator_dev_task', {'status': 'generated'})]
+Dependency Generator_dev_task not satisfied for Tester_dev_task
+[INFO] Agent_Aggregate: Dependency Generator_dev_task not satisfied for Tester_dev_task
+Dependencies for Generator_dev_task: [('Architect_dev_task', {'status': 'planned'})]
+[INFO] Agent_Aggregate: Dependencies for Generator_dev_task: [('Architect_dev_task', {'status': 'planned'})]
+Building parameters for Generator_dev_task: {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}}
+[INFO] Agent_Aggregate: Building parameters for Generator_dev_task: {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}}
+Processing Generator_dev_task for Task debug_task
+[INFO] Agent_Aggregate: Processing Generator_dev_task for Task debug_task
+Generating code for Task debug_task: Generate buggy code
+[INFO] Agent_Generator_dev_task: Generating code for Task debug_task: Generate buggy code
+Generated code:
+import os
+def buggy_files():
+    files = os.listdir('.')
+    return files[999]
+[INFO] Agent_Generator_dev_task: Generated code:
+import os
+def buggy_files():
+    files = os.listdir('.')
+    return files[999]
+[INFO] Seclorum: Memory saved: Task debug_task to /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversations_test_session.db, rowid: 1138
+[INFO] Seclorum: Agent raw saved: Task debug_task - import os
+def buggy_files():
+    files = os.listdir('.')
+    return files[999]
+[DEBUG PRINT] Task state after Architect_dev_task: {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={}), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}}, 'processed': set()}
+[DEBUG PRINT] Checking dependents for Architect_dev_task: []
+[DEBUG PRINT] Returning from _propagate for Architect_dev_task: status=planned
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 44.89it/s]
+[INFO] Seclorum: Embedding updated: Task debug_task - test_session_1138

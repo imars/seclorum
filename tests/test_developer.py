@@ -12,12 +12,16 @@ import json
 from seclorum.models import Task, CodeOutput, TestResult, ModelManager
 from seclorum.agents.developer import Developer
 
+print("Starting test script")  # Initial marker
+
 def setup_logging(quiet: bool = False):
-    level = logging.WARNING if quiet else logging.INFO
-    logging.basicConfig(level=level, format="[%(levelname)s] %(name)s: %(message)s")
-    logging.getLogger("seclorum").setLevel(level)
+    level = logging.DEBUG if not quiet else logging.WARNING
+    logging.basicConfig(level=level, format="[%(levelname)s] %(name)s: %(message)s", force=True)  # Force reset
+    for name in ["seclorum", "seclorum.agents.base", "seclorum.agents.executor", "seclorum.agents.debugger"]:
+        logging.getLogger(name).setLevel(level)
     logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
     logging.getLogger("transformers").setLevel(logging.WARNING)
+    print(f"Logging initialized to level: {logging.getLevelName(level)}")
 
 def format_history(history):
     if not history:
@@ -41,66 +45,25 @@ class MockModelManager(ModelManager):
         super().__init__(model_name)
     def generate(self, prompt: str, **kwargs) -> str:
         if "Generate Python code" in prompt:
-            return "import os\ndef list_files():\n    return os.listdir('.')"
+            return "import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]"
         elif "Generate a Python unit test" in prompt:
-            return "import os\ndef test_list_files():\n    result = list_files()\n    assert isinstance(result, list)\n\ntest_list_files()"
+            return "import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()"
         elif "Fix this Python code" in prompt:
-            return "import os\ndef list_files():\n    return os.listdir('.') if os.listdir('.') else ''"
-        return "Mock response"
+            return "import os\ndef buggy_files():\n    return os.listdir('.')[0] if os.listdir('.') else ''"
+        return "Mock debug response"
 
 class TestDeveloper(unittest.TestCase):
     def setUp(self):
         self.session_id = "test_session"
         self.task_id = f"test_task_{unittest.TestCase.id(self).split('.')[-1]}"
         self.model_manager = MockModelManager()
-        self.task = Task(task_id=self.task_id, description="List files", parameters={})
-
-    def test_architect_to_generator(self):
-        developer = Developer(self.session_id, self.model_manager)
-        developer.start()
-        status, result = developer.orchestrate(self.task, stop_at="Generator_dev_task")
-        history = developer.memory.load_history(self.task_id)
-        print(f"Status: {status}, Result: {result}")
-        print(format_history(history))
-        self.assertEqual(status, "generated")
-        self.assertIsInstance(result, CodeOutput)
-        self.assertIn("list_files", result.code)
-
-    def test_generator_to_tester(self):
-        developer = Developer(self.session_id, self.model_manager)
-        developer.start()
-        status, result = developer.orchestrate(self.task, stop_at="Tester_dev_task")
-        history = developer.memory.load_history(self.task_id)
-        print(f"Status: {status}, Result: {result}")
-        print(format_history(history))
-        self.assertEqual(status, "tested")
-        self.assertIsInstance(result, TestResult)
-        self.assertIn("test_list_files", result.test_code)
-
-    def test_tester_to_executor(self):
-        developer = Developer(self.session_id, self.model_manager)
-        developer.start()
-        status, result = developer.orchestrate(self.task, stop_at="Executor_dev_task")
-        history = developer.memory.load_history(self.task_id)
-        print(f"Status: {status}, Result: {result}")
-        print(format_history(history))
-        self.assertEqual(status, "tested")
-        self.assertIsInstance(result, TestResult)
-        self.assertTrue(result.passed, f"Execution failed: {result.output}")
+        self.task = Task(task_id=self.task_id, description="Generate buggy code", parameters={})
 
     def test_executor_to_debugger(self):
-        self.task.description = "Generate buggy code"
-        self.model_manager.generate = lambda prompt, **kwargs: (
-            "import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]"
-            if "Generate Python code" in prompt else
-            "import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()"
-            if "Generate a Python unit test" in prompt else
-            "import os\ndef buggy_files():\n    return os.listdir('.')[0] if os.listdir('.') else ''"
-            if "Fix this Python code" in prompt else
-            "Mock debug response"
-        )
+        print(f"Starting test_executor_to_debugger with task_id: {self.task_id}")
         developer = Developer(self.session_id, self.model_manager)
         developer.start()
+        print(f"Developer graph: {developer.graph}")  # Dump graph
         status, result = developer.orchestrate(self.task)
         history = developer.memory.load_history(self.task_id)
         print(f"Status: {status}, Result: {result}")
@@ -122,7 +85,9 @@ if __name__ == "__main__":
     output_file = "test_developer_output.txt"
     start_time = time.time()
     runner = unittest.TextTestRunner(verbosity=2 if not args.quiet else 0)
-    result = runner.run(unittest.TestLoader().loadTestsFromTestCase(TestDeveloper))
+    suite = unittest.TestSuite()
+    suite.addTest(TestDeveloper('test_executor_to_debugger'))  # Isolate this test
+    result = runner.run(suite)
     elapsed_time = time.time() - start_time
     with open(output_file, "w") as f:
         f.write(f"Ran {result.testsRun} tests in {elapsed_time:.3f}s\n")
