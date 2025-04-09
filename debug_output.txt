@@ -442,3 +442,81 @@ IndexError: list index out of range
 [DEBUG PRINT] Returning from _propagate for Tester_dev_task: status=tested
 Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 14.10it/s]
 [INFO] Seclorum: Embedding updated: Task debug_task - test_session_1160
+Committed changes: Executed code and tests for Task debug_task
+[INFO] Agent_FileSystemManager: Committed changes: Executed code and tests for Task debug_task
+Task state after Executor_dev_task: {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output='Traceback (most recent call last):\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>\n    test_buggy_files()\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files\n    result = buggy_files()\n             ^^^^^^^^^^^^^\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files\n    return files[999]\n           ~~~~~^^^^^\nIndexError: list index out of range\n'), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}, 'Executor_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output='Traceback (most recent call last):\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>\n    test_buggy_files()\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files\n    result = buggy_files()\n             ^^^^^^^^^^^^^\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files\n    return files[999]\n           ~~~~~^^^^^\nIndexError: list index out of range\n')}}, 'processed': {'Generator_dev_task', 'Architect_dev_task', 'Tester_dev_task'}}
+[INFO] Agent_Aggregate: Task state after Executor_dev_task: {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output='Traceback (most recent call last):\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>\n    test_buggy_files()\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files\n    result = buggy_files()\n             ^^^^^^^^^^^^^\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files\n    return files[999]\n           ~~~~~^^^^^\nIndexError: list index out of range\n'), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}, 'Executor_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output='Traceback (most recent call last):\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>\n    test_buggy_files()\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files\n    result = buggy_files()\n             ^^^^^^^^^^^^^\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files\n    return files[999]\n           ~~~~~^^^^^\nIndexError: list index out of range\n')}}, 'processed': {'Generator_dev_task', 'Architect_dev_task', 'Tester_dev_task'}}
+Checking dependents for Executor_dev_task: [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
+[INFO] Agent_Aggregate: Checking dependents for Executor_dev_task: [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
+Skipping already processed Tester_dev_task
+[INFO] Agent_Aggregate: Skipping already processed Tester_dev_task
+Skipping already processed Generator_dev_task
+[INFO] Agent_Aggregate: Skipping already processed Generator_dev_task
+Returning from _propagate for Executor_dev_task: status=tested
+[INFO] Agent_Aggregate: Returning from _propagate for Executor_dev_task: status=tested
+Dependencies for Debugger_dev_task: [('Executor_dev_task', {'status': 'tested', 'passed': False})]
+[INFO] Agent_Aggregate: Dependencies for Debugger_dev_task: [('Executor_dev_task', {'status': 'tested', 'passed': False})]
+Evaluating condition: status=tested, result=test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()" passed=False output='Traceback (most recent call last):\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>\n    test_buggy_files()\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files\n    result = buggy_files()\n             ^^^^^^^^^^^^^\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files\n    return files[999]\n           ~~~~~^^^^^\nIndexError: list index out of range\n', condition={'status': 'tested', 'passed': False}
+[INFO] Agent_Aggregate: Evaluating condition: status=tested, result=test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()" passed=False output='Traceback (most recent call last):\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>\n    test_buggy_files()\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files\n    result = buggy_files()\n             ^^^^^^^^^^^^^\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files\n    return files[999]\n           ~~~~~^^^^^\nIndexError: list index out of range\n', condition={'status': 'tested', 'passed': False}
+Status satisfied: tested
+[INFO] Agent_Aggregate: Status satisfied: tested
+Checking passed: expected=False, got=False
+[INFO] Agent_Aggregate: Checking passed: expected=False, got=False
+Passed condition met
+[INFO] Agent_Aggregate: Passed condition met
+Building parameters for Debugger_dev_task: {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}, 'Executor_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output='Traceback (most recent call last):\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>\n    test_buggy_files()\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files\n    result = buggy_files()\n             ^^^^^^^^^^^^^\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files\n    return files[999]\n           ~~~~~^^^^^\nIndexError: list index out of range\n')}}
+[INFO] Agent_Aggregate: Building parameters for Debugger_dev_task: {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}, 'Executor_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output='Traceback (most recent call last):\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>\n    test_buggy_files()\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files\n    result = buggy_files()\n             ^^^^^^^^^^^^^\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files\n    return files[999]\n           ~~~~~^^^^^\nIndexError: list index out of range\n')}}
+Processing Debugger_dev_task for Task debug_task
+[INFO] Agent_Aggregate: Processing Debugger_dev_task for Task debug_task
+Debugging for Task debug_task
+[INFO] Agent_Debugger_dev_task: Debugging for Task debug_task
+Original code:
+import os
+def buggy_files():
+    files = os.listdir('.')
+    return files[999]
+[INFO] Agent_Debugger_dev_task: Original code:
+import os
+def buggy_files():
+    files = os.listdir('.')
+    return files[999]
+Original error: Traceback (most recent call last):
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>
+    test_buggy_files()
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files
+    result = buggy_files()
+             ^^^^^^^^^^^^^
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files
+    return files[999]
+           ~~~~~^^^^^
+IndexError: list index out of range
+
+[INFO] Agent_Debugger_dev_task: Original error: Traceback (most recent call last):
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>
+    test_buggy_files()
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files
+    result = buggy_files()
+             ^^^^^^^^^^^^^
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files
+    return files[999]
+           ~~~~~^^^^^
+IndexError: list index out of range
+
+Fixed code:
+import os
+def buggy_files():
+    return os.listdir('.')[0] if os.listdir('.') else ''
+[INFO] Agent_Debugger_dev_task: Fixed code:
+import os
+def buggy_files():
+    return os.listdir('.')[0] if os.listdir('.') else ''
+[INFO] Seclorum: Memory saved: Task debug_task to /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversations_test_session.db, rowid: 1161
+[INFO] Seclorum: Agent raw saved: Task debug_task - Fixed code:
+import os
+def buggy_files():
+    return os.listdir('.')[0] if os.listdir('.') else ''
+[DEBUG PRINT] Task state after Executor_dev_task: {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output='Traceback (most recent call last):\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>\n    test_buggy_files()\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files\n    result = buggy_files()\n             ^^^^^^^^^^^^^\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files\n    return files[999]\n           ~~~~~^^^^^\nIndexError: list index out of range\n'), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}, 'Executor_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output='Traceback (most recent call last):\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>\n    test_buggy_files()\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files\n    result = buggy_files()\n             ^^^^^^^^^^^^^\n  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files\n    return files[999]\n           ~~~~~^^^^^\nIndexError: list index out of range\n')}}, 'processed': {'Generator_dev_task', 'Architect_dev_task', 'Tester_dev_task'}}
+[DEBUG PRINT] Checking dependents for Executor_dev_task: [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
+[DEBUG PRINT] Returning from _propagate for Executor_dev_task: status=tested
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 36.06it/s]
+[INFO] Seclorum: Embedding updated: Task debug_task - test_session_1161
