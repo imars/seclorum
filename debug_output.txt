@@ -309,3 +309,116 @@ test_buggy_files()
 [DEBUG PRINT] Returning from _propagate for Generator_dev_task: status=generated
 Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 28.29it/s]
 [INFO] Seclorum: Embedding updated: Task debug_task - test_session_1139
+Committed changes: Generated tests for debug_task
+[INFO] Agent_FileSystemManager: Committed changes: Generated tests for debug_task
+Task state after Tester_dev_task: {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}}, 'processed': {'Generator_dev_task', 'Architect_dev_task'}}
+[INFO] Agent_Aggregate: Task state after Tester_dev_task: {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}}, 'processed': {'Generator_dev_task', 'Architect_dev_task'}}
+Checking dependents for Tester_dev_task: [('Generator_dev_task', {'status': 'generated'})]
+[INFO] Agent_Aggregate: Checking dependents for Tester_dev_task: [('Generator_dev_task', {'status': 'generated'})]
+Skipping already processed Generator_dev_task
+[INFO] Agent_Aggregate: Skipping already processed Generator_dev_task
+Returning from _propagate for Tester_dev_task: status=tested
+[INFO] Agent_Aggregate: Returning from _propagate for Tester_dev_task: status=tested
+Updated pending agents: {'Debugger_dev_task', 'Executor_dev_task'}
+[INFO] Agent_Aggregate: Updated pending agents: {'Debugger_dev_task', 'Executor_dev_task'}
+Dependencies for Debugger_dev_task: [('Executor_dev_task', {'status': 'tested', 'passed': False})]
+[INFO] Agent_Aggregate: Dependencies for Debugger_dev_task: [('Executor_dev_task', {'status': 'tested', 'passed': False})]
+Dependency Executor_dev_task not satisfied for Debugger_dev_task
+[INFO] Agent_Aggregate: Dependency Executor_dev_task not satisfied for Debugger_dev_task
+Dependencies for Executor_dev_task: [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
+[INFO] Agent_Aggregate: Dependencies for Executor_dev_task: [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
+Building parameters for Executor_dev_task: {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}}
+[INFO] Agent_Aggregate: Building parameters for Executor_dev_task: {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}}
+Processing Executor_dev_task for Task debug_task
+[INFO] Agent_Aggregate: Processing Executor_dev_task for Task debug_task
+Executing for Task debug_task
+[INFO] Agent_Executor_dev_task: Executing for Task debug_task
+Task parameters: {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}}
+[INFO] Agent_Executor_dev_task: Task parameters: {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}}
+Full code to execute:
+import os
+def buggy_files():
+    files = os.listdir('.')
+    return files[999]
+
+import os
+def test_buggy_files():
+    result = buggy_files()
+    assert isinstance(result, str)
+    print('This should not print')
+
+test_buggy_files()
+
+test_buggy_files()
+[INFO] Agent_Executor_dev_task: Full code to execute:
+import os
+def buggy_files():
+    files = os.listdir('.')
+    return files[999]
+
+import os
+def test_buggy_files():
+    result = buggy_files()
+    assert isinstance(result, str)
+    print('This should not print')
+
+test_buggy_files()
+
+test_buggy_files()
+Writing to temp_debug_task.py
+[INFO] Agent_Executor_dev_task: Writing to temp_debug_task.py
+Running command: python -B temp_debug_task.py
+[INFO] Agent_Executor_dev_task: Running command: python -B temp_debug_task.py
+Execution failed with error: Traceback (most recent call last):
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>
+    test_buggy_files()
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files
+    result = buggy_files()
+             ^^^^^^^^^^^^^
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files
+    return files[999]
+           ~~~~~^^^^^
+IndexError: list index out of range
+
+[INFO] Agent_Executor_dev_task: Execution failed with error: Traceback (most recent call last):
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>
+    test_buggy_files()
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files
+    result = buggy_files()
+             ^^^^^^^^^^^^^
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files
+    return files[999]
+           ~~~~~^^^^^
+IndexError: list index out of range
+
+Cleaning up temp_debug_task.py
+[INFO] Agent_Executor_dev_task: Cleaning up temp_debug_task.py
+Final result: passed=False, output=Traceback (most recent call last):
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>
+    test_buggy_files()
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files
+    result = buggy_files()
+             ^^^^^^^^^^^^^
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files
+    return files[999]
+           ~~~~~^^^^^
+IndexError: list index out of range
+
+[INFO] Agent_Executor_dev_task: Final result: passed=False, output=Traceback (most recent call last):
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 12, in <module>
+    test_buggy_files()
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 8, in test_buggy_files
+    result = buggy_files()
+             ^^^^^^^^^^^^^
+  File "/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py", line 4, in buggy_files
+    return files[999]
+           ~~~~~^^^^^
+IndexError: list index out of range
+
+[INFO] Seclorum: Memory saved: Task debug_task to /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversations_test_session.db, rowid: 1140
+[INFO] Seclorum: Agent raw saved: Task debug_task - {"test_code": "import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", "passed": false, "output": "Traceback (most recent call last):\n  File \"/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py\", line 12, in <module>\n    test_buggy_files()\n  File \"/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py\", line 8, in test_buggy_files\n    result = buggy_files()\n             ^^^^^^^^^^^^^\n  File \"/Users/ian/dev/projects/agents/local/seclorum/temp_debug_task.py\", line 4, in buggy_files\n    return files[999]\n           ~~~~~^^^^^\nIndexError: list index out of range\n"}
+[DEBUG PRINT] Task state after Tester_dev_task: {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}, 'Tester_dev_task': {'status': 'tested', 'result': TestResult(test_code="import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", passed=False, output=None)}}, 'processed': {'Generator_dev_task', 'Architect_dev_task'}}
+[DEBUG PRINT] Checking dependents for Tester_dev_task: [('Generator_dev_task', {'status': 'generated'})]
+[DEBUG PRINT] Returning from _propagate for Tester_dev_task: status=tested
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 15.13it/s]
+[INFO] Seclorum: Embedding updated: Task debug_task - test_session_1140
