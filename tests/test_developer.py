@@ -7,19 +7,15 @@ import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import logging
 import unittest
-from io import StringIO
+import time
 import json
 from seclorum.models import Task, CodeOutput, TestResult, ModelManager
 from seclorum.agents.developer import Developer
 
 def setup_logging(quiet: bool = False):
     level = logging.WARNING if quiet else logging.INFO
+    logging.basicConfig(level=level, format="[%(levelname)s] %(name)s: %(message)s")
     logging.getLogger("seclorum").setLevel(level)
-    for handler in logging.getLogger().handlers[:]:
-        handler.setLevel(level)
-    for logger_name in logging.Logger.manager.loggerDict:
-        if logger_name.startswith("seclorum"):
-            logging.getLogger(logger_name).setLevel(level)
     logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
     logging.getLogger("transformers").setLevel(logging.WARNING)
 
@@ -124,12 +120,12 @@ if __name__ == "__main__":
     setup_logging(args.quiet)
 
     output_file = "test_developer_output.txt"
+    start_time = time.time()
+    runner = unittest.TextTestRunner(verbosity=2 if not args.quiet else 0)
+    result = runner.run(unittest.TestLoader().loadTestsFromTestCase(TestDeveloper))
+    elapsed_time = time.time() - start_time
     with open(output_file, "w") as f:
-        # Run tests directly, writing to both console and file in real-time
-        runner = unittest.TextTestRunner(stream=sys.stdout, verbosity=2 if not args.quiet else 0)
-        result = runner.run(unittest.TestLoader().loadTestsFromTestCase(TestDeveloper))
-        # Write results to file
-        f.write(f"Ran {result.testsRun} tests in {result._elapsed_time:.3f}s\n")
+        f.write(f"Ran {result.testsRun} tests in {elapsed_time:.3f}s\n")
         if result.wasSuccessful():
             f.write("OK\n")
         else:
