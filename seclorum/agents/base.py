@@ -64,7 +64,7 @@ class AbstractAggregate(AbstractAgent):
         self.tasks[task_id]["status"] = status
         self.tasks[task_id]["result"] = result
         self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result}
-        self.logger.info(f"Task state after {current_agent}: {self.tasks[task_id]}")  # Elevated to INFO
+        self.logger.info(f"Task state after {current_agent}: {self.tasks[task_id]}")
 
         if stop_at == current_agent:
             self.log_update(f"Stopping at {current_agent} as requested")
@@ -72,21 +72,21 @@ class AbstractAggregate(AbstractAgent):
 
         final_status, final_result = status, result
         dependents = self.graph.get(current_agent, [])
-        self.logger.info(f"Checking dependents for {current_agent}: {dependents}")  # Elevated to INFO
+        self.logger.info(f"Checking dependents for {current_agent}: {dependents}")
         for next_agent_name, condition in dependents:
             if next_agent_name in self.tasks[task_id]["processed"]:
                 self.log_update(f"Skipping already processed {next_agent_name}")
                 continue
-            self.logger.info(f"Evaluating condition for {next_agent_name}: {condition}")  # Elevated to INFO
+            self.logger.info(f"Evaluating condition for {next_agent_name}: {condition}")
             if self._check_condition(status, result, condition):
                 next_agent = self.agents[next_agent_name]
                 params: Dict[str, Any] = self.tasks[task_id]["outputs"].copy()
-                self.logger.info(f"Propagating to {next_agent_name} with params: {params}")  # Elevated to INFO
+                self.logger.info(f"Propagating to {next_agent_name} with params: {params}")
                 new_task = Task(task_id=task_id, description=task.description, parameters=params)
                 new_status, new_result = next_agent.process_task(new_task)
                 self.tasks[task_id]["processed"].add(next_agent_name)
                 final_status, final_result = self._propagate(next_agent_name, new_status, new_result, task, stop_at)
-        self.logger.info(f"Returning from _propagate for {current_agent}: status={final_status}")  # Elevated to INFO
+        self.logger.info(f"Returning from _propagate for {current_agent}: status={final_status}")
         return final_status, final_result
 
     def orchestrate(self, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
@@ -96,12 +96,13 @@ class AbstractAggregate(AbstractAgent):
             self.tasks[task_id] = {"status": None, "result": None, "outputs": {}, "processed": set()}
         self.log_update(f"Orchestrating task {task_id} with {len(self.agents)} agents, stopping at {stop_at}")
 
+        final_status: Optional[str] = None
+        final_result: Any = None
         pending_agents: Set[str] = set(self.agents.keys())
+        self.log_update(f"Initial pending agents: {pending_agents}")
         while pending_agents:
             made_progress = False
-            remaining_agents = list(pending_agents)
-            self.log_update(f"Pending agents: {remaining_agents}")
-            for agent_name in remaining_agents:
+            for agent_name in list(pending_agents):
                 if agent_name in self.tasks[task_id]["processed"]:
                     self.log_update(f"Agent {agent_name} already processed, skipping")
                     continue
@@ -140,8 +141,9 @@ class AbstractAggregate(AbstractAgent):
                 self.log_update(f"No progress made with remaining agents {pending_agents}, exiting orchestration")
                 break
             pending_agents -= self.tasks[task_id]["processed"]
+            self.log_update(f"Updated pending agents: {pending_agents}")
 
-        if final_status is None or final_result is None:  # Use final_status here
+        if final_status is None or final_result is None:
             raise ValueError(f"No agent processed task {task_id}")
         self.log_update(f"Orchestration complete, final status: {final_status}")
         return final_status, final_result
