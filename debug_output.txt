@@ -244,3 +244,68 @@ def buggy_files():
 [DEBUG PRINT] Returning from _propagate for Architect_dev_task: status=planned
 Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 45.84it/s]
 [INFO] Seclorum: Embedding updated: Task debug_task - test_session_1154
+Committed changes: Generated code and tests for debug_task
+[INFO] Agent_FileSystemManager: Committed changes: Generated code and tests for debug_task
+Task state after Generator_dev_task: {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}}, 'processed': {'Architect_dev_task'}}
+[INFO] Agent_Aggregate: Task state after Generator_dev_task: {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}}, 'processed': {'Architect_dev_task'}}
+Checking dependents for Generator_dev_task: [('Architect_dev_task', {'status': 'planned'})]
+[INFO] Agent_Aggregate: Checking dependents for Generator_dev_task: [('Architect_dev_task', {'status': 'planned'})]
+Skipping already processed Architect_dev_task
+[INFO] Agent_Aggregate: Skipping already processed Architect_dev_task
+Returning from _propagate for Generator_dev_task: status=generated
+[INFO] Agent_Aggregate: Returning from _propagate for Generator_dev_task: status=generated
+Dependencies for Executor_dev_task: [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
+[INFO] Agent_Aggregate: Dependencies for Executor_dev_task: [('Tester_dev_task', {'status': 'tested'}), ('Generator_dev_task', {'status': 'generated'})]
+Dependency Tester_dev_task not satisfied for Executor_dev_task
+[INFO] Agent_Aggregate: Dependency Tester_dev_task not satisfied for Executor_dev_task
+Dependencies for Tester_dev_task: [('Generator_dev_task', {'status': 'generated'})]
+[INFO] Agent_Aggregate: Dependencies for Tester_dev_task: [('Generator_dev_task', {'status': 'generated'})]
+Building parameters for Tester_dev_task: {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}}
+[INFO] Agent_Aggregate: Building parameters for Tester_dev_task: {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}}
+Processing Tester_dev_task for Task debug_task
+[INFO] Agent_Aggregate: Processing Tester_dev_task for Task debug_task
+Generating tests for Task debug_task
+[INFO] Agent_Tester_dev_task: Generating tests for Task debug_task
+Generated new test code:
+import os
+def test_buggy_files():
+    result = buggy_files()
+    assert isinstance(result, str)
+    print('This should not print')
+
+test_buggy_files()
+[INFO] Agent_Tester_dev_task: Generated new test code:
+import os
+def test_buggy_files():
+    result = buggy_files()
+    assert isinstance(result, str)
+    print('This should not print')
+
+test_buggy_files()
+Full executable test code:
+import os
+def test_buggy_files():
+    result = buggy_files()
+    assert isinstance(result, str)
+    print('This should not print')
+
+test_buggy_files()
+
+test_buggy_files()
+[INFO] Agent_Tester_dev_task: Full executable test code:
+import os
+def test_buggy_files():
+    result = buggy_files()
+    assert isinstance(result, str)
+    print('This should not print')
+
+test_buggy_files()
+
+test_buggy_files()
+[INFO] Seclorum: Memory saved: Task debug_task to /Users/ian/dev/projects/agents/local/seclorum/seclorum/logs/conversations/conversations_test_session.db, rowid: 1155
+[INFO] Seclorum: Agent raw saved: Task debug_task - {"test_code": "import os\ndef test_buggy_files():\n    result = buggy_files()\n    assert isinstance(result, str)\n    print('This should not print')\n\ntest_buggy_files()\n\ntest_buggy_files()", "passed": false, "output": null}
+[DEBUG PRINT] Task state after Generator_dev_task: {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None), 'outputs': {'Architect_dev_task': {'status': 'planned', 'result': Task(task_id='debug_task', description='Generate buggy code\nPlan:\nMock debug response', parameters={})}, 'Generator_dev_task': {'status': 'generated', 'result': CodeOutput(code="import os\ndef buggy_files():\n    files = os.listdir('.')\n    return files[999]", tests=None)}}, 'processed': {'Architect_dev_task'}}
+[DEBUG PRINT] Checking dependents for Generator_dev_task: [('Architect_dev_task', {'status': 'planned'})]
+[DEBUG PRINT] Returning from _propagate for Generator_dev_task: status=generated
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 28.45it/s]
+[INFO] Seclorum: Embedding updated: Task debug_task - test_session_1155
