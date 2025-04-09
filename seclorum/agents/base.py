@@ -66,6 +66,7 @@ class AbstractAggregate(AbstractAgent):
         self.tasks[task_id]["result"] = result
         self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result}
         self.logger.info(f"Task state after {current_agent}: {self.tasks[task_id]}")
+        print(f"[DEBUG PRINT] Task state after {current_agent}: {self.tasks[task_id]}")  # Fallback
 
         if stop_at == current_agent:
             self.logger.info(f"Stopping at {current_agent} as requested")
@@ -74,23 +75,29 @@ class AbstractAggregate(AbstractAgent):
         final_status, final_result = status, result
         dependents = self.graph.get(current_agent, [])
         self.logger.info(f"Checking dependents for {current_agent}: {dependents}")
+        print(f"[DEBUG PRINT] Checking dependents for {current_agent}: {dependents}")
         for next_agent_name, condition in dependents:
             if next_agent_name in self.tasks[task_id]["processed"]:
                 self.logger.info(f"Skipping already processed {next_agent_name}")
                 continue
             self.logger.info(f"Evaluating condition for {next_agent_name}: {condition}")
+            print(f"[DEBUG PRINT] Evaluating condition for {next_agent_name}: {condition}")
             if self._check_condition(status, result, condition):
                 next_agent = self.agents[next_agent_name]
                 params: Dict[str, Any] = self.tasks[task_id]["outputs"].copy()
                 self.logger.info(f"Propagating to {next_agent_name} with params: {params}")
+                print(f"[DEBUG PRINT] Propagating to {next_agent_name}")
                 new_task = Task(task_id=task_id, description=task.description, parameters=params)
                 new_status, new_result = next_agent.process_task(new_task)
                 self.tasks[task_id]["processed"].add(next_agent_name)
                 final_status, final_result = self._propagate(next_agent_name, new_status, new_result, task, stop_at)
         self.logger.info(f"Returning from _propagate for {current_agent}: status={final_status}")
+        print(f"[DEBUG PRINT] Returning from _propagate for {current_agent}: status={final_status}")
         return final_status, final_result
 
     def orchestrate(self, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
+        self.logger.info(f"Graph setup: {self.graph}")
+        print(f"[DEBUG PRINT] Graph setup: {self.graph}")
         task_id: str = task.task_id
         if task_id not in self.tasks:
             self.logger.info(f"Initializing task {task_id} at orchestration start")
