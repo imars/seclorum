@@ -51,9 +51,13 @@ class AbstractAggregate(AbstractAgent):
         if "status" in condition and condition["status"] != status:
             self.logger.info(f"Status mismatch: expected {condition['status']}, got {status}")
             return False
-        if "passed" in condition and isinstance(result, TestResult) and condition["passed"] == result.passed:  # Changed != to ==
-            self.logger.info("Passed condition satisfied")
-            return True
+        if "passed" in condition and isinstance(result, TestResult):
+            if condition["passed"] == result.passed:
+                self.logger.info(f"Passed condition satisfied: expected {condition['passed']}, got {result.passed}")
+                return True
+            else:
+                self.logger.info(f"Passed mismatch: expected {condition['passed']}, got {result.passed}")
+                return False
         self.logger.info("Condition not fully satisfied")
         return False
 
