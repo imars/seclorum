@@ -1,4 +1,4 @@
-# seclorum/agents/base.py
+# seclorum/agents/base.py (relevant parts)
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple, Set
 from collections import defaultdict
@@ -64,7 +64,7 @@ class AbstractAggregate(AbstractAgent):
         self.tasks[task_id]["status"] = status
         self.tasks[task_id]["result"] = result
         self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result}
-        self.logger.debug(f"Task state after {current_agent}: {self.tasks[task_id]}")
+        self.logger.info(f"Task state after {current_agent}: {self.tasks[task_id]}")  # Elevated to INFO
 
         if stop_at == current_agent:
             self.log_update(f"Stopping at {current_agent} as requested")
@@ -72,21 +72,21 @@ class AbstractAggregate(AbstractAgent):
 
         final_status, final_result = status, result
         dependents = self.graph.get(current_agent, [])
-        self.log_update(f"Checking dependents for {current_agent}: {dependents}")
+        self.logger.info(f"Checking dependents for {current_agent}: {dependents}")  # Elevated to INFO
         for next_agent_name, condition in dependents:
             if next_agent_name in self.tasks[task_id]["processed"]:
                 self.log_update(f"Skipping already processed {next_agent_name}")
                 continue
-            self.log_update(f"Evaluating condition for {next_agent_name}: {condition}")
+            self.logger.info(f"Evaluating condition for {next_agent_name}: {condition}")  # Elevated to INFO
             if self._check_condition(status, result, condition):
                 next_agent = self.agents[next_agent_name]
                 params: Dict[str, Any] = self.tasks[task_id]["outputs"].copy()
-                self.log_update(f"Propagating to {next_agent_name} with params: {params}")
+                self.logger.info(f"Propagating to {next_agent_name} with params: {params}")  # Elevated to INFO
                 new_task = Task(task_id=task_id, description=task.description, parameters=params)
                 new_status, new_result = next_agent.process_task(new_task)
                 self.tasks[task_id]["processed"].add(next_agent_name)
                 final_status, final_result = self._propagate(next_agent_name, new_status, new_result, task, stop_at)
-        self.log_update(f"Returning from _propagate for {current_agent}: status={final_status}")
+        self.logger.info(f"Returning from _propagate for {current_agent}: status={final_status}")  # Elevated to INFO
         return final_status, final_result
 
     def orchestrate(self, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
@@ -96,8 +96,6 @@ class AbstractAggregate(AbstractAgent):
             self.tasks[task_id] = {"status": None, "result": None, "outputs": {}, "processed": set()}
         self.log_update(f"Orchestrating task {task_id} with {len(self.agents)} agents, stopping at {stop_at}")
 
-        status: Optional[str] = None
-        result: Any = None
         pending_agents: Set[str] = set(self.agents.keys())
         while pending_agents:
             made_progress = False
@@ -132,18 +130,18 @@ class AbstractAggregate(AbstractAgent):
                 )
                 self.log_update(f"Processing {agent_name} for Task {task_id}")
                 agent_status, agent_result = agent.process_task(new_task)
-                status, result = self._propagate(agent_name, agent_status, agent_result, task, stop_at)
+                final_status, final_result = self._propagate(agent_name, agent_status, agent_result, task, stop_at)
                 self.tasks[task_id]["processed"].add(agent_name)
                 made_progress = True
                 if stop_at == agent_name:
                     self.log_update(f"Stopping orchestration at {agent_name}")
-                    return status, result
+                    return final_status, final_result
             if not made_progress:
                 self.log_update(f"No progress made with remaining agents {pending_agents}, exiting orchestration")
                 break
-            pending_agents -= self.tasks[task_id]["processed"]  # Update pending agents
+            pending_agents -= self.tasks[task_id]["processed"]
 
-        if status is None or result is None:
+        if final_status is None or final_result is None:  # Use final_status here
             raise ValueError(f"No agent processed task {task_id}")
-        self.log_update(f"Orchestration complete, final status: {status}")
-        return status, result
+        self.log_update(f"Orchestration complete, final status: {final_status}")
+        return final_status, final_result
