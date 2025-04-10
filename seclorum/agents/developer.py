@@ -36,29 +36,45 @@ class Developer(Aggregate):
         self.log_update(f"Developer processing Task {task.task_id}")
         return self.orchestrate(task)
 
+    # seclorum/agents/developer.py (merged orchestrate)
     def orchestrate(self, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
         status, result = super().orchestrate(task, stop_at)
         self.log_update(f"Orchestration completed with status: {status}")
 
-        # Force progression if stopped early
-        if status == "planned":
+        # Force progression if stopped early or to ensure complete workflow
+        if status == "planned" and "Generator_dev_task" in self.agents:
+            self.log_update("Forcing Generator to process after Architect")
             generator = self.agents["Generator_dev_task"]
             status, result = generator.process_task(task)
             self.log_update(f"Forced Generator, new status: {status}")
 
-        if status == "generated" and task.parameters.get("generate_tests", False):
+        if status == "generated" and task.parameters.get("generate_tests", False) and "Tester_dev_task" in self.agents:
+            self.log_update("Forcing Tester to process after Generator")
             tester = self.agents["Tester_dev_task"]
             status, result = tester.process_task(task)
             self.log_update(f"Forced Tester, new status: {status}")
 
-        if status == "tested":
+        if status == "tested" and "Executor_dev_task" in self.agents:
+            self.log_update("Forcing Executor to process after Tester")
             executor = self.agents["Executor_dev_task"]
             status, result = executor.process_task(task)
             self.log_update(f"Forced Executor, new status: {status}")
 
-        if status == "tested" and not result.passed:
+        if status == "tested" and isinstance(result, TestResult) and not result.passed and "Debugger_dev_task" in self.agents:
+            self.log_update("Forcing Debugger to process due to failed tests")
             debugger = self.agents["Debugger_dev_task"]
             status, result = debugger.process_task(task)
             self.log_update(f"Forced Debugger, new status: {status}")
 
+        # Ensure the correct result is returned based on final status
+        if status == "generated":
+            result = task.parameters.get("Generator_dev_task", {}).get("result", result)
+        elif status == "tested":
+            result = task.parameters.get("Executor_dev_task", {}).get("result",
+                     task.parameters.get("Tester_dev_task", {}).get("result", result))
+        elif status == "debugged":
+            result = task.parameters.get("Debugger_dev_task", {}).get("result",
+                     task.parameters.get("Executor_dev_task", {}).get("result", result))
+
+        self.log_update(f"Final result type: {type(result).__name__}, content: {result}")
         return status, result
