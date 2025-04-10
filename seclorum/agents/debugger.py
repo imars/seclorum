@@ -1,10 +1,10 @@
 # seclorum/agents/debugger.py
-from seclorum.agents.base import AbstractAgent
+from seclorum.agents.base import Agent
 from seclorum.models import Task, CodeOutput, TestResult
 from seclorum.agents.memory_manager import MemoryManager
 from seclorum.agents.model_manager import ModelManager
 
-class Debugger(AbstractAgent):
+class Debugger(Agent):
     def __init__(self, task_id: str, session_id: str, model_manager: ModelManager, memory: MemoryManager = None):
         super().__init__(f"Debugger_{task_id}", session_id)
         self.task_id = task_id

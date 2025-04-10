@@ -1,9 +1,9 @@
 # seclorum/agents/architect.py
 from typing import Tuple
-from seclorum.agents.base import AbstractAgent
+from seclorum.agents.base import Agent
 from seclorum.models import Task
 
-class Architect(AbstractAgent):
+class Architect(Agent):
     def __init__(self, task_id: str, session_id: str, model_manager):
         super().__init__(f"Architect_{task_id}", session_id)
         self.task_id = task_id

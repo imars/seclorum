@@ -1,2 +1,2 @@
-Ran 1 tests in 15.991s
+Ran 1 tests in 14.377s
 OK

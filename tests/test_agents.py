@@ -8,6 +8,8 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import unittest
 from io import StringIO
 from seclorum.models import Task, CodeOutput, TestResult, ModelManager
+from seclorum.agents.base import Agent
+from seclorum.models.manager import create_model_manager
 from seclorum.agents.architect import Architect
 from seclorum.agents.generator import Generator
 from seclorum.agents.tester import Tester
@@ -19,7 +21,7 @@ class MockModelManager(ModelManager):
         super().__init__(model_name)
     def generate(self, prompt: str, **kwargs) -> str:
         if "Generate Python code" in prompt:
-            return "import os\ndef list_files():\n    return os.listdir('.')"
+            return "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]"  # Updated to match output
         elif "Generate a Python unit test" in prompt:
             return "import os\ndef test_list_files():\n    result = list_files()\n    assert isinstance(result, list)"
         elif "Fix this Python code" in prompt:
@@ -49,11 +51,11 @@ class TestAgents(unittest.TestCase):
         status, result = generator.process_task(task_with_plan)
         self.assertEqual(status, "generated")
         self.assertIsInstance(result, CodeOutput)
-        self.assertIn("list_files", result.code)
+        self.assertIn("list_py_files", result.code)  # Updated
 
     def test_tester(self):
         tester = Tester(self.task_id, self.session_id, self.model_manager)
-        code_output = CodeOutput(code="import os\ndef list_files():\n    return os.listdir('.')")
+        code_output = CodeOutput(code="import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]")
         task_with_code = Task(
             task_id=self.task_id,
             description="Test code",
@@ -70,7 +72,7 @@ class TestAgents(unittest.TestCase):
             test_code="import os\ndef test_list_files():\n    result = list_files()\n    assert isinstance(result, list)",
             passed=False
         )
-        code_output = CodeOutput(code="import os\ndef list_files():\n    return os.listdir('.')")
+        code_output = CodeOutput(code="import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]")
         task_with_test = Task(
             task_id=self.task_id,
             description="Execute test",
@@ -89,7 +91,7 @@ class TestAgents(unittest.TestCase):
             passed=False,
             output="IndexError"
         )
-        code_output = CodeOutput(code="import os\ndef list_files():\n    return os.listdir()[999]")
+        code_output = CodeOutput(code="import os\ndef list_py_files():\n    return os.listdir()[999]")
         task_with_failure = Task(
             task_id=self.task_id,
             description="Debug code",
@@ -100,6 +102,22 @@ class TestAgents(unittest.TestCase):
         self.assertEqual(status, "debugged")
         self.assertIsInstance(result, CodeOutput)
         self.assertIn("if os.listdir", result.code)
+
+    def test_agent_model_management(self):
+        mock_model = MockModelManager(model_name="mock")
+        agent = Agent("TestAgent", "test_session", model_manager=mock_model)
+
+        mock_model_alt = MockModelManager(model_name="mock_alt")
+        agent.add_model("mock_alt", mock_model_alt)
+
+        result = agent.infer("Generate Python code to list files")
+        self.assertIn("list_py_files", result, "Mock model should generate list_py_files function")
+
+        agent.switch_model("mock_alt")
+        self.assertEqual(agent.current_model_key, "mock_alt", "Should switch to mock_alt model")
+
+        agent.switch_model("default")  # Changed from "mock" to "default"
+        self.assertEqual(agent.current_model_key, "default", "Should switch back to default model")
 
 if __name__ == "__main__":
     output_file = "test_agents_output.txt"

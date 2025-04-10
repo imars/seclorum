@@ -1,10 +1,10 @@
 # seclorum/agents/generator.py
-from seclorum.agents.base import AbstractAgent
+from seclorum.agents.base import Agent
 from seclorum.models import Task, CodeOutput, create_model_manager, ModelManager
 from seclorum.agents.memory_manager import MemoryManager
 
 
-class Generator(AbstractAgent):
+class Generator(Agent):
     def __init__(self, task_id: str, session_id: str, model_manager: ModelManager, memory: MemoryManager = None):
         super().__init__(f"Generator_{task_id}", session_id)
         self.task_id = task_id

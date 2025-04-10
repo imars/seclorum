@@ -1,11 +1,11 @@
 # seclorum/agents/executor.py
 import subprocess
 import os
-from seclorum.agents.base import AbstractAgent
+from seclorum.agents.base import Agent
 from seclorum.models import Task, CodeOutput, TestResult
 from seclorum.agents.memory_manager import MemoryManager
 
-class Executor(AbstractAgent):
+class Executor(Agent):
     def __init__(self, task_id: str, session_id: str):
         super().__init__(f"Executor_{task_id}", session_id)
         self.task_id = task_id

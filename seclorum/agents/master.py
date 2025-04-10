@@ -7,7 +7,7 @@ import logging
 from flask_socketio import SocketIO
 from seclorum.agents.redis_mixin import RedisMixin
 from seclorum.agents.lifecycle import LifecycleMixin
-from seclorum.agents.base import AbstractAgent, AbstractAggregate
+from seclorum.agents.base import AbstractAgent, Agent, Aggregate
 from seclorum.agents.generator import Generator
 from seclorum.agents.tester import Tester
 from seclorum.agents.executor import Executor
@@ -19,10 +19,10 @@ import time
 import json
 from typing import Optional, List, Any
 
-class MasterNode(AbstractAggregate, RedisMixin):
+class MasterNode(Aggregate, RedisMixin):
     def __init__(self, session_id: str, require_redis: bool = False):
         super().__init__(session_id)  # Pass quiet to AbstractAgent
-        AbstractAggregate.__init__(self, session_id)
+        Aggregate.__init__(self, session_id)
         RedisMixin.__init__(self, name="MasterNode")
         LifecycleMixin.__init__(self, name="MasterNode", pid_file="seclorum_master.pid")
         self.name = "MasterNode"  # Override AbstractAggregate's default name

@@ -32,14 +32,12 @@ class AbstractAgent(ABC, LoggerMixin):
     def commit_changes(self, message: str) -> None:
         self.fs_manager.commit_changes(message)
 
-# seclorum/agents/base.py (partial update for Agent class)
 class Agent(AbstractAgent):
-    def __init__(self, name: str, session_id: str, model_manager: Optional[ModelManager] = None, model_name: str = "LLaMA-3.2-latest"):
+    def __init__(self, name: str, session_id: str, model_manager: Optional[ModelManager] = None, model_name: str = "llama3.2:latest"):
         super().__init__(name, session_id)
-        # Initialize with a default model if none provided
         self.model = model_manager or create_model_manager(provider="ollama", model_name=model_name)
-        self.available_models = {"default": self.model}  # Dictionary to store multiple models
-        self.current_model_key = "default"  # Track the active model
+        self.available_models = {"default": self.model}
+        self.current_model_key = "default"
         self.log_update(f"Agent {name} initialized with model {self.model.model_name}")
 
     def add_model(self, model_key: str, model_manager: ModelManager) -> None:
@@ -66,6 +64,15 @@ class Agent(AbstractAgent):
             self.switch_model(model_key)
         else:
             self.log_update(f"Model '{model_key}' not found, sticking with '{self.current_model_key}'")
+
+    def infer(self, prompt: str, **kwargs) -> str:
+        """Run inference with the current active model."""
+        self.log_update(f"Inferring with model '{self.current_model_key}' on prompt: {prompt[:50]}...")
+        return self.model.generate(prompt, **kwargs)
+
+    def process_task(self, task: Task) -> Tuple[str, Any]:
+        """Base implementation; override in subclasses."""
+        raise NotImplementedError("Subclasses must implement process_task")
 
 class Aggregate(Agent):
     def __init__(self, session_id: str, model_manager=None):
