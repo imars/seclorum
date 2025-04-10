@@ -25,9 +25,12 @@ class Executor(Agent):
             self.log_update("No valid code from Generator")
             result = TestResult(test_code="", passed=False, output="No code provided")
             self.memory.save(response=result, task_id=task.task_id)
+            task.parameters["Executor_dev_task"] = {"status": "tested", "result": result}
             return "tested", result
 
         code_output = generator_output
+        self.log_update(f"Executing code:\n{code_output.code}")
+
         test_result = tester_output if tester_output and isinstance(tester_output, TestResult) else TestResult(test_code="", passed=False)
         full_code = f"{code_output.code}\n\n{test_result.test_code}" if test_result.test_code else code_output.code
 
