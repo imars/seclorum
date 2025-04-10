@@ -40,20 +40,25 @@ class Developer(Aggregate):
         status, result = super().orchestrate(task, stop_at)
         self.log_update(f"Orchestration completed with status: {status}")
 
-        # Ensure we return the latest relevant output
+        # Force progression if stopped early
         if status == "planned":
-            # If stuck at planning, force Generator to proceed
-            generator_output = task.parameters.get("Generator_dev_task", {}).get("result")
-            if not generator_output:
-                self.log_update("Forcing Generator to process after Architect")
-                generator = self.agents["Generator_dev_task"]
-                status, result = generator.process_task(task)
-        elif status == "generated":
-            result = task.parameters.get("Generator_dev_task", {}).get("result", result)
-        elif status == "tested":
-            result = task.parameters.get("Executor_dev_task", {}).get("result",
-                     task.parameters.get("Tester_dev_task", {}).get("result", result))
-        elif status == "debugged":
-            result = task.parameters.get("Debugger_dev_task", {}).get("result", result)
+            generator = self.agents["Generator_dev_task"]
+            status, result = generator.process_task(task)
+            self.log_update(f"Forced Generator, new status: {status}")
+
+        if status == "generated" and task.parameters.get("generate_tests", False):
+            tester = self.agents["Tester_dev_task"]
+            status, result = tester.process_task(task)
+            self.log_update(f"Forced Tester, new status: {status}")
+
+        if status == "tested":
+            executor = self.agents["Executor_dev_task"]
+            status, result = executor.process_task(task)
+            self.log_update(f"Forced Executor, new status: {status}")
+
+        if status == "tested" and not result.passed:
+            debugger = self.agents["Debugger_dev_task"]
+            status, result = debugger.process_task(task)
+            self.log_update(f"Forced Debugger, new status: {status}")
 
         return status, result
