@@ -36,9 +36,11 @@ class AbstractAgent(ABC, LoggerMixin):
 class Agent(AbstractAgent, Remote):
     def __init__(self, name: str, session_id: str, model_manager: Optional[ModelManager] = None, model_name: str = "llama3.2:latest"):
         super().__init__(name, session_id)
+        self.logger = logging.getLogger(f"Agent_{name}")
         self.model = model_manager or create_model_manager(provider="ollama", model_name=model_name)
         self.available_models = {"default": self.model}
         self.current_model_key = "default"
+        self.memory = MemoryManager(session_id)
         self.log_update(f"Agent {name} initialized with model {self.model.model_name}")
 
     def add_model(self, model_key: str, model_manager: ModelManager) -> None:
@@ -66,7 +68,7 @@ class Agent(AbstractAgent, Remote):
         else:
             self.log_update(f"Model '{model_key}' not found, sticking with '{self.current_model_key}'")
 
-    def infer(self, prompt: str, use_remote: bool = False, endpoint: str = "google_ai_studio", **kwargs) -> str:
+    def infer(self, prompt: str, use_remote: Optional[bool] = None, endpoint: str = "google_ai_studio", **kwargs) -> str:
         """Run inference with the current active model."""
         self.log_update(f"Inferring with model '{self.current_model_key}' on prompt: {prompt[:50]}...")
         return self.generate(prompt, use_remote=use_remote, endpoint=endpoint, **kwargs)
