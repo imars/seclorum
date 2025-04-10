@@ -23,16 +23,27 @@ class MockModelManager(ModelManager):
     def generate(self, prompt: str, **kwargs) -> str:
         if "Generate Python code" in prompt:
             return "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]"
-        elif "Generate a Python unit test" in prompt:
-            return "import os\ndef test_list_files():\n    result = list_files()\n    assert isinstance(result, list)"
-        elif "Fix this Python code" in prompt:
-            return "import os\ndef list_files():\n    return os.listdir('.') if os.listdir('.') else []"
         elif "Generate JavaScript code" in prompt:
             return "function listFiles() { return ['file1.js', 'file2.js']; }"
+        elif "Generate C++ code" in prompt:
+            return "int add(int a, int b) { return a + b; }"
+        elif "Generate HTML code" in prompt:
+            return "<html><body><h1>Hello</h1></body></html>"
+        elif "Generate CSS code" in prompt:
+            return "button { color: blue; }"
+        elif "Generate a Python unit test" in prompt:
+            return "import os\ndef test_list_files():\n    result = list_files()\n    assert isinstance(result, list)"
         elif "Generate a JavaScript unit test" in prompt:
             return "test('lists files', () => { expect(listFiles()).toHaveLength(2); });"
-        elif "Fix this JavaScript code" in prompt:
-            return "function listFiles() { return ['file1.js']; }"
+        elif "Generate a C++ unit test" in prompt:
+            return "#include <gtest/gtest.h>\nTEST(AddTest, Positive) { ASSERT_EQ(5, add(2, 3)); }"
+        elif "Fix this" in prompt:
+            if "Python" in prompt:
+                return "import os\ndef list_files():\n    return os.listdir('.') if os.listdir('.') else []"
+            elif "JavaScript" in prompt:
+                return "function listFiles() { return ['file1.js']; }"
+            elif "C++" in prompt:
+                return "int add(int a, int b) { return a + b; }"
         return "Mock response"
 
 class TestAgents(unittest.TestCase):
@@ -167,6 +178,40 @@ class TestAgents(unittest.TestCase):
         self.assertEqual(status, "debugged")
         self.assertIsInstance(result, CodeOutput)
         self.assertTrue("function" in result.code or "=>" in result.code, "Should remain JavaScript")
+
+    def test_generator_cpp(self):
+        generator = Generator(self.task_id, self.session_id, self.model_manager)
+        task_cpp = Task(
+            task_id=self.task_id,
+            description="Add two numbers",
+            parameters={"language": "cpp", "generate_tests": True}
+        )
+        status, result = generator.process_task(task_cpp)
+        self.assertEqual(status, "generated")
+        self.assertTrue("int" in result.code or "return" in result.code, "Should generate C++ syntax")
+        self.assertTrue("TEST" in result.tests or "ASSERT" in result.tests, "Should generate gtest syntax")
+
+    def test_generator_html(self):
+        generator = Generator(self.task_id, self.session_id, self.model_manager)
+        task_html = Task(
+            task_id=self.task_id,
+            description="Create a simple webpage",
+            parameters={"language": "html"}
+        )
+        status, result = generator.process_task(task_html)
+        self.assertEqual(status, "generated")
+        self.assertTrue("<html" in result.code or "<div" in result.code, "Should generate HTML syntax")
+
+    def test_generator_css(self):
+        generator = Generator(self.task_id, self.session_id, self.model_manager)
+        task_css = Task(
+            task_id=self.task_id,
+            description="Style a button",
+            parameters={"language": "css"}
+        )
+        status, result = generator.process_task(task_css)
+        self.assertEqual(status, "generated")
+        self.assertTrue("{" in result.code and "}" in result.code, "Should generate CSS syntax")
 
 if __name__ == "__main__":
     output_file = "test_agents_output.txt"

@@ -2,6 +2,7 @@
 from seclorum.agents.base import Agent
 from seclorum.models import Task, CodeOutput, create_model_manager, ModelManager
 from seclorum.agents.memory_manager import MemoryManager
+from seclorum.languages import LANGUAGE_CONFIG
 
 class Generator(Agent):
     def __init__(self, task_id: str, session_id: str, model_manager: ModelManager, memory: MemoryManager = None):
@@ -14,36 +15,21 @@ class Generator(Agent):
 
     def process_task(self, task: Task) -> tuple[str, CodeOutput]:
         self.log_update(f"Generating code for Task {task.task_id}: {task.description}")
-        language = task.parameters.get("language", "python").lower()  # Default to Python
+        language = task.parameters.get("language", "python").lower()
+        config = LANGUAGE_CONFIG.get(language, LANGUAGE_CONFIG["python"])  # Fallback to Python
 
-        if language == "javascript":
-            code_prompt = (
-                f"Generate JavaScript code to {task.description}. "
-                "Return only the raw, executable JavaScript code without Markdown, comments, or explanations."
-            )
-            test_prompt = (
-                f"Generate a JavaScript unit test (using Jest syntax) for this code:\n{{code}}\n"
-                "Return only the raw, executable test code without Markdown, comments, or explanations."
-            )
-        else:  # Default to Python
-            code_prompt = (
-                f"Generate Python code to {task.description}. "
-                "Return only the raw, executable Python code without Markdown, comments, or explanations."
-            )
-            test_prompt = (
-                f"Generate a Python unit test for this code:\n{{code}}\n"
-                "Return only the raw, executable Python test code without Markdown, comments, or explanations."
-            )
-
+        code_prompt = config["code_prompt"].format(description=task.description)
         code = self.model.generate(code_prompt).strip()
-        tests = None
-        if task.parameters.get("generate_tests", False):
-            tests = self.model.generate(test_prompt.format(code=code)).strip()
 
-        # Clean up code (remove any stray markers)
-        code = code.replace("```javascript", "").replace("```python", "").replace("```", "").strip()
+        tests = None
+        if task.parameters.get("generate_tests", False) and config["test_prompt"]:
+            test_prompt = config["test_prompt"].format(code=code)
+            tests = self.model.generate(test_prompt).strip()
+
+        # Clean up code
+        code = code.replace(f"```{language}", "").replace("```", "").strip()
         if tests:
-            tests = tests.replace("```javascript", "").replace("```python", "").replace("```", "").strip()
+            tests = tests.replace(f"```{language}", "").replace("```", "").strip()
 
         result = CodeOutput(code=code, tests=tests)
         self.log_update(f"Generated {language} code:\n{code}")
