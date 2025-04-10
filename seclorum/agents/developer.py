@@ -1,6 +1,6 @@
 # seclorum/agents/developer.py
 from typing import Tuple, Any
-from seclorum.agents.base import AbstractAggregate
+from seclorum.agents.base import Aggregate
 from seclorum.models import Task, create_model_manager
 from seclorum.agents.generator import Generator
 from seclorum.agents.tester import Tester
@@ -9,9 +9,9 @@ from seclorum.agents.architect import Architect
 from seclorum.agents.debugger import Debugger
 from typing import Any, Dict, List, Optional, Tuple, Set
 
-class Developer(AbstractAggregate):
+class Developer(Aggregate):
     def __init__(self, session_id: str, model_manager=None):
-        super().__init__(session_id)
+        super().__init__(session_id, model_manager)  # Pass model_manager to Aggregate
         self.name = "Developer"
         self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="codellama")
         self.setup_workflow()

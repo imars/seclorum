@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple, Set
 from collections import defaultdict
 from seclorum.models import Task, TestResult, CodeOutput
 from seclorum.utils.logger import LoggerMixin
+from seclorum.models.manager import ModelManager, create_model_manager
 from seclorum.core.filesystem import FileSystemManager
 from seclorum.agents.memory_manager import MemoryManager
 
@@ -31,9 +32,44 @@ class AbstractAgent(ABC, LoggerMixin):
     def commit_changes(self, message: str) -> None:
         self.fs_manager.commit_changes(message)
 
-class AbstractAggregate(AbstractAgent):
-    def __init__(self, session_id: str):
-        super().__init__("Aggregate", session_id)
+# seclorum/agents/base.py (partial update for Agent class)
+class Agent(AbstractAgent):
+    def __init__(self, name: str, session_id: str, model_manager: Optional[ModelManager] = None, model_name: str = "LLaMA-3.2-latest"):
+        super().__init__(name, session_id)
+        # Initialize with a default model if none provided
+        self.model = model_manager or create_model_manager(provider="ollama", model_name=model_name)
+        self.available_models = {"default": self.model}  # Dictionary to store multiple models
+        self.current_model_key = "default"  # Track the active model
+        self.log_update(f"Agent {name} initialized with model {self.model.model_name}")
+
+    def add_model(self, model_key: str, model_manager: ModelManager) -> None:
+        """Add a new model to the agent's model pool."""
+        self.available_models[model_key] = model_manager
+        self.log_update(f"Added model '{model_key}' to {self.name}: {model_manager.model_name}")
+
+    def switch_model(self, model_key: str) -> None:
+        """Switch the active model for inference."""
+        if model_key not in self.available_models:
+            raise ValueError(f"Model '{model_key}' not found in available models: {list(self.available_models.keys())}")
+        self.current_model_key = model_key
+        self.model = self.available_models[model_key]
+        self.log_update(f"Switched {self.name} to model '{model_key}': {self.model.model_name}")
+
+    def select_model(self, task: Task) -> None:
+        """Intelligently select a model based on task requirements."""
+        prompt = (
+            f"Given the task '{task.description}', available models: {list(self.available_models.keys())}, "
+            "which model should be used? Return only the model key."
+        )
+        model_key = self.infer(prompt).strip()
+        if model_key in self.available_models:
+            self.switch_model(model_key)
+        else:
+            self.log_update(f"Model '{model_key}' not found, sticking with '{self.current_model_key}'")
+
+class Aggregate(Agent):
+    def __init__(self, session_id: str, model_manager=None):
+        super().__init__("Aggregate", session_id, model_manager)
         self.agents: Dict[str, AbstractAgent] = {}
         self.graph: Dict[str, List[Tuple[str, Optional[Dict[str, Any]]]]] = defaultdict(list)
         self.tasks: Dict[str, Dict[str, Any]] = {}
@@ -122,52 +158,77 @@ class AbstractAggregate(AbstractAgent):
         final_result: Any = None
         pending_agents: Set[str] = set(self.agents.keys())
         self.logger.info(f"Initial pending agents: {pending_agents}")
+
         while pending_agents:
-            made_progress = False
-            for agent_name in list(pending_agents):
-                if agent_name in self.tasks[task_id]["processed"]:
-                    self.logger.info(f"Agent {agent_name} already processed, skipping")
-                    continue
-                deps = self.graph[agent_name]
-                deps_satisfied = True
-                agent_outputs: Dict[str, Any] = self.tasks[task_id]["outputs"].copy()
-                self.logger.info(f"Dependencies for {agent_name}: {deps}")
-                for dep_name, condition in deps:
-                    if dep_name not in agent_outputs:
-                        self.logger.info(f"Dependency {dep_name} not satisfied for {agent_name}")
-                        deps_satisfied = False
-                        break
-                    dep_output = agent_outputs[dep_name]
-                    # Use _check_condition instead of manual comparison
-                    if not self._check_condition(dep_output["status"], dep_output["result"], condition):
-                        self.logger.info(f"Condition not met for {dep_name} in {agent_name}")
-                        deps_satisfied = False
-                        break
-                    # No need to add to agent_outputs here; it’s already populated
-                if not deps_satisfied:
-                    continue
-                agent = self.agents[agent_name]
-                self.logger.info(f"Building parameters for {agent_name}: {agent_outputs}")
-                new_task = Task(
-                    task_id=task_id,
-                    description=task.description,
-                    parameters=agent_outputs
-                )
-                self.logger.info(f"Processing {agent_name} for Task {task_id}")
-                agent_status, agent_result = agent.process_task(new_task)
-                final_status, final_result = self._propagate(agent_name, agent_status, agent_result, task, stop_at)
-                self.tasks[task_id]["processed"].add(agent_name)
-                made_progress = True
-                if stop_at == agent_name:
-                    self.logger.info(f"Stopping orchestration at {agent_name}")
-                    return final_status, final_result
-            if not made_progress:
-                self.logger.info(f"No progress made with remaining agents {pending_agents}, exiting orchestration")
+            next_agent_name = self.decide_next_step(task, pending_agents)
+            if not next_agent_name:
+                self.logger.info(f"No next step decided, exiting with remaining agents: {pending_agents}")
                 break
-            pending_agents -= self.tasks[task_id]["processed"]
+
+            if next_agent_name in self.tasks[task_id]["processed"]:
+                self.logger.info(f"Agent {next_agent_name} already processed, skipping")
+                pending_agents.remove(next_agent_name)
+                continue
+
+            # Check dependencies
+            deps = self.graph[next_agent_name]
+            agent_outputs: Dict[str, Any] = self.tasks[task_id]["outputs"].copy()
+            deps_satisfied = all(
+                dep_name in agent_outputs and
+                self._check_condition(agent_outputs[dep_name]["status"], agent_outputs[dep_name]["result"], condition)
+                for dep_name, condition in deps
+            )
+            if not deps_satisfied:
+                self.logger.info(f"Dependencies not satisfied for {next_agent_name}, re-evaluating")
+                pending_agents.remove(next_agent_name)  # Temporarily skip, re-evaluate next iteration
+                continue
+
+            # Process the chosen agent
+            agent = self.agents[next_agent_name]
+            self.logger.info(f"Processing {next_agent_name} for Task {task_id}")
+            new_task = Task(task_id=task_id, description=task.description, parameters=agent_outputs)
+            agent_status, agent_result = agent.process_task(new_task)
+            final_status, final_result = self._propagate(next_agent_name, agent_status, agent_result, task, stop_at)
+            self.tasks[task_id]["processed"].add(next_agent_name)
+
+            if stop_at == next_agent_name:
+                self.logger.info(f"Stopping orchestration at {next_agent_name}")
+                return final_status, final_result
+
+            pending_agents.remove(next_agent_name)
             self.logger.info(f"Updated pending agents: {pending_agents}")
 
         if final_status is None or final_result is None:
             raise ValueError(f"No agent processed task {task_id}")
         self.logger.info(f"Orchestration complete, final status: {final_status}")
         return final_status, final_result
+
+    def decide_next_step(self, task: Task, pending_agents: Set[str]) -> Optional[str]:
+        """
+        Decide the next agent to process based on task state and graph dependencies.
+        Returns None if no suitable next step is found.
+        """
+        task_id = task.task_id
+        if task_id not in self.tasks:
+            self.logger.info(f"Task {task_id} not initialized, defaulting to first agent")
+            return next(iter(pending_agents), None)
+
+        # Build prompt for intelligent decision
+        current_state = self.tasks[task_id]
+        prompt = (
+            f"Given the task '{task.description}' and current state:\n"
+            f"Status: {current_state['status']}\n"
+            f"Processed agents: {list(current_state['processed'])}\n"
+            f"Outputs: {current_state['outputs']}\n"
+            f"Pending agents: {list(pending_agents)}\n"
+            f"Graph: {self.graph}\n"
+            "Which agent should process the task next? Return only the agent name or 'None' if no step is clear."
+        )
+        decision = self.infer(prompt).strip()
+        self.logger.info(f"Decided next step for task {task_id}: {decision}")
+
+        # Validate decision
+        if decision == "None" or decision not in pending_agents:
+            self.logger.info(f"No valid next step decided, falling back to first available")
+            return next(iter(pending_agents), None)
+        return decision
