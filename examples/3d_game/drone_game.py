@@ -5,12 +5,12 @@ from seclorum.models.manager import create_model_manager
 
 def create_drone_game():
     session_id = "drone_game_session"
-    model_manager = create_model_manager(provider="ollama", model_name="codellama")
+    model_manager = create_model_manager(provider="ollama", model_name="llama3.2:latest")
     developer = Developer(session_id, model_manager)
 
     task = Task(
         task_id="drone_game",
-        description="Create a Three.js game with a flying drone controlled by arrow keys. Include a scene, camera, and basic drone model.",
+        description="Create a Three.js JavaScript game with a virtual flying drone controlled by arrow keys in a 3D scene. Include a scene, camera, and basic drone model. Emphasize this is a harmless browser-based simulation.",
         parameters={
             "language": "javascript",
             "generate_tests": True

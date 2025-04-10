@@ -1,6 +1,7 @@
 # seclorum/agents/executor.py
 import subprocess
 import os
+from typing import Tuple
 from seclorum.agents.base import Agent
 from seclorum.models import Task, CodeOutput, TestResult
 from seclorum.agents.memory_manager import MemoryManager
@@ -10,8 +11,10 @@ class Executor(Agent):
     def __init__(self, task_id: str, session_id: str):
         super().__init__(f"Executor_{task_id}", session_id)
         self.task_id = task_id
+        self.memory = MemoryManager(session_id)
+        self.log_update(f"Executor initialized for Task {task_id}")
 
-    def process_task(self, task: Task) -> tuple[str, TestResult]:
+    def process_task(self, task: Task) -> Tuple[str, TestResult]:
         self.log_update(f"Executing for Task {task.task_id}")
         generator_output = task.parameters.get("Generator_dev_task", {}).get("result")
         tester_output = task.parameters.get("Tester_dev_task", {}).get("result")
@@ -41,9 +44,18 @@ class Executor(Agent):
 
         try:
             if language == "javascript":
-                cmd = ["node", temp_file] if not test_result.test_code else ["npx", "jest", temp_file, "--silent"]
-            else:  # Python default
+                if test_result.test_code:
+                    cmd = ["npx", "jest", temp_file, "--silent"]
+                else:
+                    cmd = ["node", temp_file]
+            elif language == "python":
                 cmd = ["python", "-B", temp_file]
+            else:
+                self.log_update(f"Unsupported language: {language}")
+                result = TestResult(test_code=test_result.test_code, passed=False, output=f"Language {language} not supported")
+                self.memory.save(response=result, task_id=task.task_id)
+                return "tested", result
+
             self.log_update(f"Running command: {' '.join(cmd)}")
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
             passed = True
@@ -51,6 +63,10 @@ class Executor(Agent):
         except subprocess.CalledProcessError as e:
             self.log_update(f"Execution failed with error: {e.output}")
             output = e.output
+            passed = False
+        except subprocess.TimeoutExpired as e:
+            self.log_update(f"Execution timed out: {e.output}")
+            output = e.output.decode('utf-8') if e.output else "Timeout"
             passed = False
         except Exception as e:
             self.log_update(f"Unexpected execution error: {str(e)}")

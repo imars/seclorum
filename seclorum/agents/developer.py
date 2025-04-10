@@ -1,17 +1,17 @@
 # seclorum/agents/developer.py
 from typing import Tuple, Any
 from seclorum.agents.base import Aggregate
-from seclorum.models import Task, create_model_manager
+from seclorum.models import Task, create_model_manager, CodeOutput, TestResult
 from seclorum.agents.generator import Generator
 from seclorum.agents.tester import Tester
 from seclorum.agents.executor import Executor
 from seclorum.agents.architect import Architect
 from seclorum.agents.debugger import Debugger
-from typing import Any, Dict, List, Optional, Tuple, Set
+from typing import Optional
 
 class Developer(Aggregate):
     def __init__(self, session_id: str, model_manager=None):
-        super().__init__(session_id, model_manager)  # Pass model_manager to Aggregate
+        super().__init__(session_id, model_manager)
         self.name = "Developer"
         self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="codellama")
         self.setup_workflow()
@@ -37,4 +37,23 @@ class Developer(Aggregate):
         return self.orchestrate(task)
 
     def orchestrate(self, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
-        return super().orchestrate(task, stop_at)
+        status, result = super().orchestrate(task, stop_at)
+        self.log_update(f"Orchestration completed with status: {status}")
+
+        # Ensure we return the latest relevant output
+        if status == "planned":
+            # If stuck at planning, force Generator to proceed
+            generator_output = task.parameters.get("Generator_dev_task", {}).get("result")
+            if not generator_output:
+                self.log_update("Forcing Generator to process after Architect")
+                generator = self.agents["Generator_dev_task"]
+                status, result = generator.process_task(task)
+        elif status == "generated":
+            result = task.parameters.get("Generator_dev_task", {}).get("result", result)
+        elif status == "tested":
+            result = task.parameters.get("Executor_dev_task", {}).get("result",
+                     task.parameters.get("Tester_dev_task", {}).get("result", result))
+        elif status == "debugged":
+            result = task.parameters.get("Debugger_dev_task", {}).get("result", result)
+
+        return status, result

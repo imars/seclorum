@@ -16,7 +16,7 @@ class Generator(Agent):
     def process_task(self, task: Task) -> tuple[str, CodeOutput]:
         self.log_update(f"Generating code for Task {task.task_id}: {task.description}")
         language = task.parameters.get("language", "python").lower()
-        config = LANGUAGE_CONFIG.get(language, LANGUAGE_CONFIG["python"])  # Fallback to Python
+        config = LANGUAGE_CONFIG.get(language, LANGUAGE_CONFIG["python"])
 
         code_prompt = config["code_prompt"].format(description=task.description)
         code = self.model.generate(code_prompt).strip()
@@ -26,7 +26,6 @@ class Generator(Agent):
             test_prompt = config["test_prompt"].format(code=code)
             tests = self.model.generate(test_prompt).strip()
 
-        # Clean up code
         code = code.replace(f"```{language}", "").replace("```", "").strip()
         if tests:
             tests = tests.replace(f"```{language}", "").replace("```", "").strip()
