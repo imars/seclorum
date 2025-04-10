@@ -16,16 +16,23 @@ from seclorum.agents.tester import Tester
 from seclorum.agents.executor import Executor
 from seclorum.agents.debugger import Debugger
 
+# tests/test_agents.py (partial update)
 class MockModelManager(ModelManager):
     def __init__(self, model_name: str = "mock"):
         super().__init__(model_name)
     def generate(self, prompt: str, **kwargs) -> str:
         if "Generate Python code" in prompt:
-            return "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]"  # Updated to match output
+            return "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]"
         elif "Generate a Python unit test" in prompt:
             return "import os\ndef test_list_files():\n    result = list_files()\n    assert isinstance(result, list)"
         elif "Fix this Python code" in prompt:
             return "import os\ndef list_files():\n    return os.listdir('.') if os.listdir('.') else []"
+        elif "Generate JavaScript code" in prompt:
+            return "function listFiles() { return ['file1.js', 'file2.js']; }"
+        elif "Generate a JavaScript unit test" in prompt:
+            return "test('lists files', () => { expect(listFiles()).toHaveLength(2); });"
+        elif "Fix this JavaScript code" in prompt:
+            return "function listFiles() { return ['file1.js']; }"
         return "Mock response"
 
 class TestAgents(unittest.TestCase):
