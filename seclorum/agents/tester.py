@@ -8,10 +8,10 @@ class Tester(Agent):
         super().__init__(f"Tester_{task_id}", session_id)
         self.task_id = task_id
         self.model = model_manager
-        self.log_update(f"Tester initialized for Task {task.task_id}")
+        self.log_update(f"Tester initialized for Task {self.task_id}")
 
     def process_task(self, task: Task) -> tuple[str, TestResult]:
-        self.log_update(f"Testing for Task {task.task_id}")
+        self.log_update(f"Testing for Task {self.task_id}")
         generator_output = task.parameters.get("Generator_dev_task", {}).get("result")
 
         if not generator_output or not isinstance(generator_output, CodeOutput):

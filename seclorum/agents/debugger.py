@@ -11,7 +11,7 @@ class Debugger(Agent):
         self.task_id = task_id
         self.model = model_manager
         self.memory = memory or MemoryManager(session_id)
-        self.log_update(f"Debugger initialized for Task {task.task_id}")
+        self.log_update(f"Debugger initialized for Task {self.task_id}")
 
     def process_task(self, task: Task) -> tuple[str, CodeOutput]:
         self.log_update(f"Debugging for Task {task.task_id}")
@@ -40,7 +40,7 @@ class Debugger(Agent):
         self.log_update(f"Fixed {language} code:\n{fixed_code}")
         result = CodeOutput(code=fixed_code, tests=cleaned_tests)
         self.memory.save(response=f"Fixed code:\n{fixed_code}", task_id=task.task_id)
-        self.commit_changes(f"Fixed {language} code for Task {task.task_id}")
+        self.commit_changes(f"Fixed {language} code for Task {self.task_id}")
         return "debugged", result
 
     def _clean_code(self, code: str, comment_prefix: str) -> str:
