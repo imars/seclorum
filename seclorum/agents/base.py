@@ -7,6 +7,7 @@ from seclorum.utils.logger import LoggerMixin
 from seclorum.models.manager import ModelManager, create_model_manager
 from seclorum.core.filesystem import FileSystemManager
 from seclorum.agents.memory_manager import MemoryManager
+from seclorum.agents.remote import Remote
 
 class AbstractAgent(ABC, LoggerMixin):
     def __init__(self, name: str, session_id: str, quiet: bool = False):
@@ -32,7 +33,7 @@ class AbstractAgent(ABC, LoggerMixin):
     def commit_changes(self, message: str) -> None:
         self.fs_manager.commit_changes(message)
 
-class Agent(AbstractAgent):
+class Agent(AbstractAgent, Remote):
     def __init__(self, name: str, session_id: str, model_manager: Optional[ModelManager] = None, model_name: str = "llama3.2:latest"):
         super().__init__(name, session_id)
         self.model = model_manager or create_model_manager(provider="ollama", model_name=model_name)
@@ -65,10 +66,10 @@ class Agent(AbstractAgent):
         else:
             self.log_update(f"Model '{model_key}' not found, sticking with '{self.current_model_key}'")
 
-    def infer(self, prompt: str, **kwargs) -> str:
+    def infer(self, prompt: str, use_remote: bool = False, endpoint: str = "google_ai_studio", **kwargs) -> str:
         """Run inference with the current active model."""
         self.log_update(f"Inferring with model '{self.current_model_key}' on prompt: {prompt[:50]}...")
-        return self.model.generate(prompt, **kwargs)
+        return self.generate(prompt, use_remote=use_remote, endpoint=endpoint, **kwargs)
 
     def process_task(self, task: Task) -> Tuple[str, Any]:
         """Base implementation; override in subclasses."""
