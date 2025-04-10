@@ -22,23 +22,42 @@ class Tester(Agent):
             return "tested", result
 
         code_output = generator_output["result"]
+        language = task.parameters.get("language", "python").lower()  # Default to Python
+
         if code_output.tests:
             test_code = code_output.tests
-            self.log_update(f"Using provided test code:\n{test_code}")
+            self.log_update(f"Using provided {language} test code:\n{test_code}")
         else:
-            test_prompt = (
-                f"Generate a Python unit test for this code:\n{code_output.code}\n"
-                "Return only the raw, executable Python test code without Markdown, comments, or explanations."
-            )
+            if language == "javascript":
+                test_prompt = (
+                    f"Generate a JavaScript unit test (using Jest syntax) for this code:\n{code_output.code}\n"
+                    "Return only the raw, executable JavaScript test code without Markdown, comments, or explanations."
+                )
+            else:  # Python
+                test_prompt = (
+                    f"Generate a Python unit test for this code:\n{code_output.code}\n"
+                    "Return only the raw, executable Python test code without Markdown, comments, or explanations."
+                )
             test_code = self.model.generate(test_prompt).strip()
-            self.log_update(f"Generated new test code:\n{test_code}")
+            self.log_update(f"Generated new {language} test code:\n{test_code}")
 
-        # Make test self-executing
-        test_function_name = test_code.split('def ')[1].split('(')[0]
-        full_test_code = f"{test_code}\n\n{test_function_name}()"
-        self.log_update(f"Full executable test code:\n{full_test_code}")
+        # Clean up test code
+        test_code = test_code.replace("```javascript", "").replace("```python", "").replace("```", "").strip()
 
-        result = TestResult(test_code=full_test_code, passed=False)
+        # Make test self-executing (language-specific)
+        if language == "javascript":
+            # For Jest, wrap in an IIFE to make it executable standalone
+            full_test_code = f"(() => {{\n{test_code}\n}})();"
+        else:  # Python
+            if "def test_" in test_code:
+                test_function_name = test_code.split('def ')[1].split('(')[0]
+                full_test_code = f"{test_code}\n\n{test_function_name}()"
+            else:
+                full_test_code = test_code  # If no function, assume it’s executable
+
+        self.log_update(f"Full executable {language} test code:\n{full_test_code}")
+
+        result = TestResult(test_code=full_test_code, passed=False)  # Executor will determine pass/fail
         self.memory.save(response=result, task_id=task.task_id)
-        self.commit_changes(f"Generated tests for {task.task_id}")
+        self.commit_changes(f"Generated {language} tests for {task.task_id}")
         return "tested", result
