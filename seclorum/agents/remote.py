@@ -9,21 +9,19 @@ class Remote:
     """Mixin to provide optional remote inference capabilities to agents."""
     REMOTE_ENDPOINTS = {
         "google_ai_studio": {
-            "url": "https://api.googleaistudio.com/v1/models/gemini:generate",  # Update with actual if different
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
             "api_key": None,
-            "model": "gemini-1.5-flash",
+            "model": "gemini-2.0-flash",
             "headers": {"Content-Type": "application/json"}
         }
     }
 
-    # Track remote usage (simple rate limiting)
-    _last_remote_call = 0  # Timestamp of last call
-    _remote_call_count = 0  # Calls in the last minute
-    _rate_limit_window = 60  # Seconds (e.g., 1 minute)
-    _max_calls_per_window = 10  # Arbitrary limit; adjust per API docs
+    _last_remote_call = 0
+    _remote_call_count = 0
+    _rate_limit_window = 60
+    _max_calls_per_window = 10
 
     def remote_infer(self, prompt: str, endpoint: str = "google_ai_studio", **kwargs) -> Optional[str]:
-        """Perform inference using a remote endpoint."""
         logger = getattr(self, 'logger', logging.getLogger(f"Agent_{getattr(self, 'name', 'Remote')}"))
 
         endpoint_config = self.REMOTE_ENDPOINTS.get(endpoint)
@@ -36,26 +34,33 @@ class Remote:
             logger.warning(f"No API key configured for {endpoint}")
             return None
 
+        # Updated payload to match Gemini API
         payload = {
-            "prompt": prompt,
-            "model": endpoint_config["model"],
-            "max_tokens": kwargs.get("max_tokens", 512),
-            "temperature": kwargs.get("temperature", 0.7),
-            **kwargs
+            "contents": [{
+                "parts": [{"text": prompt}]
+            }],
+            "generationConfig": {
+                "maxOutputTokens": kwargs.get("max_tokens", 512),
+                "temperature": kwargs.get("temperature", 0.7),
+                **{k: v for k, v in kwargs.items() if k in ["topP", "topK"]}
+            }
         }
         headers = endpoint_config["headers"].copy()
-        headers["Authorization"] = f"Bearer {api_key}"
+        headers["Authorization"] = f"Bearer {api_key}"  # Not needed for Gemini API with ?key=
+
+        # Use query param for API key as per Gemini API convention
+        url = f"{endpoint_config['url']}?key={api_key}"
 
         logger.debug(f"Sending inference request to {endpoint}")
         try:
-            response = requests.post(endpoint_config["url"], json=payload, headers=headers, timeout=10)
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
             response.raise_for_status()
-            result = response.json().get("generated_text", "") or response.json().get("text", "")
+            # Adjust response parsing for Gemini API
+            result = response.json()["candidates"][0]["content"]["parts"][0]["text"]
             logger.debug(f"Remote inference successful: {result[:50]}...")
-            # Update usage tracking
             current_time = time.time()
             if current_time - self._last_remote_call > self._rate_limit_window:
-                self._remote_call_count = 0  # Reset if window has passed
+                self._remote_call_count = 0
             self._remote_call_count += 1
             self._last_remote_call = current_time
             return result.strip()
@@ -64,44 +69,30 @@ class Remote:
             return None
 
     def should_use_remote(self, prompt: str) -> bool:
-        """Decide whether to use remote inference based on conditions."""
         logger = getattr(self, 'logger', logging.getLogger(f"Agent_{getattr(self, 'name', 'Remote')}"))
-
-        # Check local model availability
         has_local_model = hasattr(self, "model") and self.model is not None
-
-        # Check prompt complexity (simple heuristic: length)
         prompt_length = len(prompt)
-        is_complex = prompt_length > 200  # Arbitrary threshold; adjust as needed
-
-        # Check rate limit status
+        is_complex = prompt_length > 200
         current_time = time.time()
         if current_time - self._last_remote_call > self._rate_limit_window:
-            self._remote_call_count = 0  # Reset if window has passed
+            self._remote_call_count = 0
         rate_limit_ok = self._remote_call_count < self._max_calls_per_window
 
-        # Decision logic
         if not has_local_model:
             logger.debug("No local model, preferring remote")
             return rate_limit_ok
         if is_complex:
             logger.debug("Complex prompt, considering remote")
             return rate_limit_ok
-        if rate_limit_ok and prompt_length > 50:  # Small prompts stay local unless rate limit allows
+        if rate_limit_ok and prompt_length > 50:
             logger.debug("Rate limit allows, using remote for moderate prompt")
             return True
         logger.debug("Defaulting to local inference")
         return False
 
     def generate(self, prompt: str, use_remote: Optional[bool] = None, endpoint: str = "google_ai_studio", **kwargs) -> str:
-        """Generate text, smartly choosing between local and remote inference."""
         logger = getattr(self, 'logger', logging.getLogger(f"Agent_{getattr(self, 'name', 'Remote')}"))
-
-        # Allow explicit override
-        if use_remote is not None:
-            should_use_remote = use_remote
-        else:
-            should_use_remote = self.should_use_remote(prompt)
+        should_use_remote = use_remote if use_remote is not None else self.should_use_remote(prompt)
 
         if should_use_remote:
             result = self.remote_infer(prompt, endpoint, **kwargs)
@@ -114,5 +105,4 @@ class Remote:
         raise RuntimeError("No local model available and remote inference failed")
 
     def set_remote_endpoint(self, endpoint: str, config: Dict[str, Any]):
-        """Add or update a remote endpoint configuration."""
         self.REMOTE_ENDPOINTS[endpoint] = config
