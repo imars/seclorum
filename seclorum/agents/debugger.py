@@ -24,24 +24,32 @@ class Debugger(Agent):
         code_output = generator_output
         test_result = executor_output
         error = test_result.output or "Unknown error"
+        language = task.parameters.get("language", "python").lower()
 
-        self.log_update(f"Original code:\n{code_output.code}")
+        self.log_update(f"Original {language} code:\n{code_output.code}")
         self.log_update(f"Original error: {error}")
 
         cleaned_code = self._clean_code(code_output.code)
         cleaned_tests = self._clean_code(code_output.tests) if code_output.tests else None
 
-        debug_prompt = (
-            f"Fix this Python code that failed with error:\n{error}\n"
-            f"Original code:\n{cleaned_code}\n"
-            f"Return only the corrected Python code without Markdown or explanations."
-        )
-        fixed_code = self.model.generate(debug_prompt).strip()
+        if language == "javascript":
+            debug_prompt = (
+                f"Fix this JavaScript code that failed with error:\n{error}\n"
+                f"Original code:\n{cleaned_code}\n"
+                "Return only the corrected JavaScript code without Markdown or explanations."
+            )
+        else:  # Python
+            debug_prompt = (
+                f"Fix this Python code that failed with error:\n{error}\n"
+                f"Original code:\n{cleaned_code}\n"
+                "Return only the corrected Python code without Markdown or explanations."
+            )
 
-        self.log_update(f"Fixed code:\n{fixed_code}")
+        fixed_code = self.model.generate(debug_prompt).strip()
+        self.log_update(f"Fixed {language} code:\n{fixed_code}")
         result = CodeOutput(code=fixed_code, tests=cleaned_tests)
         self.memory.save(response=f"Fixed code:\n{fixed_code}", task_id=task.task_id)
-        self.commit_changes(f"Fixed code for Task {task.task_id}")
+        self.commit_changes(f"Fixed {language} code for Task {task.task_id}")
         return "debugged", result
 
     def _clean_code(self, code: str) -> str:
@@ -52,12 +60,12 @@ class Debugger(Agent):
         in_code_block = False
         for line in lines:
             line = line.strip()
-            if line.startswith("```python"):
+            if line.startswith("```javascript") or line.startswith("```python"):
                 in_code_block = True
                 continue
             elif line.startswith("```") and in_code_block:
                 in_code_block = False
                 continue
-            elif in_code_block or (not line.startswith("#") and not line.startswith("Error:")):
+            elif in_code_block or (not line.startswith("#") and not line.startswith("//") and not line.startswith("Error:")):
                 cleaned.append(line)
         return "\n".join(cleaned).strip()

@@ -119,6 +119,48 @@ class TestAgents(unittest.TestCase):
         agent.switch_model("default")  # Changed from "mock" to "default"
         self.assertEqual(agent.current_model_key, "default", "Should switch back to default model")
 
+    def test_generator_javascript(self):
+        generator = Generator(self.task_id, self.session_id, self.model_manager)
+        task_js = Task(
+            task_id=self.task_id,
+            description="List files in a directory",
+            parameters={"language": "javascript", "generate_tests": True}
+        )
+        status, result = generator.process_task(task_js)
+        self.assertEqual(status, "generated")
+        self.assertIsInstance(result, CodeOutput)
+        self.assertTrue("function" in result.code or "=>" in result.code, "Should generate JavaScript syntax")
+        self.assertTrue("test(" in result.tests or "describe(" in result.tests, "Should generate Jest test syntax")
+
+    def test_tester_javascript(self):
+        tester = Tester(self.task_id, self.session_id, self.model_manager)
+        code_output = CodeOutput(code="function listFiles() { return ['file1.js']; }")
+        task_js = Task(
+            task_id=self.task_id,
+            description="Test code",
+            parameters={"Generator_dev_task": {"status": "generated", "result": code_output}, "language": "javascript"}
+        )
+        status, result = tester.process_task(task_js)
+        self.assertEqual(status, "tested")
+        self.assertIsInstance(result, TestResult)
+        self.assertTrue("test(" in result.test_code or "describe(" in result.test_code, "Should generate Jest test syntax")
+
+    def test_debugger_javascript(self):
+        debugger = Debugger(self.task_id, self.session_id, self.model_manager)
+        test_result = TestResult(test_code="test('lists files', () => { expect(listFiles()).toBeDefined(); });", passed=False, output="ReferenceError")
+        code_output = CodeOutput(code="function listFiles() { return undefinedVar; }")
+        task_js = Task(
+            task_id=self.task_id,
+            description="Debug code",
+            parameters={"Executor_dev_task": {"status": "tested", "result": test_result},
+                        "Generator_dev_task": {"status": "generated", "result": code_output},
+                        "language": "javascript"}
+        )
+        status, result = debugger.process_task(task_js)
+        self.assertEqual(status, "debugged")
+        self.assertIsInstance(result, CodeOutput)
+        self.assertTrue("function" in result.code or "=>" in result.code, "Should remain JavaScript")
+
 if __name__ == "__main__":
     output_file = "test_agents_output.txt"
     original_stdout = sys.stdout
