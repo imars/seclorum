@@ -8,6 +8,7 @@ from seclorum.models.manager import ModelManager, create_model_manager
 from seclorum.core.filesystem import FileSystemManager
 from seclorum.agents.memory_manager import MemoryManager
 from seclorum.agents.remote import Remote
+import logging
 
 class AbstractAgent(ABC, LoggerMixin):
     def __init__(self, name: str, session_id: str, quiet: bool = False):

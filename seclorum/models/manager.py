@@ -9,18 +9,20 @@ import ollama
 logger = logging.getLogger("ModelManager")
 
 class ModelManager(ABC):
+    def __init__(self, model_name: str, provider: str = "ollama", base_url: str = "http://localhost:11434"):
+        self.model_name = model_name
+        self.provider = provider
+        self.base_url = base_url
+        self.logger = logging.getLogger(f"ModelManager_{model_name}")
+
     @abstractmethod
     def generate(self, prompt: str, **kwargs) -> str:
-        """Generate text based on the given prompt with optional parameters."""
         pass
-
-    def __init__(self, model_name: str):
-        self.model_name = model_name
 
 class OllamaModelManager(ModelManager):
     def __init__(self, model_name: str = "codellama", host: Optional[str] = None):
-        super().__init__(model_name)
-        self.host = host or "http://localhost:11434"
+        super().__init__(model_name, provider="ollama", base_url=host or "http://localhost:11434")
+        self.host = self.base_url
         self.client = ollama.Client(host=self.host)
         self.ensure_model_and_server()
 
@@ -51,15 +53,17 @@ class OllamaModelManager(ModelManager):
 
     def generate(self, prompt: str, **kwargs) -> str:
         try:
-            response = self.client.generate(model=self.model_name, prompt=prompt, **kwargs)
+            # Filter kwargs to only those supported by Ollama
+            valid_kwargs = {k: v for k, v in kwargs.items() if k in ['system', 'template', 'context']}
+            response = self.client.generate(model=self.model_name, prompt=prompt, **valid_kwargs)
             return response['response'].strip()
         except Exception as e:
             logger.error(f"Failed to generate with {self.model_name}: {str(e)}")
             raise
 
 class MockModelManager(ModelManager):
-    def __init__(self, model_name: str = "mock"):  # Already correct, but verify
-        super().__init__(model_name)  # Ensure model_name is set via base class
+    def __init__(self, model_name: str = "mock"):
+        super().__init__(model_name, provider="mock")
 
     def generate(self, prompt: str, **kwargs) -> str:
         if "Generate Python code" in prompt:
