@@ -17,10 +17,38 @@ from seclorum.agents.executor import Executor
 from seclorum.agents.debugger import Debugger
 
 # tests/test_agents.py (partial update)
+# tests/test_agents.py (partial update)
 class MockModelManager(ModelManager):
     def __init__(self, model_name: str = "mock"):
         super().__init__(model_name)
     def generate(self, prompt: str, **kwargs) -> str:
+        if "Generate JavaScript code" in prompt and "Three.js" in prompt:
+            return """
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+const geometry = new THREE.BoxGeometry(1, 1, 1);
+const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+const drone = new THREE.Mesh(geometry, material);
+scene.add(drone);
+camera.position.z = 5;
+function animate() {
+    requestAnimationFrame(animate);
+    drone.rotation.x += 0.01;
+    drone.rotation.y += 0.01;
+    renderer.render(scene, camera);
+}
+animate();
+            """
+        elif "Generate a JavaScript unit test" in prompt and "Three.js" in prompt:
+            return """
+test('drone exists in scene', () => {
+    expect(scene.children.length).toBe(1);
+    expect(drone.position.z).toBe(0);
+});
+            """
         if "Generate Python code" in prompt:
             return "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]"
         elif "Generate JavaScript code" in prompt:
