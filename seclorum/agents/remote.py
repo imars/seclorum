@@ -1,4 +1,4 @@
-# seclorum/agents/remote.py
+# seclorum/agents/remote.py (updated)
 import requests
 from typing import Optional, Dict, Any
 import os
@@ -9,9 +9,9 @@ class Remote:
     """Mixin to provide optional remote inference capabilities to agents."""
     REMOTE_ENDPOINTS = {
         "google_ai_studio": {
-            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
             "api_key": None,
-            "model": "gemini-2.0-flash",
+            "model": "gemini-1.5-flash",
             "headers": {"Content-Type": "application/json"}
         }
     }
@@ -34,28 +34,21 @@ class Remote:
             logger.warning(f"No API key configured for {endpoint}")
             return None
 
-        # Updated payload to match Gemini API
         payload = {
-            "contents": [{
-                "parts": [{"text": prompt}]
-            }],
+            "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
                 "maxOutputTokens": kwargs.get("max_tokens", 512),
                 "temperature": kwargs.get("temperature", 0.7),
                 **{k: v for k, v in kwargs.items() if k in ["topP", "topK"]}
             }
         }
-        headers = endpoint_config["headers"].copy()
-        headers["Authorization"] = f"Bearer {api_key}"  # Not needed for Gemini API with ?key=
-
-        # Use query param for API key as per Gemini API convention
+        headers = {"Content-Type": "application/json"}  # Simplified headers
         url = f"{endpoint_config['url']}?key={api_key}"
 
-        logger.debug(f"Sending inference request to {endpoint}")
+        logger.debug(f"Sending inference request to {url} with payload: {payload}")
         try:
             response = requests.post(url, json=payload, headers=headers, timeout=10)
             response.raise_for_status()
-            # Adjust response parsing for Gemini API
             result = response.json()["candidates"][0]["content"]["parts"][0]["text"]
             logger.debug(f"Remote inference successful: {result[:50]}...")
             current_time = time.time()
@@ -66,6 +59,8 @@ class Remote:
             return result.strip()
         except requests.RequestException as e:
             logger.error(f"Remote inference failed: {str(e)}")
+            logger.debug(f"Response status: {e.response.status_code if e.response else 'No response'}")
+            logger.debug(f"Response content: {e.response.text if e.response else 'No content'}")
             return None
 
     def should_use_remote(self, prompt: str) -> bool:
