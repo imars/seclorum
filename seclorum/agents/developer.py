@@ -36,12 +36,10 @@ class Developer(Aggregate):
         self.log_update(f"Developer processing Task {task.task_id}")
         return self.orchestrate(task)
 
-    # seclorum/agents/developer.py (merged orchestrate)
     def orchestrate(self, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
         status, result = super().orchestrate(task, stop_at)
         self.log_update(f"Orchestration completed with status: {status}")
 
-        # Force progression if stopped early or to ensure complete workflow
         if status == "planned" and "Generator_dev_task" in self.agents:
             self.log_update("Forcing Generator to process after Architect")
             generator = self.agents["Generator_dev_task"]
@@ -53,6 +51,10 @@ class Developer(Aggregate):
             tester = self.agents["Tester_dev_task"]
             status, result = tester.process_task(task)
             self.log_update(f"Forced Tester, new status: {status}")
+        elif status == "generated" and not task.parameters.get("generate_tests", False):
+            result = task.parameters.get("Generator_dev_task", {}).get("result", result)
+            self.log_update("No tests requested, stopping at Generator")
+            return status, result  # Stop here if no tests
 
         if status == "tested" and "Executor_dev_task" in self.agents:
             self.log_update("Forcing Executor to process after Tester")
@@ -66,7 +68,6 @@ class Developer(Aggregate):
             status, result = debugger.process_task(task)
             self.log_update(f"Forced Debugger, new status: {status}")
 
-        # Ensure the correct result is returned based on final status
         if status == "generated":
             result = task.parameters.get("Generator_dev_task", {}).get("result", result)
         elif status == "tested":

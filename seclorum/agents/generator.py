@@ -22,18 +22,18 @@ class Generator(Agent):
         code_prompt = config["code_prompt"].format(description=task.description)
         use_remote = task.parameters.get("use_remote", None)
         code = self.infer(code_prompt, use_remote=use_remote)
+        self.log_update(f"Raw generated code:\n{code}")
 
         tests = None
         if task.parameters.get("generate_tests", False) and config["test_prompt"]:
             test_prompt = config["test_prompt"].format(code=code)
             tests = self.infer(test_prompt, use_remote=use_remote)
+            self.log_update(f"Generated tests:\n{tests}")
 
         result = CodeOutput(code=code, tests=tests)
-        self.log_update(f"Generated {language} code:\n{code}")
-        if tests:
-            self.log_update(f"Generated {language} tests:\n{tests}")
+        self.log_update(f"CodeOutput created: {result}")
         self.memory.save(response=result, task_id=task.task_id)
-        task.parameters["Generator_dev_task"] = {"status": "generated", "result": result}  # Ensure storage
+        task.parameters["Generator_dev_task"] = {"status": "generated", "result": result}
         self.commit_changes(f"Generated {language} code and tests for {task.task_id}")
         return "generated", result
 
