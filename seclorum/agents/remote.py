@@ -87,6 +87,8 @@ class Remote:
 
     def generate(self, prompt: str, use_remote: Optional[bool] = None, endpoint: str = "google_ai_studio", **kwargs) -> str:
         logger = getattr(self, 'logger', logging.getLogger(f"Agent_{getattr(self, 'name', 'Remote')}"))
+
+        # Use explicit use_remote if provided, else fall back to decision logic
         should_use_remote = use_remote if use_remote is not None else self.should_use_remote(prompt)
 
         if should_use_remote:
