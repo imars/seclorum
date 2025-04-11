@@ -26,44 +26,59 @@ class Executor(Agent):
     def execute_with_jsdom(self, code: str, temp_file: str) -> Tuple[bool, str]:
         """Execute JavaScript code in a jsdom environment with Three.js support."""
         jsdom_script = """
-const { JSDOM } = require('jsdom');
+const { JSDOM, VirtualConsole } = require('jsdom');
 const THREE = require('three');
 const fs = require('fs');
+const canvas = require('canvas');
 
-// Mock browser globals for Node.js
-global.requestAnimationFrame = (cb) => setTimeout(cb, 16); // ~60fps
-global.window = { innerWidth: 800, innerHeight: 600 }; // Mock window dimensions
-global.document = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-  runScripts: 'dangerously',
+const virtualConsole = new VirtualConsole();
+virtualConsole.on('error', (err) => console.error('JSDOM Error:', err));
+virtualConsole.on('jsdomError', (err) => console.error('jsdomError:', err));
+
+const dom = new JSDOM('<!DOCTYPE html><body></body>', {
+  virtualConsole,
   resources: 'usable',
+  runScripts: 'dangerously',
   pretendToBeVisual: true
-}).window.document;
+});
+
+const { window } = dom;
+global.window = window;
+global.document = window.document;
 global.navigator = { userAgent: 'node.js' };
 
-// Attach Three.js to global scope
-global.THREE = THREE;
-global.window.THREE = THREE;
+window.innerWidth = 800;
+window.innerHeight = 600;
 
-// Capture console output and errors
+window.requestAnimationFrame = (callback) => setTimeout(callback, 1000 / 60);
+
+window.HTMLCanvasElement.prototype.getContext = function (type) {
+  if (type === 'webgl') {
+    return canvas.createCanvas(this.width, this.height).getContext('webgl');
+  }
+  return null;
+};
+
+global.THREE = THREE;
+window.THREE = THREE;
+
 let consoleOutput = '';
 const originalConsoleLog = console.log;
 console.log = (...args) => {
   consoleOutput += args.join(' ') + '\\n';
   originalConsoleLog(...args);
 };
-process.on('uncaughtException', (err) => {
-  consoleOutput += 'Uncaught Exception: ' + err.stack + '\\n';
-  fs.writeFileSync('{temp_file}.out', consoleOutput);
-  process.exit(1);
-});
+console.error = (...args) => {
+  consoleOutput += 'Error: ' + args.join(' ') + '\\n';
+  originalConsoleLog(...args);
+};
 
 try {
   const userCode = fs.readFileSync('{temp_file}', 'utf8');
-  eval(userCode); // Run code in global scope
+  eval(userCode);
 
-  // Validate execution
   if (typeof global.animate === 'function') {
-    global.animate(); // Run one frame
+    global.animate();
     console.log('Execution successful: animation ran');
   } else if (global.THREE && global.THREE.Scene) {
     console.log('Execution successful: Three.js scene detected');
@@ -71,11 +86,11 @@ try {
     console.log('No detectable functionality');
   }
 } catch (e) {
-  consoleOutput += 'Execution error: ' + e.stack + '\\n';
+  console.error('Execution error:', e.stack);
 }
 
 fs.writeFileSync('{temp_file}.out', consoleOutput);
-process.exit(consoleOutput.includes('error') || consoleOutput.includes('Exception') ? 1 : 0);
+process.exit(consoleOutput.includes('Error') ? 1 : 0);
 """.format(temp_file=temp_file)
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as js_file:
@@ -91,7 +106,7 @@ process.exit(consoleOutput.includes('error') || consoleOutput.includes('Exceptio
                 timeout=15
             )
             output += open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else ""
-            passed = "error" not in output.lower() and "exception" not in output.lower()
+            passed = "Error" not in output
             self.log_update(f"jsdom output: {output}")
         except subprocess.CalledProcessError as e:
             output = (e.output or "No output") + (open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else "")
