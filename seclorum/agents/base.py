@@ -11,13 +11,21 @@ from seclorum.agents.remote import Remote
 import logging
 
 class AbstractAgent(ABC, LoggerMixin):
+    _memory_cache = {}  # Class-level cache for MemoryManager
+
     def __init__(self, name: str, session_id: str, quiet: bool = False):
         self.name: str = name
         super().__init__()
         self.session_id: str = session_id
         self.active: bool = False
         self.fs_manager = FileSystemManager()
-        self.memory = MemoryManager(session_id)
+        self.memory = self.get_or_create_memory(session_id)
+
+    @classmethod
+    def get_or_create_memory(cls, session_id: str) -> MemoryManager:
+        if session_id not in cls._memory_cache:
+            cls._memory_cache[session_id] = MemoryManager(session_id)
+        return cls._memory_cache[session_id]
 
     @abstractmethod
     def process_task(self, task: Task) -> Tuple[str, Any]:
