@@ -13,7 +13,8 @@ class Executor(Agent):
         super().__init__(f"Executor_{task_id}", session_id)
         self.task_id = task_id
         self.log_update(f"Executor initialized for task {task_id}")
-        self.script_dir = os.path.join(os.path.dirname(__file__), "..", "..", "scripts")
+        # Resolve script directory from project root (seclorum)
+        self.script_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "scripts"))
 
     def clean_code(self, code: str) -> Tuple[str, bool]:
         """Extract code from <script> tags if present, return cleaned code and browser flag."""
