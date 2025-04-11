@@ -88,8 +88,8 @@ class Agent(AbstractAgent, Remote):
         raise NotImplementedError("Subclasses must implement process_task")
 
     def store_output(self, task: Task, status: str, result: Any):
-        """Store agent output in task parameters under a generic key."""
-        agent_key = f"{self.name}_output"  # Generic key based on agent name
+        """Store agent output in task parameters with a consistent key."""
+        agent_key = f"{self.name}"  # Use agent name directly as key (e.g., "Generator_dev_task")
         task.parameters[agent_key] = {"status": status, "result": result}
         self.log_update(f"Stored output for {self.name}: {status}, {result}")
 

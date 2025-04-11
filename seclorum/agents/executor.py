@@ -83,8 +83,10 @@ process.exit(consoleOutput.includes('Error') ? 1 : 0);
 
     def process_task(self, task: Task) -> Tuple[str, TestResult]:
         self.log_update(f"Executing task {task.task_id}")
-        generator_output = task.parameters.get("Generator_output", {}).get("result")
-        tester_output = task.parameters.get("Tester_output", {}).get("result")
+        generator_key = next((key for key in task.parameters if key.startswith("Generator_")), None)
+        generator_output = task.parameters.get(generator_key, {}).get("result") if generator_key else None
+        tester_key = next((key for key in task.parameters if key.startswith("Tester_")), None)
+        tester_output = task.parameters.get(tester_key, {}).get("result") if tester_key else None
         language = task.parameters.get("language", "python").lower()
         config = LANGUAGE_CONFIG.get(language, LANGUAGE_CONFIG["python"])
 

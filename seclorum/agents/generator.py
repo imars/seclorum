@@ -47,6 +47,7 @@ class Generator(Agent):
             self.log_update(f"Generated tests:\n{tests}")
 
         result = CodeOutput(code=code, tests=tests)
+        self.store_output(task, "generated", result)  # Uses "Generator_dev_task"
         self.log_update(f"CodeOutput created: {result}")
         self.memory.save(response=result, task_id=task.task_id)
         task.parameters["Generator_dev_task"] = {"status": "generated", "result": result}
