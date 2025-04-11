@@ -5,12 +5,88 @@ from typing import Tuple
 from seclorum.agents.base import Agent
 from seclorum.models import Task, CodeOutput, TestResult
 from seclorum.languages import LANGUAGE_CONFIG
+import re
+import tempfile
+import jsdom  # Requires Python-JavaScript bridge or subprocess with Node.js
 
 class Executor(Agent):
     def __init__(self, task_id: str, session_id: str):
         super().__init__(f"Executor_{task_id}", session_id)
         self.task_id = task_id
         self.log_update(f"Executor initialized for Task {task_id}")
+
+    def clean_code(self, code: str) -> Tuple[str, bool]:
+        """Extract code from <script> tags if present, return cleaned code and browser flag."""
+        script_match = re.search(r'<\s*script[^>]*>(.*?)<\s*/\s*script\s*>', code, re.DOTALL)
+        if script_match:
+            cleaned = script_match.group(1).strip()
+            self.log_update(f"Extracted code from <script> tags:\n{cleaned}")
+            return cleaned, True
+        return code.strip(), False
+
+    def execute_with_jsdom(self, code: str, temp_file: str) -> Tuple[bool, str]:
+        """Execute JavaScript code in a jsdom environment."""
+        # Create a Node.js script to run the code with jsdom
+        jsdom_script = f"""
+const { JSDOM } = require('jsdom');
+const fs = require('fs');
+
+const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {{ runScripts: 'dangerously' }});
+const window = dom.window;
+const document = window.document;
+
+// Capture console output
+let consoleOutput = '';
+const originalConsoleLog = console.log;
+console.log = (...args) => {{
+  consoleOutput += args.join(' ') + '\\n';
+  originalConsoleLog(...args);
+}};
+
+// Load and execute the user code
+const userCode = fs.readFileSync('{temp_file}', 'utf8');
+const scriptEl = document.createElement('script');
+scriptEl.textContent = userCode;
+document.body.appendChild(scriptEl);
+
+// Simulate some drone game interaction (e.g., check if scene is defined)
+let passed = false;
+try {{
+  if (typeof window.THREE !== 'undefined' || typeof window.add === 'function') {{
+    passed = true;
+  }}
+  console.log('Execution result:', passed ? 'Success' : 'No expected functionality detected');
+}} catch (e) {{
+  console.log('Error during execution:', e.message);
+  passed = false;
+}}
+
+fs.writeFileSync('{temp_file}.out', consoleOutput);
+process.exit(passed ? 0 : 1);
+"""
+        # Write the jsdom script to a temp file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as js_file:
+            js_file.write(jsdom_script)
+            js_file_path = js_file.name
+
+        try:
+            self.log_update(f"Running jsdom script: node {js_file_path}")
+            subprocess.check_call(["node", js_file_path], timeout=10)
+            output = open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else "No output captured"
+            passed = True
+        except subprocess.CalledProcessError as e:
+            output = open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else e.output
+            passed = False
+        except subprocess.TimeoutExpired as e:
+            output = e.output.decode('utf-8') if e.output else "Timeout"
+            passed = False
+        finally:
+            if os.path.exists(js_file_path):
+                os.remove(js_file_path)
+            if os.path.exists(f"{temp_file}.out"):
+                os.remove(f"{temp_file}.out")
+
+        return passed, output
 
     def process_task(self, task: Task) -> Tuple[str, TestResult]:
         self.log_update(f"Executing for Task {task.task_id}")
@@ -30,11 +106,12 @@ class Executor(Agent):
         self.log_update(f"Executing code:\n{code_output.code}")
 
         test_result = tester_output if tester_output and isinstance(tester_output, TestResult) else TestResult(test_code="", passed=False)
-        full_code = f"{code_output.code}\n\n{test_result.test_code}" if test_result.test_code else code_output.code
+        clean_code, is_browser_code = self.clean_code(code_output.code)
+        full_code = f"{clean_code}\n\n{self.clean_code(test_result.test_code)[0]}" if test_result.test_code else clean_code
 
         if not full_code.strip():
-            self.log_update("No code to execute")
-            result = TestResult(test_code=test_result.test_code, passed=False, output="No code provided")
+            self.log_update("No code to execute after cleaning")
+            result = TestResult(test_code=test_result.test_code, passed=False, output="No executable code after cleaning")
             self.memory.save(response=result, task_id=task.task_id)
             return "tested", result
 
@@ -47,19 +124,28 @@ class Executor(Agent):
             if language == "javascript":
                 if test_result.test_code:
                     cmd = ["npx", "jest", temp_file, "--silent"]
+                    self.log_update(f"Running Jest command: {' '.join(cmd)}")
+                    output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
+                    passed = True
+                elif is_browser_code or "THREE" in full_code:  # Detect Three.js or script tags
+                    self.log_update("Detected browser-oriented code, using jsdom")
+                    passed, output = self.execute_with_jsdom(full_code, temp_file)
                 else:
                     cmd = ["node", temp_file]
+                    self.log_update(f"Running Node command: {' '.join(cmd)}")
+                    output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
+                    passed = True
             elif language == "python":
                 cmd = ["python", "-B", temp_file]
+                self.log_update(f"Running Python command: {' '.join(cmd)}")
+                output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
+                passed = True
             else:
                 self.log_update(f"Unsupported language: {language}")
                 result = TestResult(test_code=test_result.test_code, passed=False, output=f"Language {language} not supported")
                 self.memory.save(response=result, task_id=task.task_id)
                 return "tested", result
 
-            self.log_update(f"Running command: {' '.join(cmd)}")
-            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
-            passed = True
             self.log_update(f"Execution output: {output}")
         except subprocess.CalledProcessError as e:
             self.log_update(f"Execution failed with error: {e.output}")
@@ -82,6 +168,7 @@ class Executor(Agent):
         self.log_update(f"Final result: passed={result.passed}, output={result.output}")
         self.memory.save(response=result, task_id=task.task_id)
         self.commit_changes(f"Executed {language} code and tests for Task {task.task_id}")
+        task.parameters["Executor_dev_task"] = {"status": "tested", "result": result}
         return "tested", result
 
     def start(self):
