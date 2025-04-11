@@ -12,9 +12,9 @@ class Executor(Agent):
     def __init__(self, task_id: str, session_id: str):
         super().__init__(f"Executor_{task_id}", session_id)
         self.task_id = task_id
-        self.log_update(f"Executor initialized for task {task_id}")
-        # Resolve script directory from project root (seclorum)
-        self.script_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "scripts"))
+        # Adjust path to scripts directory relative to executor.py
+        self.script_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts"))
+        self.log_update(f"Executor initialized for task {task_id}, script_dir={self.script_dir}")
 
     def clean_code(self, code: str) -> Tuple[str, bool]:
         """Extract code from <script> tags if present, return cleaned code and browser flag."""
@@ -30,7 +30,7 @@ class Executor(Agent):
         puppeteer_script = os.path.join(self.script_dir, "run_puppeteer.js")
         if not os.path.exists(puppeteer_script):
             self.log_update(f"Puppeteer script not found at {puppeteer_script}")
-            return False, "Puppeteer script missing"
+            return False, f"Puppeteer script not found at {puppeteer_script}"
 
         try:
             self.log_update(f"Running Puppeteer script: node {puppeteer_script} {temp_file}")
