@@ -33,6 +33,7 @@ class Generator(Agent):
             self.log_update(f"Generated tests:\n{tests}")
 
         result = CodeOutput(code=code, tests=tests)
+        self.log_update(f"Storing CodeOutput: {result}")
         self.store_output(task, "generated", result)  # Use generic storage
         self.commit_changes(f"Generated {language} code for task")
         return "generated", result

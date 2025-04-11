@@ -90,6 +90,7 @@ process.exit(consoleOutput.includes('Error') ? 1 : 0);
         language = task.parameters.get("language", "python").lower()
         config = LANGUAGE_CONFIG.get(language, LANGUAGE_CONFIG["python"])
 
+        self.log_update(f"Available keys in task.parameters: {list(task.parameters.keys())}")
         if not generator_output or not isinstance(generator_output, CodeOutput):
             self.log_update("No valid code from generator")
             result = TestResult(test_code="", passed=False, output="No code provided")
