@@ -4,7 +4,7 @@ import logging
 import os
 from seclorum.agents.developer import Developer
 from seclorum.models import Task
-from seclorum.utils.model_manager import create_model_manager
+from seclorum.models import create_model_manager
 
 # Custom filter for summary mode
 class SummaryFilter(logging.Filter):
@@ -60,7 +60,7 @@ def create_drone_game():
     task.parameters["generate_tests"] = True
 
     # Process task
-    status, result = developer.process(task)
+    status, result = developer.process_task(task)
 
     # Output result
     if isinstance(result, dict) and "code" in result:
