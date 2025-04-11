@@ -4,7 +4,7 @@ import logging
 import unittest
 from seclorum.agents.developer import Developer
 from seclorum.models import Task, CodeOutput, TestResult
-from seclorum.utils.model_manager import create_model_manager
+from seclorum.models.manager import create_model_manager
 
 class TestExecutor(unittest.TestCase):
     def setUp(self):
@@ -22,9 +22,9 @@ class TestExecutor(unittest.TestCase):
         for agent in self.developer.agents.values():
             agent.REMOTE_ENDPOINTS["google_ai_studio"]["api_key"] = self.api_key
 
-        # Define a Three.js task to test Puppeteer execution
+        # Define a Three.js task to force Puppeteer execution
         self.task = Task(
-            task_id="jsdom_test",
+            task_id="puppeteer_test",
             description="Create a simple Three.js JavaScript scene with a rotating cube.",
             parameters={"language": "javascript", "use_remote": True, "generate_tests": True}
         )
@@ -33,7 +33,7 @@ class TestExecutor(unittest.TestCase):
         self.logger.info("Starting Puppeteer execution test")
 
         # Run the developer workflow
-        status, result = self.developer.process(self.task)
+        status, result = self.developer.process_task(self.task)
 
         # Log the final state
         self.logger.info(f"Task completed with status: {status}")
@@ -49,15 +49,14 @@ class TestExecutor(unittest.TestCase):
 
         # Check Executor output
         executor_key = next((k for k in self.task.parameters if k.startswith("Executor_")), None)
-        executor_output = self.task.parameters.get(executor_key, {}).get("result")
+        executor_output = self.task.parameters.get(executor_key, {}).get("result") if executor_key else None
 
-        self.assertIsNotNone(executor_output, "Executor should have run")
+        self.assertIsNotNone(executor_output, "Executor should have run with generate_tests=True")
         self.assertIsInstance(executor_output, TestResult, "Executor should return TestResult")
         self.logger.info(f"Executor result: passed={executor_output.passed}, output={executor_output.output}")
 
         if not executor_output.passed:
             self.assertTrue(executor_output.output.strip(), "Executor should provide a meaningful error message")
-            self.logger.warning(f"Execution failed, but output is detailed: {executor_output.output}")
         else:
             self.assertTrue(executor_output.passed, "Executor should pass with valid Puppeteer execution")
 

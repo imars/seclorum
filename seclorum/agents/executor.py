@@ -3,7 +3,6 @@ import subprocess
 import os
 import re
 import tempfile
-import json
 from typing import Tuple
 from seclorum.agents.base import Agent
 from seclorum.models import Task, CodeOutput, TestResult
@@ -14,6 +13,7 @@ class Executor(Agent):
         super().__init__(f"Executor_{task_id}", session_id)
         self.task_id = task_id
         self.log_update(f"Executor initialized for task {task_id}")
+        self.script_dir = os.path.join(os.path.dirname(__file__), "..", "..", "scripts")
 
     def clean_code(self, code: str) -> Tuple[str, bool]:
         """Extract code from <script> tags if present, return cleaned code and browser flag."""
@@ -25,67 +25,22 @@ class Executor(Agent):
         return code.strip(), False
 
     def execute_with_puppeteer(self, code: str, temp_file: str) -> Tuple[bool, str]:
-        """Execute JavaScript code in a headless browser using Puppeteer."""
-        puppeteer_script = self.memory.retrieve("puppeteer_executor_script") or """
-const puppeteer = require('puppeteer');
-const fs = require('fs');
-
-(async () => {
-  const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] });
-  const page = await browser.newPage();
-
-  // Capture console output
-  let consoleOutput = '';
-  page.on('console', msg => {
-    consoleOutput += msg.text() + '\\n';
-  });
-
-  try {
-    // Set up page with Three.js CDN (for browser context)
-    await page.setContent(`
-      <!DOCTYPE html>
-      <html>
-        <body>
-          <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-          <script>
-            ${fs.readFileSync('{temp_file}', 'utf8')}
-          </script>
-        </body>
-      </html>
-    `);
-
-    // Wait for execution or timeout
-    await page.waitForFunction('typeof animate === "function" || window.THREE', { timeout: 5000 });
-    console.log('Execution successful');
-
-  } catch (e) {
-    consoleOutput += 'Execution error: ' + e.stack + '\\n';
-  } finally {
-    await browser.close();
-    fs.writeFileSync('{temp_file}.out', consoleOutput);
-    process.exit(consoleOutput.includes('error') ? 1 : 0);
-  }
-})();
-""".format(temp_file=temp_file)
-
-        # Store script if not already in memory
-        if not self.memory.retrieve("puppeteer_executor_script"):
-            self.memory.save({"puppeteer_executor_script": puppeteer_script}, self.task_id)
-
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as js_file:
-            js_file.write(puppeteer_script)
-            js_file_path = js_file.name
+        """Execute JavaScript code using an external Puppeteer script."""
+        puppeteer_script = os.path.join(self.script_dir, "run_puppeteer.js")
+        if not os.path.exists(puppeteer_script):
+            self.log_update(f"Puppeteer script not found at {puppeteer_script}")
+            return False, "Puppeteer script missing"
 
         try:
-            self.log_update(f"Running Puppeteer script: node {js_file_path}")
+            self.log_update(f"Running Puppeteer script: node {puppeteer_script} {temp_file}")
             output = subprocess.check_output(
-                ["node", js_file_path],
+                ["node", puppeteer_script, temp_file],
                 stderr=subprocess.STDOUT,
                 text=True,
-                timeout=30  # Longer timeout for browser launch
+                timeout=20
             )
             output += open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else ""
-            passed = "error" not in output.lower()
+            passed = "Error" not in output
             self.log_update(f"Puppeteer output: {output}")
         except subprocess.CalledProcessError as e:
             output = (e.output or "No output") + (open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else "")
@@ -100,9 +55,8 @@ const fs = require('fs');
             passed = False
             self.log_update(f"Puppeteer unexpected error: {output}")
         finally:
-            for file in [js_file_path, f"{temp_file}.out"]:
-                if os.path.exists(file):
-                    os.remove(file)
+            if os.path.exists(f"{temp_file}.out"):
+                os.remove(f"{temp_file}.out")
 
         return passed, output
 
