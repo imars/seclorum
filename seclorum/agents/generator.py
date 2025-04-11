@@ -21,6 +21,10 @@ class Generator(Agent):
 
         code_prompt = config["code_prompt"].format(description=task.description)
         use_remote = task.parameters.get("use_remote", None)
+        if use_remote:
+            self.log_update("Using remote inference (Google AI Studio)")
+        else:
+            self.log_update("Using local inference (Ollama)")
         code = self.infer(code_prompt, use_remote=use_remote)
         self.log_update(f"Raw generated code:\n{code}")
 
