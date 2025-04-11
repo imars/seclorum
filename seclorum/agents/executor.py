@@ -4,14 +4,12 @@ import os
 from typing import Tuple
 from seclorum.agents.base import Agent
 from seclorum.models import Task, CodeOutput, TestResult
-from seclorum.agents.memory_manager import MemoryManager
 from seclorum.languages import LANGUAGE_CONFIG
 
 class Executor(Agent):
     def __init__(self, task_id: str, session_id: str):
         super().__init__(f"Executor_{task_id}", session_id)
         self.task_id = task_id
-        self.memory = MemoryManager(session_id)
         self.log_update(f"Executor initialized for Task {task_id}")
 
     def process_task(self, task: Task) -> Tuple[str, TestResult]:

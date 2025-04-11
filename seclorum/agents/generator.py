@@ -1,16 +1,14 @@
 # seclorum/agents/generator.py
 from seclorum.agents.base import Agent
 from seclorum.models import Task, CodeOutput, create_model_manager, ModelManager
-from seclorum.agents.memory_manager import MemoryManager
 from seclorum.languages import LANGUAGE_CONFIG
 from typing import Tuple
 
 class Generator(Agent):
-    def __init__(self, task_id: str, session_id: str, model_manager: ModelManager, memory: MemoryManager = None):
+    def __init__(self, task_id: str, session_id: str, model_manager: ModelManager):
         super().__init__(f"Generator_{task_id}", session_id)
         self.task_id = task_id
         self.model = model_manager
-        self.memory = memory or MemoryManager(session_id)
         self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
         self.log_update(f"Generator initialized for Task {task_id} with model {self.model_manager.model_name}")
 

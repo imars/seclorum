@@ -1,16 +1,14 @@
 # seclorum/agents/debugger.py
 from seclorum.agents.base import Agent
 from seclorum.models import Task, CodeOutput, TestResult
-from seclorum.agents.memory_manager import MemoryManager
 from seclorum.agents.model_manager import ModelManager
 from seclorum.languages import LANGUAGE_CONFIG
 
 class Debugger(Agent):
-    def __init__(self, task_id: str, session_id: str, model_manager: ModelManager, memory: MemoryManager = None):
+    def __init__(self, task_id: str, session_id: str, model_manager: ModelManager):
         super().__init__(f"Debugger_{task_id}", session_id)
         self.task_id = task_id
         self.model = model_manager
-        self.memory = memory or MemoryManager(session_id)
         self.log_update(f"Debugger initialized for Task {self.task_id}")
 
     def process_task(self, task: Task) -> tuple[str, CodeOutput]:

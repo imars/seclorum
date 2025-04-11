@@ -1,3 +1,3 @@
-from .core import ConversationMemory
+from .core import Memory
 
-__all__ = ["ConversationMemory"]
+__all__ = ["nMemory"]

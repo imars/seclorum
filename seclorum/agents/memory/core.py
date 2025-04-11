@@ -10,7 +10,7 @@ from datetime import datetime
 logger = logging.getLogger("Seclorum")
 logging.basicConfig(level=logging.INFO)
 
-class ConversationMemory:
+class Memory:
     def __init__(self, session_id="default_session", use_json=False):
         self.session_id = session_id
         self.use_json = use_json

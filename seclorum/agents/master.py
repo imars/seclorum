@@ -13,7 +13,6 @@ from seclorum.agents.tester import Tester
 from seclorum.agents.executor import Executor
 from seclorum.agents.debugger import Debugger
 from seclorum.models import Task, CodeOutput, TestResult, create_model_manager
-from seclorum.agents.memory_manager import MemoryManager
 import threading
 import time
 import json
@@ -26,7 +25,7 @@ class MasterNode(Aggregate, RedisMixin):
         RedisMixin.__init__(self, name="MasterNode")
         LifecycleMixin.__init__(self, name="MasterNode", pid_file="seclorum_master.pid")
         self.name = "MasterNode"  # Override AbstractAggregate's default name
-        self.memory = MemoryManager(session_id)  # Set memory first
+        self.memory = Memory(session_id)  # Set memory first
         self.redis_available = require_redis
         self.setup_redis(require_redis)  # Call the mixin method
         self.tasks = self.load_tasks() or {}

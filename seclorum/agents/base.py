@@ -6,7 +6,7 @@ from seclorum.models import Task, TestResult, CodeOutput
 from seclorum.utils.logger import LoggerMixin
 from seclorum.models.manager import ModelManager, create_model_manager
 from seclorum.core.filesystem import FileSystemManager
-from seclorum.agents.memory.core import ConversationMemory  # Updated import
+from seclorum.agents.memory.core import Memory  # Updated import
 from seclorum.agents.remote import Remote
 import logging
 
@@ -23,9 +23,9 @@ class AbstractAgent(ABC, LoggerMixin):
         self.logger.info(f"Using shared MemoryManager for session {session_id}")
 
     @classmethod
-    def get_or_create_memory(cls, session_id: str) -> MemoryManager:
+    def get_or_create_memory(cls, session_id: str) -> Memory:
         if session_id not in cls._memory_cache:
-            cls._memory_cache[session_id] = MemoryManager(session_id)
+            cls._memory_cache[session_id] = Memory(session_id)
         return cls._memory_cache[session_id]
 
     @abstractmethod

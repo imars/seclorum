@@ -1,12 +1,11 @@
 # seclorum/agents/learner.py
 from seclorum.agents.base import AbstractAgent
 from seclorum.models import TrainingSample, PredictionInput, PredictionOutput, Task
-from seclorum.agents.memory_manager import MemoryManager
 # Placeholder for actual model (e.g., Hugging Face)
 from typing import List
 
 class Learner(AbstractAgent):
-    def __init__(self, task_id: str, session_id: str, memory: MemoryManager = None):
+    def __init__(self, task_id: str, session_id: str):
         super().__init__(f"Learner_{task_id}", session_id)
         self.task_id = task_id
         self.memory = memory or MemoryManager(session_id)

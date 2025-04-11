@@ -45,7 +45,7 @@ class Remote:
         headers = {"Content-Type": "application/json"}  # Simplified headers
         url = f"{endpoint_config['url']}?key={api_key}"
 
-        logger.debug(f"Sending inference request to {url} with payload: {payload}")
+        logger.info(f"Sending inference request to {url} with payload: {payload}")
         try:
             response = requests.post(url, json=payload, headers=headers, timeout=10)
             response.raise_for_status()
