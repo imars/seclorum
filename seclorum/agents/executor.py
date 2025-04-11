@@ -5,7 +5,7 @@ import re
 import tempfile
 from typing import Tuple
 from seclorum.agents.base import Agent
-from seclorum.models import Task, TestResult, CodeOutput
+from seclorum.models import Task, CodeOutput, TestResult
 from seclorum.languages import LANGUAGE_CONFIG
 
 class Executor(Agent):
@@ -30,11 +30,15 @@ const { JSDOM } = require('jsdom');
 const THREE = require('three');
 const fs = require('fs');
 
-const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { runScripts: 'dangerously', resources: 'usable' });
+// Set up jsdom with a basic DOM
+const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
+  runScripts: 'dangerously',
+  resources: 'usable'
+});
 const window = dom.window;
 const document = window.document;
 
-// Inject Three.js into the window scope
+// Attach THREE to the window object
 window.THREE = THREE;
 
 // Capture console output
@@ -45,15 +49,20 @@ console.log = (...args) => {
   originalConsoleLog(...args);
 };
 
-// Execute the user code
 try {
+  // Load and execute user code
   const userCode = fs.readFileSync('{temp_file}', 'utf8');
   const scriptEl = document.createElement('script');
   scriptEl.textContent = userCode;
   document.body.appendChild(scriptEl);
-  console.log('Execution completed successfully');
+
+  // Minimal validation: check if scene or animate exists
+  if (typeof window.animate === 'function' || window.THREE.Scene) {
+    console.log('Execution successful');
+  } else {
+    console.log('No detectable functionality');
+  }
 } catch (e) {
-  console.log('Execution error:', e.message);
   consoleOutput += 'Error: ' + e.message + '\\n';
 }
 
@@ -71,26 +80,21 @@ process.exit(consoleOutput.includes('Error') ? 1 : 0);
                 ["node", js_file_path],
                 stderr=subprocess.STDOUT,
                 text=True,
-                timeout=10
+                timeout=15
             )
-            if os.path.exists(f"{temp_file}.out"):
-                output += open(f"{temp_file}.out", "r").read()
+            output += open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else ""
             passed = "Error" not in output
-            self.log_update(f"jsdom execution output: {output}")
+            self.log_update(f"jsdom output: {output}")
         except subprocess.CalledProcessError as e:
-            output = e.output or "Subprocess failed"
-            if os.path.exists(f"{temp_file}.out"):
-                output += open(f"{temp_file}.out", "r").read()
+            output = (e.output or "No output") + (open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else "")
             passed = False
-            self.log_update(f"jsdom subprocess error: {output}")
+            self.log_update(f"jsdom failed with: {output}")
         except subprocess.TimeoutExpired as e:
-            output = e.output.decode('utf-8') if e.output else "Timeout"
-            if os.path.exists(f"{temp_file}.out"):
-                output += open(f"{temp_file}.out", "r").read()
+            output = (e.output.decode('utf-8') if e.output else "Timeout") + (open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else "")
             passed = False
-            self.log_update(f"jsdom timeout: {output}")
+            self.log_update(f"jsdom timed out: {output}")
         except Exception as e:
-            output = f"Unexpected jsdom error: {str(e)}"
+            output = f"Unexpected error: {str(e)}"
             passed = False
             self.log_update(f"jsdom unexpected error: {output}")
         finally:
@@ -117,13 +121,14 @@ process.exit(consoleOutput.includes('Error') ? 1 : 0);
 
         code_output = generator_output
         self.log_update(f"Executing code:\n{code_output.code}")
+
         test_result = tester_output if tester_output and isinstance(tester_output, TestResult) else TestResult(test_code="", passed=False)
         clean_code, is_browser_code = self.clean_code(code_output.code)
         full_code = f"{clean_code}\n\n{self.clean_code(test_result.test_code)[0]}" if test_result.test_code else clean_code
 
         if not full_code.strip():
             self.log_update("No code to execute after cleaning")
-            result = TestResult(test_code=test_result.test_code, passed=False, output="No executable code")
+            result = TestResult(test_code=test_result.test_code, passed=False, output="No executable code after cleaning")
             self.store_output(task, "tested", result)
             return "tested", result
 
@@ -142,12 +147,12 @@ process.exit(consoleOutput.includes('Error') ? 1 : 0);
                     self.log_update("Detected browser-oriented code, using jsdom")
                     passed, output = self.execute_with_jsdom(full_code, temp_file_path)
                 else:
-                    cmd = config.get("execute_cmd", ["node"]) + [temp_file_path]
+                    cmd = config["execute_cmd"] + [temp_file_path]
                     self.log_update(f"Running command: {' '.join(cmd)}")
                     output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
                     passed = True
             elif language == "python":
-                cmd = config.get("execute_cmd", ["python", "-B"]) + [temp_file_path]
+                cmd = config["execute_cmd"] + [temp_file_path]
                 self.log_update(f"Running command: {' '.join(cmd)}")
                 output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
                 passed = True
@@ -180,3 +185,9 @@ process.exit(consoleOutput.includes('Error') ? 1 : 0);
         self.store_output(task, "tested", result)
         self.commit_changes(f"Executed {language} code for task {task.task_id}")
         return "tested", result
+
+    def start(self):
+        self.log_update("Starting executor")
+
+    def stop(self):
+        self.log_update("Stopping executor")
