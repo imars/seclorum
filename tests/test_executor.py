@@ -1,4 +1,4 @@
-# tests/test_jsdom_executor.py
+# tests/test_executor.py
 import os
 import logging
 import unittest
@@ -13,32 +13,32 @@ class TestJsdomExecutor(unittest.TestCase):
         self.api_key = os.getenv("GOOGLE_AI_STUDIO_API_KEY")
         if not self.api_key:
             self.skipTest("Skipping test: GOOGLE_AI_STUDIO_API_KEY not set in environment")
-        
+
         self.session_id = "test_jsdom_executor_session"
         self.model_manager = create_model_manager(provider="ollama", model_name="llama3.2:latest")
         self.developer = Developer(self.session_id, self.model_manager)
-        
+
         # Inject API key for remote inference
         for agent in self.developer.agents.values():
             agent.REMOTE_ENDPOINTS["google_ai_studio"]["api_key"] = self.api_key
-        
-        # Define a simple Three.js task
+
+        # Define a Three.js task with tests to force Executor to run
         self.task = Task(
             task_id="jsdom_test",
-            description="Create a simple Three.js JavaScript scene with a cube.",
-            parameters={"language": "javascript", "use_remote": True, "generate_tests": False}
+            description="Create a simple Three.js JavaScript scene with a rotating cube.",
+            parameters={"language": "javascript", "use_remote": True, "generate_tests": True}
         )
 
     def test_jsdom_execution(self):
         self.logger.info("Starting JSDOM execution test")
-        
+
         # Run the developer workflow
         status, result = self.developer.process_task(self.task)
-        
+
         # Log the final state
         self.logger.info(f"Task completed with status: {status}")
         self.logger.info(f"Final result type: {type(result).__name__}, content: {result}")
-        
+
         # Check Generator output
         generator_key = next((k for k in self.task.parameters if k.startswith("Generator_")), None)
         generator_output = self.task.parameters.get(generator_key, {}).get("result")
@@ -50,20 +50,16 @@ class TestJsdomExecutor(unittest.TestCase):
         # Check Executor output
         executor_key = next((k for k in self.task.parameters if k.startswith("Executor_")), None)
         executor_output = self.task.parameters.get(executor_key, {}).get("result") if executor_key else None
-        
-        if executor_output:
-            self.assertIsInstance(executor_output, TestResult, "Executor should return TestResult")
-            self.logger.info(f"Executor result: passed={executor_output.passed}, output={executor_output.output}")
-            
-            if not executor_output.passed:
-                self.assertNotEqual(executor_output.output, "' JSDOM '", "Should not fail with vague ' JSDOM ' error")
-                self.assertTrue(executor_output.output.strip(), "Executor should provide a meaningful error message")
-            else:
-                self.assertTrue(executor_output.passed, "Executor should pass with valid jsdom execution")
+
+        self.assertIsNotNone(executor_output, "Executor should have run with generate_tests=True")
+        self.assertIsInstance(executor_output, TestResult, "Executor should return TestResult")
+        self.logger.info(f"Executor result: passed={executor_output.passed}, output={executor_output.output}")
+
+        if not executor_output.passed:
+            self.assertNotEqual(executor_output.output, "' JSDOM '", "Should not fail with vague ' JSDOM ' error")
+            self.assertTrue(executor_output.output.strip(), "Executor should provide a meaningful error message")
         else:
-            self.logger.warning("Executor did not run; checking if stopped early")
-            self.assertEqual(status, "generated", "If Executor didn’t run, status should be 'generated'")
-            self.assertIsInstance(result, CodeOutput, "Result should be CodeOutput if stopped early")
+            self.assertTrue(executor_output.passed, "Executor should pass with valid jsdom execution")
 
     def tearDown(self):
         self.logger.info("Test completed")
