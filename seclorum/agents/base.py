@@ -87,6 +87,12 @@ class Agent(AbstractAgent, Remote):
         """Base implementation; override in subclasses."""
         raise NotImplementedError("Subclasses must implement process_task")
 
+    def store_output(self, task: Task, status: str, result: Any):
+        """Store agent output in task parameters under a generic key."""
+        agent_key = f"{self.name}_output"  # Generic key based on agent name
+        task.parameters[agent_key] = {"status": status, "result": result}
+        self.log_update(f"Stored output for {self.name}: {status}, {result}")
+
 class Aggregate(Agent):
     def __init__(self, session_id: str, model_manager=None):
         super().__init__("Aggregate", session_id, model_manager)

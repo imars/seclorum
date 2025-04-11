@@ -13,28 +13,36 @@ class Generator(Agent):
         self.log_update(f"Generator initialized for Task {task_id} with model {self.model_manager.model_name}")
 
     def process_task(self, task: Task) -> Tuple[str, CodeOutput]:
-        self.log_update(f"Generating code for Task {task.task_id}: {task.description}")
+        self.log_update(f"Generating code for task: {task.description}")
         language = task.parameters.get("language", "python").lower()
         config = LANGUAGE_CONFIG.get(language, LANGUAGE_CONFIG["python"])
 
-        description = task.description.lower()
-        if language == "javascript" and any(keyword in description for keyword in ["3d", "three.js", "graphics"]):
-            code_prompt = config["code_prompt"].replace("only if the description mentions 3D, Three.js, or graphics; otherwise, return plain JavaScript code", "")
-        else:
-            code_prompt = "Generate JavaScript code to {description}. Return only the raw, executable JavaScript code without Markdown, comments, or explanations."
-
-        code_prompt = code_prompt.format(description=task.description)
+        code_prompt = config["code_prompt"].format(description=task.description) + (
+            " Return only the raw, executable code suitable for runtime environments, "
+            "without tags, markup, comments, or explanations."
+            if language == "javascript" else ""
+        )
         use_remote = task.parameters.get("use_remote", None)
-        if use_remote:
-            self.log_update("Using remote inference (Google AI Studio)")
-        else:
-            self.log_update("Using local inference (Ollama)")
         code = self.infer(code_prompt, use_remote=use_remote)
         self.log_update(f"Raw generated code:\n{code}")
 
         tests = None
         if task.parameters.get("generate_tests", False) and config["test_prompt"]:
             test_prompt = config["test_prompt"].format(code=code)
+            tests = self.infer(test_prompt, use_remote=use_remote)
+            self.log_update(f"Generated tests:\n{tests}")
+
+        result = CodeOutput(code=code, tests=tests)
+        self.store_output(task, "generated", result)  # Use generic storage
+        self.commit_changes(f"Generated {language} code for task")
+        return "generated", result
+
+        tests = None
+        if task.parameters.get("generate_tests", False) and config["test_prompt"]:
+            test_prompt = config["test_prompt"].format(code=code) + (
+                " Return only the raw Jest test code for Node.js, without Markdown or comments."
+                if language == "javascript" else ""
+            )
             tests = self.infer(test_prompt, use_remote=use_remote)
             self.log_update(f"Generated tests:\n{tests}")
 
