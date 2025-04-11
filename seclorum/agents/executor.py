@@ -1,13 +1,12 @@
 # seclorum/agents/executor.py
 import subprocess
 import os
+import re
 from typing import Tuple
 from seclorum.agents.base import Agent
 from seclorum.models import Task, CodeOutput, TestResult
 from seclorum.languages import LANGUAGE_CONFIG
-import re
 import tempfile
-import jsdom  # Requires Python-JavaScript bridge or subprocess with Node.js
 
 class Executor(Agent):
     def __init__(self, task_id: str, session_id: str):
@@ -27,21 +26,21 @@ class Executor(Agent):
     def execute_with_jsdom(self, code: str, temp_file: str) -> Tuple[bool, str]:
         """Execute JavaScript code in a jsdom environment."""
         # Create a Node.js script to run the code with jsdom
-        jsdom_script = f"""
+        jsdom_script = """
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
 
-const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {{ runScripts: 'dangerously' }});
+const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { runScripts: 'dangerously' });
 const window = dom.window;
 const document = window.document;
 
 // Capture console output
 let consoleOutput = '';
 const originalConsoleLog = console.log;
-console.log = (...args) => {{
+console.log = (...args) => {
   consoleOutput += args.join(' ') + '\\n';
   originalConsoleLog(...args);
-}};
+};
 
 // Load and execute the user code
 const userCode = fs.readFileSync('{temp_file}', 'utf8');
@@ -51,19 +50,20 @@ document.body.appendChild(scriptEl);
 
 // Simulate some drone game interaction (e.g., check if scene is defined)
 let passed = false;
-try {{
-  if (typeof window.THREE !== 'undefined' || typeof window.add === 'function') {{
+try {
+  if (typeof window.THREE !== 'undefined' || typeof window.add === 'function') {
     passed = true;
-  }}
+  }
   console.log('Execution result:', passed ? 'Success' : 'No expected functionality detected');
-}} catch (e) {{
+} catch (e) {
   console.log('Error during execution:', e.message);
   passed = false;
-}}
+}
 
 fs.writeFileSync('{temp_file}.out', consoleOutput);
 process.exit(passed ? 0 : 1);
-"""
+""".format(temp_file=temp_file)  # Inject temp_file path safely
+
         # Write the jsdom script to a temp file
         with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as js_file:
             js_file.write(jsdom_script)
@@ -75,7 +75,7 @@ process.exit(passed ? 0 : 1);
             output = open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else "No output captured"
             passed = True
         except subprocess.CalledProcessError as e:
-            output = open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else e.output
+            output = open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else e.output or "Execution failed"
             passed = False
         except subprocess.TimeoutExpired as e:
             output = e.output.decode('utf-8') if e.output else "Timeout"
@@ -132,47 +132,4 @@ process.exit(passed ? 0 : 1);
                     passed, output = self.execute_with_jsdom(full_code, temp_file)
                 else:
                     cmd = ["node", temp_file]
-                    self.log_update(f"Running Node command: {' '.join(cmd)}")
-                    output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
-                    passed = True
-            elif language == "python":
-                cmd = ["python", "-B", temp_file]
-                self.log_update(f"Running Python command: {' '.join(cmd)}")
-                output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
-                passed = True
-            else:
-                self.log_update(f"Unsupported language: {language}")
-                result = TestResult(test_code=test_result.test_code, passed=False, output=f"Language {language} not supported")
-                self.memory.save(response=result, task_id=task.task_id)
-                return "tested", result
-
-            self.log_update(f"Execution output: {output}")
-        except subprocess.CalledProcessError as e:
-            self.log_update(f"Execution failed with error: {e.output}")
-            output = e.output
-            passed = False
-        except subprocess.TimeoutExpired as e:
-            self.log_update(f"Execution timed out: {e.output}")
-            output = e.output.decode('utf-8') if e.output else "Timeout"
-            passed = False
-        except Exception as e:
-            self.log_update(f"Unexpected execution error: {str(e)}")
-            output = str(e)
-            passed = False
-        finally:
-            if os.path.exists(temp_file):
-                self.log_update(f"Cleaning up {temp_file}")
-                os.remove(temp_file)
-
-        result = TestResult(test_code=test_result.test_code, passed=passed, output=output)
-        self.log_update(f"Final result: passed={result.passed}, output={result.output}")
-        self.memory.save(response=result, task_id=task.task_id)
-        self.commit_changes(f"Executed {language} code and tests for Task {task.task_id}")
-        task.parameters["Executor_dev_task"] = {"status": "tested", "result": result}
-        return "tested", result
-
-    def start(self):
-        self.log_update("Starting executor")
-
-    def stop(self):
-        self.log_update("Stopping executor")
+                    self.log_update
