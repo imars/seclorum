@@ -3,6 +3,7 @@ from seclorum.agents.base import Agent
 from seclorum.models import Task, CodeOutput, create_model_manager, ModelManager
 from seclorum.languages import LANGUAGE_CONFIG
 from typing import Tuple
+import re
 
 class Generator(Agent):
     def __init__(self, task_id: str, session_id: str, model_manager: ModelManager):
