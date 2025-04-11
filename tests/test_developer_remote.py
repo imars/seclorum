@@ -7,7 +7,6 @@ from seclorum.models import Task, create_model_manager, CodeOutput
 
 class TestDeveloperRemote(unittest.TestCase):
     def setUp(self):
-        os.environ["TOKENIZERS_PARALLELISM"] = "false"  # Suppress parallelism warnings
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger("TestDeveloperRemote")
         self.api_key = os.getenv("GOOGLE_AI_STUDIO_API_KEY")
