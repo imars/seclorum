@@ -3,22 +3,17 @@ import argparse
 import logging
 import os
 from seclorum.agents.developer import Developer
-from seclorum.models import Task
+from seclorum.models import Task, CodeOutput
 from seclorum.models import create_model_manager
 
-# Custom filter for summary mode
 class SummaryFilter(logging.Filter):
     def filter(self, record):
-        # Include only key events in summary mode
         key_phrases = [
             "Raw generated code",
-            "Executing code",
             "Execution output",
             "Unexpected execution error",
             "Final result",
             "Task completed",
-            "Forced",
-            "Stored output",
         ]
         return any(phrase in record.msg for phrase in key_phrases)
 
@@ -34,7 +29,7 @@ def setup_logging(summary_mode=False):
         formatter = logging.Formatter("%(levelname)s:%(name)s: %(message)s")
 
     handler.setFormatter(formatter)
-    logger.handlers = [handler]  # Replace default handlers
+    logger.handlers = [handler]  # Clear and set single handler
     return logger
 
 def create_drone_game():
@@ -42,38 +37,32 @@ def create_drone_game():
     parser.add_argument("--summary", action="store_true", help="Output a summary of key events only.")
     args = parser.parse_args()
 
-    # Setup logging based on summary flag
     logger = setup_logging(args.summary)
 
-    # Initialize model manager and developer
     model_manager = create_model_manager(provider="ollama", model_name="llama3.2:latest")
     developer = Developer("drone_game_session", model_manager)
 
-    # Define task
     task_description = (
         "Create a Three.js JavaScript game with a virtual flying drone controlled by arrow keys in a 3D scene. "
         "Include a scene, camera, and basic drone model. Emphasize this is a harmless browser-based simulation."
     )
     task = Task(task_id="drone_game", description=task_description, status="planned")
     task.parameters["language"] = "javascript"
-    task.parameters["use_remote"] = True  # Use Google AI Studio for generation
+    task.parameters["use_remote"] = True
     task.parameters["generate_tests"] = True
 
-    # Process task
     status, result = developer.process_task(task)
 
-    # Output result
-    if isinstance(result, dict) and "code" in result:
-        code = result["code"]
-    elif hasattr(result, "code"):
+    # Ensure result is a CodeOutput with valid code
+    if isinstance(result, CodeOutput) and result.code.strip():
         code = result.code
     else:
-        code = str(result)
+        code = "No valid code generated"
+        logger.error(f"Final result invalid: {result}")
 
-    print(f"Task completed with status: {status}")
-    print(f"Generated JavaScript code:\n{code}")
+    logger.info(f"Task completed with status: {status}")
+    logger.info(f"Raw generated code:\n{code}")
 
-    # Generate HTML file
     html_content = f"""
 <!DOCTYPE html>
 <html>
@@ -92,7 +81,7 @@ def create_drone_game():
     """
     with open("drone_game.html", "w") as f:
         f.write(html_content)
-    print("HTML file 'drone_game.html' created.")
+    logger.info("HTML file 'drone_game.html' created.")
 
 if __name__ == "__main__":
     create_drone_game()
