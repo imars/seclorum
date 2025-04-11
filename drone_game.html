@@ -10,7 +10,6 @@
     <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script>
     const THREE = require('three');
-const OrbitControls = require('three/examples/jsm/controls/OrbitControls');
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -18,42 +17,36 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-const controls = new OrbitControls(camera, renderer.domElement);
-
-const geometry = new THREE.BoxGeometry(2, 1, 2);
-const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+const geometry = new THREE.BoxGeometry(1, 1, 1);
+const material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
 const drone = new THREE.Mesh(geometry, material);
 scene.add(drone);
 
 camera.position.z = 5;
 
 const speed = 0.1;
-let droneVelocity = new THREE.Vector3(0,0,0);
 
 document.addEventListener('keydown', (event) => {
-    switch (event.key) {
-        case 'ArrowUp': droneVelocity.z = speed; break;
-        case 'ArrowDown': droneVelocity.z = -speed; break;
-        case 'ArrowLeft': droneVelocity.x = -speed; break;
-        case 'ArrowRight': droneVelocity.x = speed; break;
-    }
-});
-
-document.addEventListener('keyup', (event) => {
-    switch (event.key) {
-        case 'ArrowUp': if (droneVelocity.z > 0) droneVelocity.z = 0; break;
-        case 'ArrowDown': if (droneVelocity.z < 0) droneVelocity.z = 0; break;
-        case 'ArrowLeft': if (droneVelocity.x < 0) droneVelocity.x = 0; break;
-        case 'ArrowRight': if (droneVelocity.x > 0) droneVelocity.x = 0; break;
-    }
+  switch (event.key) {
+    case 'ArrowUp':
+      drone.position.z += speed;
+      break;
+    case 'ArrowDown':
+      drone.position.z -= speed;
+      break;
+    case 'ArrowLeft':
+      drone.position.x -= speed;
+      break;
+    case 'ArrowRight':
+      drone.position.x += speed;
+      break;
+  }
 });
 
 
 function animate() {
-    requestAnimationFrame(animate);
-    drone.position.x += droneVelocity.x;
-    drone.position.z += droneVelocity.z;
-    renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
 }
 
 animate();
