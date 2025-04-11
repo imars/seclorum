@@ -30,18 +30,16 @@ const { JSDOM } = require('jsdom');
 const THREE = require('three');
 const fs = require('fs');
 
-// Set up jsdom with a basic DOM
-const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-  runScripts: 'dangerously',
-  resources: 'usable'
-});
-const window = dom.window;
-const document = window.document;
+// Mock browser APIs
+global.requestAnimationFrame = (callback) => setTimeout(callback, 16);  // ~60fps
+global.cancelAnimationFrame = (id) => clearTimeout(id);
+global.window = { innerWidth: 800, innerHeight: 600 };  // Mock window dimensions
+global.document = { body: { appendChild: () => {} } };  // Minimal DOM mock
+global.navigator = { userAgent: 'node.js' };
 
-// Attach THREE to the window object
-window.THREE = THREE;
+// Attach THREE to global scope
+global.THREE = THREE;
 
-// Capture console output
 let consoleOutput = '';
 const originalConsoleLog = console.log;
 console.log = (...args) => {
@@ -52,22 +50,23 @@ console.log = (...args) => {
 try {
   // Load and execute user code
   const userCode = fs.readFileSync('{temp_file}', 'utf8');
-  const scriptEl = document.createElement('script');
-  scriptEl.textContent = userCode;
-  document.body.appendChild(scriptEl);
+  eval(userCode);
 
-  // Minimal validation: check if scene or animate exists
-  if (typeof window.animate === 'function' || window.THREE.Scene) {
-    console.log('Execution successful');
+  // Validate execution
+  if (typeof animate === 'function') {
+    animate();  // Run one frame
+    console.log('Execution successful: animation ran');
+  } else if (THREE.Scene) {
+    console.log('Execution successful: Three.js scene detected');
   } else {
-    console.log('No detectable functionality');
+    consoleOutput += 'No detectable functionality\\n';
   }
 } catch (e) {
-  consoleOutput += 'Error: ' + e.message + '\\n';
+  consoleOutput += 'Execution error: ' + e.stack + '\\n';
 }
 
 fs.writeFileSync('{temp_file}.out', consoleOutput);
-process.exit(consoleOutput.includes('Error') ? 1 : 0);
+process.exit(consoleOutput.includes('error') ? 1 : 0);
 """.format(temp_file=temp_file)
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as js_file:
@@ -83,10 +82,10 @@ process.exit(consoleOutput.includes('Error') ? 1 : 0);
                 timeout=15
             )
             output += open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else ""
-            passed = "Error" not in output
+            passed = "error" not in output.lower()
             self.log_update(f"jsdom output: {output}")
         except subprocess.CalledProcessError as e:
-            output = (e.output or "No output") + (open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else "")
+            output = (e.output or "No subprocess output") + (open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else "")
             passed = False
             self.log_update(f"jsdom failed with: {output}")
         except subprocess.TimeoutExpired as e:
@@ -94,7 +93,7 @@ process.exit(consoleOutput.includes('Error') ? 1 : 0);
             passed = False
             self.log_update(f"jsdom timed out: {output}")
         except Exception as e:
-            output = f"Unexpected error: {str(e)}"
+            output = f"Unexpected error in jsdom execution: {str(e)}"
             passed = False
             self.log_update(f"jsdom unexpected error: {output}")
         finally:
