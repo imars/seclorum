@@ -24,15 +24,20 @@ class Executor(Agent):
         return code.strip(), False
 
     def execute_with_jsdom(self, code: str, temp_file: str) -> Tuple[bool, str]:
-        """Execute JavaScript code in a jsdom environment."""
+        """Execute JavaScript code in a jsdom environment with Three.js support."""
         jsdom_script = """
 const { JSDOM } = require('jsdom');
+const THREE = require('three');
 const fs = require('fs');
 
-const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { runScripts: 'dangerously' });
+const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { runScripts: 'dangerously', resources: 'usable' });
 const window = dom.window;
 const document = window.document;
 
+// Inject Three.js into the window scope
+window.THREE = THREE;
+
+// Capture console output
 let consoleOutput = '';
 const originalConsoleLog = console.log;
 console.log = (...args) => {
@@ -40,14 +45,16 @@ console.log = (...args) => {
   originalConsoleLog(...args);
 };
 
+// Execute the user code
 try {
   const userCode = fs.readFileSync('{temp_file}', 'utf8');
   const scriptEl = document.createElement('script');
   scriptEl.textContent = userCode;
   document.body.appendChild(scriptEl);
-  console.log('Execution completed');
+  console.log('Execution completed successfully');
 } catch (e) {
-  console.log('Error during execution:', e.message);
+  console.log('Execution error:', e.message);
+  consoleOutput += 'Error: ' + e.message + '\\n';
 }
 
 fs.writeFileSync('{temp_file}.out', consoleOutput);
@@ -59,31 +66,49 @@ process.exit(consoleOutput.includes('Error') ? 1 : 0);
             js_file_path = js_file.name
 
         try:
-            output = subprocess.check_output(["node", js_file_path], stderr=subprocess.STDOUT, text=True, timeout=10)
-            output += open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else ""
+            self.log_update(f"Running jsdom script: node {js_file_path}")
+            output = subprocess.check_output(
+                ["node", js_file_path],
+                stderr=subprocess.STDOUT,
+                text=True,
+                timeout=10
+            )
+            if os.path.exists(f"{temp_file}.out"):
+                output += open(f"{temp_file}.out", "r").read()
             passed = "Error" not in output
+            self.log_update(f"jsdom execution output: {output}")
         except subprocess.CalledProcessError as e:
-            output = (e.output or "") + (open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else "")
+            output = e.output or "Subprocess failed"
+            if os.path.exists(f"{temp_file}.out"):
+                output += open(f"{temp_file}.out", "r").read()
             passed = False
+            self.log_update(f"jsdom subprocess error: {output}")
+        except subprocess.TimeoutExpired as e:
+            output = e.output.decode('utf-8') if e.output else "Timeout"
+            if os.path.exists(f"{temp_file}.out"):
+                output += open(f"{temp_file}.out", "r").read()
+            passed = False
+            self.log_update(f"jsdom timeout: {output}")
         except Exception as e:
-            output = str(e)
+            output = f"Unexpected jsdom error: {str(e)}"
             passed = False
+            self.log_update(f"jsdom unexpected error: {output}")
         finally:
             for file in [js_file_path, f"{temp_file}.out"]:
                 if os.path.exists(file):
                     os.remove(file)
+
         return passed, output
 
     def process_task(self, task: Task) -> Tuple[str, TestResult]:
         self.log_update(f"Executing task {task.task_id}")
-        generator_key = next((k for k in task.parameters if k.startswith("Generator_")), None)
+        generator_key = next((key for key in task.parameters if key.startswith("Generator_")), None)
         generator_output = task.parameters.get(generator_key, {}).get("result") if generator_key else None
-        tester_key = next((k for k in task.parameters if k.startswith("Tester_")), None)
+        tester_key = next((key for key in task.parameters if key.startswith("Tester_")), None)
         tester_output = task.parameters.get(tester_key, {}).get("result") if tester_key else None
         language = task.parameters.get("language", "python").lower()
         config = LANGUAGE_CONFIG.get(language, LANGUAGE_CONFIG["python"])
 
-        self.log_update(f"Task parameters: {task.parameters}")
         if not generator_output or not isinstance(generator_output, CodeOutput):
             self.log_update(f"No valid code from generator (checked key: {generator_key})")
             result = TestResult(test_code="", passed=False, output="No code provided")
@@ -92,13 +117,13 @@ process.exit(consoleOutput.includes('Error') ? 1 : 0);
 
         code_output = generator_output
         self.log_update(f"Executing code:\n{code_output.code}")
+        test_result = tester_output if tester_output and isinstance(tester_output, TestResult) else TestResult(test_code="", passed=False)
         clean_code, is_browser_code = self.clean_code(code_output.code)
-        test_code = tester_output.test_code if tester_output and isinstance(tester_output, TestResult) else ""
-        full_code = f"{clean_code}\n\n{self.clean_code(test_code)[0]}" if test_code else clean_code
+        full_code = f"{clean_code}\n\n{self.clean_code(test_result.test_code)[0]}" if test_result.test_code else clean_code
 
         if not full_code.strip():
             self.log_update("No code to execute after cleaning")
-            result = TestResult(test_code=test_code, passed=False, output="No executable code")
+            result = TestResult(test_code=test_result.test_code, passed=False, output="No executable code")
             self.store_output(task, "tested", result)
             return "tested", result
 
@@ -107,22 +132,30 @@ process.exit(consoleOutput.includes('Error') ? 1 : 0);
             temp_file_path = temp_file.name
 
         try:
-            if not config.get("execute_cmd"):
-                self.log_update(f"No execution command defined for {language}")
-                result = TestResult(test_code=test_code, passed=False, output=f"Execution not supported for {language}")
-                self.store_output(task, "tested", result)
-                return "tested", result
-
-            if language == "javascript" and (is_browser_code or "window" in full_code or "document" in full_code):
-                self.log_update("Detected browser-oriented code, using jsdom")
-                passed, output = self.execute_with_jsdom(full_code, temp_file_path)
-            else:
-                cmd = config["execute_cmd"] + [temp_file_path]
-                if test_code and config["test_framework"]:
-                    cmd = ["npx", "jest", temp_file_path, "--silent"] if language == "javascript" else cmd
+            if language == "javascript":
+                if test_result.test_code:
+                    cmd = ["npx", "jest", temp_file_path, "--silent"]
+                    self.log_update(f"Running test command: {' '.join(cmd)}")
+                    output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
+                    passed = True
+                elif is_browser_code or "window" in full_code or "document" in full_code:
+                    self.log_update("Detected browser-oriented code, using jsdom")
+                    passed, output = self.execute_with_jsdom(full_code, temp_file_path)
+                else:
+                    cmd = config.get("execute_cmd", ["node"]) + [temp_file_path]
+                    self.log_update(f"Running command: {' '.join(cmd)}")
+                    output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
+                    passed = True
+            elif language == "python":
+                cmd = config.get("execute_cmd", ["python", "-B"]) + [temp_file_path]
                 self.log_update(f"Running command: {' '.join(cmd)}")
                 output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
                 passed = True
+            else:
+                self.log_update(f"Unsupported language: {language}")
+                result = TestResult(test_code=test_result.test_code, passed=False, output=f"Language {language} not supported")
+                self.store_output(task, "tested", result)
+                return "tested", result
 
             self.log_update(f"Execution output: {output}")
         except subprocess.CalledProcessError as e:
@@ -142,7 +175,8 @@ process.exit(consoleOutput.includes('Error') ? 1 : 0);
                 self.log_update(f"Cleaning up {temp_file_path}")
                 os.remove(temp_file_path)
 
-        result = TestResult(test_code=test_code, passed=passed, output=output)
+        result = TestResult(test_code=test_result.test_code, passed=passed, output=output)
+        self.log_update(f"Final result: passed={result.passed}, output={result.output}")
         self.store_output(task, "tested", result)
         self.commit_changes(f"Executed {language} code for task {task.task_id}")
         return "tested", result
