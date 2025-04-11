@@ -1,13 +1,15 @@
+
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>Drone Simulation</title>
-    <style>body { margin: 0; } canvas { display: block; }</style>
+    <title>Drone Game</title>
+    <style>body { margin: 0; }</style>
 </head>
 <body>
-    <script type="module">
-        const THREE = require('three');
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+    const THREE = require('three');
 const OrbitControls = require('three/examples/jsm/controls/OrbitControls');
 
 const scene = new THREE.Scene();
@@ -18,12 +20,12 @@ document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 
-const geometry = new THREE.BoxGeometry(1, 1, 1);
+camera.position.z = 5;
+
+const geometry = new THREE.BoxGeometry();
 const material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
 const drone = new THREE.Mesh(geometry, material);
 scene.add(drone);
-
-camera.position.z = 5;
 
 const speed = 0.1;
 
@@ -54,3 +56,4 @@ animate();
     </script>
 </body>
 </html>
+    
