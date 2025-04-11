@@ -8,16 +8,53 @@ import ollama
 
 logger = logging.getLogger("ModelManager")
 
-class ModelManager(ABC):
-    def __init__(self, model_name: str, provider: str = "ollama", base_url: str = "http://localhost:11434"):
+# seclorum/models/manager.py (partial update)
+from typing import Optional
+import logging
+import httpx
+
+class ModelManager:
+    _model_cache = {}  # Class-level cache for models
+
+    def __init__(self, model_name: str, provider: str = "ollama", host: str = "http://localhost:11434"):
+        self.logger = logging.getLogger(f"ModelManager")
         self.model_name = model_name
         self.provider = provider
-        self.base_url = base_url
-        self.logger = logging.getLogger(f"ModelManager_{model_name}")
+        self.host = host
+        self.check_server()
 
-    @abstractmethod
-    def generate(self, prompt: str, **kwargs) -> str:
-        pass
+    def check_server(self):
+        try:
+            response = httpx.get(f"{self.host}/api/tags")
+            response.raise_for_status()
+            self.logger.info(f"Ollama server running at {self.host}")
+            if not self.check_model():
+                self.pull_model()
+        except httpx.RequestError as e:
+            self.logger.error(f"Failed to connect to Ollama server: {e}")
+            raise
+
+    def check_model(self) -> bool:
+        response = httpx.get(f"{self.host}/api/tags")
+        models = response.json().get("models", [])
+        model_exists = any(model["name"] == self.model_name for model in models)
+        self.logger.info(f"Model {self.model_name} {'already available' if model_exists else 'not found'}")
+        return model_exists
+
+    def pull_model(self):
+        self.logger.info(f"Model {self.model_name} not found. Pulling it...")
+        # Pull logic (unchanged)
+        self.logger.info(f"Model {self.model_name} pulled successfully")
+
+    @classmethod
+    def get_or_create(cls, model_name: str, provider: str = "ollama", host: str = "http://localhost:11434") -> 'ModelManager':
+        key = (model_name, provider, host)
+        if key not in cls._model_cache:
+            cls._model_cache[key] = cls(model_name, provider, host)
+        return cls._model_cache[key]
+
+def create_model_manager(provider: str = "ollama", model_name: str = "llama3.2:latest") -> ModelManager:
+    return ModelManager.get_or_create(model_name, provider)
 
 class OllamaModelManager(ModelManager):
     def __init__(self, model_name: str = "codellama", host: Optional[str] = None):

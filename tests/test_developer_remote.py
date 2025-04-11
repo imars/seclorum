@@ -33,8 +33,7 @@ class TestDeveloperRemote(unittest.TestCase):
         self.logger.info(f"Task completed with status: {status}")
         self.logger.info(f"Generated result: {result}")
 
-        # Assertions
-        self.assertIn(status, ["generated", "tested", "debugged"], "Unexpected status")
+        self.assertEqual(status, "generated", "Expected task to complete at 'generated' status")
         self.assertIsInstance(result, CodeOutput, "Result should be a CodeOutput object")
         self.assertTrue(hasattr(result, "code"), "Result should have a 'code' attribute")
         self.assertTrue("function" in result.code, "Code should contain a function definition")

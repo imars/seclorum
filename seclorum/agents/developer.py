@@ -13,7 +13,7 @@ class Developer(Aggregate):
     def __init__(self, session_id: str, model_manager=None):
         super().__init__(session_id, model_manager)
         self.name = "Developer"
-        self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="codellama")
+        self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
         self.setup_workflow()
 
     def setup_workflow(self):
