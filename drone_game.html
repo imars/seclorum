@@ -17,9 +17,9 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-const geometry = new THREE.BoxGeometry(1, 1, 1);
-const material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-const drone = new THREE.Mesh(geometry, material);
+const droneGeometry = new THREE.BoxGeometry(1, 1, 1);
+const droneMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+const drone = new THREE.Mesh(droneGeometry, droneMaterial);
 scene.add(drone);
 
 camera.position.z = 5;
