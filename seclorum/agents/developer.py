@@ -50,13 +50,18 @@ class Developer(Aggregate):
         self.log_update(f"Available agent keys: generator={generator_key}, tester={tester_key}, executor={executor_key}, debugger={debugger_key}")
         self.log_update(f"Initial task parameters: {task.parameters}")
 
-        if status == "planned" and generator_key:
-            self.log_update(f"Forcing {generator_key} to process after planning")
+        # Ensure Generator runs if not already generated
+        if status not in ["generated", "tested", "debugged"] and generator_key:
+            self.log_update(f"Forcing {generator_key} to process initial generation")
             generator = self.agents[generator_key]
             status, result = generator.process_task(task)
             self.log_update(f"Forced {generator_key}, new status: {status}, result: {result}")
-            self.log_update(f"Post-Generator task parameters: {task.parameters}")
+            if generator_key not in task.parameters or not task.parameters[generator_key].get("result"):
+                self.log_update(f"Error: {generator_key} output not stored in task parameters: {task.parameters}")
+            else:
+                self.log_update(f"Post-{generator_key} task parameters: {task.parameters}")
 
+        # Handle testing if requested
         if status == "generated" and task.parameters.get("generate_tests", False) and tester_key:
             self.log_update(f"Forcing {tester_key} to process after generation")
             tester = self.agents[tester_key]
@@ -66,25 +71,27 @@ class Developer(Aggregate):
             result = task.parameters.get(generator_key, {}).get("result", result) if generator_key else result
             self.log_update("No tests requested, stopping at generation")
             if not isinstance(result, CodeOutput) or not result.code.strip():
-                self.log_update(f"Warning: Invalid or empty Generator output: {result}")
+                self.log_update(f"Warning: Invalid or empty {generator_key} output: {result}")
             return status, result  # Early return with generated code
 
+        # Execute if tested
         if status == "tested" and executor_key:
             self.log_update(f"Forcing {executor_key} to process after testing")
             executor = self.agents[executor_key]
             status, result = executor.process_task(task)
             self.log_update(f"Forced {executor_key}, new status: {status}, result: {result}")
 
+        # Debug if tests failed
         if status == "tested" and isinstance(result, TestResult) and not result.passed and debugger_key:
             self.log_update(f"Forcing {debugger_key} to process due to failed tests")
             debugger = self.agents[debugger_key]
             status, result = debugger.process_task(task)
             self.log_update(f"Forced {debugger_key}, new status: {status}, result: {result}")
 
-        # Fallback to Generator's output if available and valid
+        # Fallback to Generator's output
         final_result = result
         if generator_key and generator_key in task.parameters:
-            generator_result = task.parameters.get(generator_key, {}).get("result")
+            generator_result = task.parameters[generator_key].get("result")
             self.log_update(f"Checking {generator_key} output: {generator_result}")
             if isinstance(generator_result, CodeOutput) and generator_result.code.strip():
                 final_result = generator_result
@@ -92,6 +99,8 @@ class Developer(Aggregate):
                 self.log_update(f"Preserving {generator_key} output as final result: {final_result}")
             else:
                 self.log_update(f"No valid code in {generator_key} output: {generator_result}")
+        else:
+            self.log_update(f"No {generator_key} output found in task parameters: {task.parameters}")
 
         # Adjust status based on result type
         if isinstance(final_result, CodeOutput):
