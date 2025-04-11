@@ -22,7 +22,7 @@ class TestJsdomExecutor(unittest.TestCase):
         for agent in self.developer.agents.values():
             agent.REMOTE_ENDPOINTS["google_ai_studio"]["api_key"] = self.api_key
 
-        # Define a Three.js task with tests to force Executor to run
+        # Define a Three.js task with tests
         self.task = Task(
             task_id="jsdom_test",
             description="Create a simple Three.js JavaScript scene with a rotating cube.",
@@ -39,6 +39,9 @@ class TestJsdomExecutor(unittest.TestCase):
         self.logger.info(f"Task completed with status: {status}")
         self.logger.info(f"Final result type: {type(result).__name__}, content: {result}")
 
+        # Check status
+        self.assertEqual(status, "tested", "Task should complete with 'tested' status")
+
         # Check Generator output
         generator_key = next((k for k in self.task.parameters if k.startswith("Generator_")), None)
         generator_output = self.task.parameters.get(generator_key, {}).get("result")
@@ -49,14 +52,13 @@ class TestJsdomExecutor(unittest.TestCase):
 
         # Check Executor output
         executor_key = next((k for k in self.task.parameters if k.startswith("Executor_")), None)
-        executor_output = self.task.parameters.get(executor_key, {}).get("result") if executor_key else None
-
-        self.assertIsNotNone(executor_output, "Executor should have run with generate_tests=True")
+        executor_output = self.task.parameters.get(executor_key, {}).get("result")
+        self.assertIsNotNone(executor_output, "Executor should have run")
         self.assertIsInstance(executor_output, TestResult, "Executor should return TestResult")
         self.logger.info(f"Executor result: passed={executor_output.passed}, output={executor_output.output}")
 
         if not executor_output.passed:
-            self.assertNotEqual(executor_output.output, "' JSDOM '", "Should not fail with vague ' JSDOM ' error")
+            self.assertNotIn("' JSDOM", executor_output.output, "Should not fail with vague 'JSDOM' error")
             self.assertTrue(executor_output.output.strip(), "Executor should provide a meaningful error message")
         else:
             self.assertTrue(executor_output.passed, "Executor should pass with valid jsdom execution")
