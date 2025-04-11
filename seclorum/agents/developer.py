@@ -32,13 +32,10 @@ class Developer(Aggregate):
         ])
         self.add_agent(debugger, [("Executor_dev_task", {"status": "tested", "passed": False})])
 
-    def process_task(self, task: Task) -> Tuple[str, Any]:
-        self.log_update(f"Developer processing Task {task.task_id}")
-        # Force remote inference for all agents if specified
-        if task.parameters.get("use_remote", False):
-            for agent in self.agents.values():
-                agent.infer = lambda prompt, **kwargs: agent.infer(prompt, use_remote=True, **kwargs)
-        return self.orchestrate(task)
+    def process_task(self, Task: Task) -> Tuple[str, Any]:
+        self.log_update(f"Developer processing Task {Task.task_id}")
+        # No need to override infer; task.parameters["use_remote"] will propagate naturally
+        return self.orchestrate(Task)
 
     def orchestrate(self, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
         status, result = super().orchestrate(task, stop_at)
