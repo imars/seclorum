@@ -30,43 +30,52 @@ const { JSDOM } = require('jsdom');
 const THREE = require('three');
 const fs = require('fs');
 
-// Mock browser APIs
-global.requestAnimationFrame = (callback) => setTimeout(callback, 16);  // ~60fps
-global.cancelAnimationFrame = (id) => clearTimeout(id);
-global.window = { innerWidth: 800, innerHeight: 600 };  // Mock window dimensions
-global.document = { body: { appendChild: () => {} } };  // Minimal DOM mock
+// Mock browser globals for Node.js
+global.requestAnimationFrame = (cb) => setTimeout(cb, 16); // ~60fps
+global.window = { innerWidth: 800, innerHeight: 600 }; // Mock window dimensions
+global.document = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
+  runScripts: 'dangerously',
+  resources: 'usable',
+  pretendToBeVisual: true
+}).window.document;
 global.navigator = { userAgent: 'node.js' };
 
-// Attach THREE to global scope
+// Attach Three.js to global scope
 global.THREE = THREE;
+global.window.THREE = THREE;
 
+// Capture console output and errors
 let consoleOutput = '';
 const originalConsoleLog = console.log;
 console.log = (...args) => {
   consoleOutput += args.join(' ') + '\\n';
   originalConsoleLog(...args);
 };
+process.on('uncaughtException', (err) => {
+  consoleOutput += 'Uncaught Exception: ' + err.stack + '\\n';
+  fs.writeFileSync('{temp_file}.out', consoleOutput);
+  process.exit(1);
+});
 
 try {
-  // Load and execute user code
   const userCode = fs.readFileSync('{temp_file}', 'utf8');
-  eval(userCode);
+  eval(userCode); // Run code in global scope
 
   // Validate execution
-  if (typeof animate === 'function') {
-    animate();  // Run one frame
+  if (typeof global.animate === 'function') {
+    global.animate(); // Run one frame
     console.log('Execution successful: animation ran');
-  } else if (THREE.Scene) {
+  } else if (global.THREE && global.THREE.Scene) {
     console.log('Execution successful: Three.js scene detected');
   } else {
-    consoleOutput += 'No detectable functionality\\n';
+    console.log('No detectable functionality');
   }
 } catch (e) {
   consoleOutput += 'Execution error: ' + e.stack + '\\n';
 }
 
 fs.writeFileSync('{temp_file}.out', consoleOutput);
-process.exit(consoleOutput.includes('error') ? 1 : 0);
+process.exit(consoleOutput.includes('error') || consoleOutput.includes('Exception') ? 1 : 0);
 """.format(temp_file=temp_file)
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as js_file:
@@ -82,10 +91,10 @@ process.exit(consoleOutput.includes('error') ? 1 : 0);
                 timeout=15
             )
             output += open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else ""
-            passed = "error" not in output.lower()
+            passed = "error" not in output.lower() and "exception" not in output.lower()
             self.log_update(f"jsdom output: {output}")
         except subprocess.CalledProcessError as e:
-            output = (e.output or "No subprocess output") + (open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else "")
+            output = (e.output or "No output") + (open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else "")
             passed = False
             self.log_update(f"jsdom failed with: {output}")
         except subprocess.TimeoutExpired as e:
@@ -93,9 +102,9 @@ process.exit(consoleOutput.includes('error') ? 1 : 0);
             passed = False
             self.log_update(f"jsdom timed out: {output}")
         except Exception as e:
-            output = f"Unexpected error in jsdom execution: {str(e)}"
+            output = f"Unexpected error in jsdom setup: {str(e)}"
             passed = False
-            self.log_update(f"jsdom unexpected error: {output}")
+            self.log_update(f"Unexpected jsdom setup error: {output}")
         finally:
             for file in [js_file_path, f"{temp_file}.out"]:
                 if os.path.exists(file):
@@ -123,7 +132,8 @@ process.exit(consoleOutput.includes('error') ? 1 : 0);
 
         test_result = tester_output if tester_output and isinstance(tester_output, TestResult) else TestResult(test_code="", passed=False)
         clean_code, is_browser_code = self.clean_code(code_output.code)
-        full_code = f"{clean_code}\n\n{self.clean_code(test_result.test_code)[0]}" if test_result.test_code else clean_code
+        clean_test_code, _ = self.clean_code(test_result.test_code)
+        full_code = f"{clean_code}\n\n{clean_test_code}" if clean_test_code else clean_code
 
         if not full_code.strip():
             self.log_update("No code to execute after cleaning")
