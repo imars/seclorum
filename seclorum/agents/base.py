@@ -6,7 +6,7 @@ from seclorum.models import Task, TestResult, CodeOutput
 from seclorum.utils.logger import LoggerMixin
 from seclorum.models.manager import ModelManager, create_model_manager
 from seclorum.core.filesystem import FileSystemManager
-from seclorum.agents.memory_manager import MemoryManager
+from seclorum.agents.memory.core import ConversationMemory  # Updated import
 from seclorum.agents.remote import Remote
 import logging
 
@@ -50,7 +50,7 @@ class Agent(AbstractAgent, Remote):
         self.model = model_manager or create_model_manager(provider="ollama", model_name=model_name)
         self.available_models = {"default": self.model}
         self.current_model_key = "default"
-        self.memory = MemoryManager(session_id)
+        self.memory = self.get_or_create_memory(session_id)  # Consistent with AbstractAgent
         self.log_update(f"Agent {name} initialized with model {self.model.model_name}")
 
     def add_model(self, model_key: str, model_manager: ModelManager) -> None:
