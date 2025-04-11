@@ -3,6 +3,7 @@ import subprocess
 import os
 import re
 import tempfile
+import json
 from typing import Tuple
 from seclorum.agents.base import Agent
 from seclorum.models import Task, CodeOutput, TestResult
@@ -23,111 +24,81 @@ class Executor(Agent):
             return cleaned, True
         return code.strip(), False
 
-    def execute_with_jsdom(self, code: str, temp_file: str) -> Tuple[bool, str]:
-        """Execute JavaScript code in a jsdom environment with Three.js support."""
-        jsdom_script = """
-const { JSDOM, VirtualConsole } = require('jsdom');
-const THREE = require('three');
+    def execute_with_puppeteer(self, code: str, temp_file: str) -> Tuple[bool, str]:
+        """Execute JavaScript code in a headless browser using Puppeteer."""
+        puppeteer_script = self.memory.retrieve("puppeteer_executor_script") or """
+const puppeteer = require('puppeteer');
 const fs = require('fs');
-const canvas = require('canvas');
 
-// Enhanced VirtualConsole for detailed logging
-const virtualConsole = new VirtualConsole();
-virtualConsole.on('error', (err) => console.error('JSDOM Error:', err));
-virtualConsole.on('jsdomError', (err) => console.error('jsdomError:', err.stack || err));
+(async () => {
+  const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] });
+  const page = await browser.newPage();
 
-const dom = new JSDOM('<!DOCTYPE html><body></body>', {
-  virtualConsole,
-  resources: 'usable',
-  runScripts: 'dangerously',
-  pretendToBeVisual: true
-});
+  // Capture console output
+  let consoleOutput = '';
+  page.on('console', msg => {
+    consoleOutput += msg.text() + '\\n';
+  });
 
-const { window } = dom;
-global.window = window;
-global.document = window.document;
-global.navigator = { userAgent: 'node.js' };
+  try {
+    // Set up page with Three.js CDN (for browser context)
+    await page.setContent(`
+      <!DOCTYPE html>
+      <html>
+        <body>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+          <script>
+            ${fs.readFileSync('{temp_file}', 'utf8')}
+          </script>
+        </body>
+      </html>
+    `);
 
-window.innerWidth = 800;
-window.innerHeight = 600;
-window.requestAnimationFrame = (callback) => setTimeout(callback, 1000 / 60);
+    // Wait for execution or timeout
+    await page.waitForFunction('typeof animate === "function" || window.THREE', { timeout: 5000 });
+    console.log('Execution successful');
 
-// Polyfill canvas for WebGL
-window.HTMLCanvasElement = canvas.HTMLCanvasElement;
-window.HTMLCanvasElement.prototype.getContext = function(type) {
-  if (type === 'webgl') {
-    const canv = canvas.createCanvas(window.innerWidth, window.innerHeight);
-    return canv.getContext('webgl') || canv.getContext('experimental-webgl');
+  } catch (e) {
+    consoleOutput += 'Execution error: ' + e.stack + '\\n';
+  } finally {
+    await browser.close();
+    fs.writeFileSync('{temp_file}.out', consoleOutput);
+    process.exit(consoleOutput.includes('error') ? 1 : 0);
   }
-  return null;
-};
-
-// Attach Three.js
-global.THREE = THREE;
-window.THREE = THREE;
-
-let consoleOutput = '';
-const originalConsoleLog = console.log;
-console.log = (...args) => {
-  consoleOutput += args.join(' ') + '\\n';
-  originalConsoleLog(...args);
-};
-console.error = (...args) => {
-  consoleOutput += 'Error: ' + args.join(' ') + '\\n';
-  originalConsoleLog(...args);
-};
-
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught:', err.stack);
-});
-
-try {
-  const userCode = fs.readFileSync('{temp_file}', 'utf8');
-  eval(userCode);
-
-  if (typeof global.animate === 'function') {
-    global.animate(); // Run one frame
-    console.log('Execution successful: animation ran');
-  } else if (global.THREE && global.THREE.Scene) {
-    console.log('Execution successful: Three.js scene detected');
-  } else {
-    console.log('No detectable functionality');
-  }
-} catch (e) {
-  console.error('Execution failed:', e.stack);
-}
-
-fs.writeFileSync('{temp_file}.out', consoleOutput);
-process.exit(consoleOutput.includes('Error') ? 1 : 0);
+})();
 """.format(temp_file=temp_file)
 
+        # Store script if not already in memory
+        if not self.memory.retrieve("puppeteer_executor_script"):
+            self.memory.save({"puppeteer_executor_script": puppeteer_script}, self.task_id)
+
         with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as js_file:
-            js_file.write(jsdom_script)
+            js_file.write(puppeteer_script)
             js_file_path = js_file.name
 
         try:
-            self.log_update(f"Running jsdom script: node {js_file_path}")
+            self.log_update(f"Running Puppeteer script: node {js_file_path}")
             output = subprocess.check_output(
                 ["node", js_file_path],
                 stderr=subprocess.STDOUT,
                 text=True,
-                timeout=15
+                timeout=30  # Longer timeout for browser launch
             )
             output += open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else ""
-            passed = "Error" not in output
-            self.log_update(f"jsdom output: {output}")
+            passed = "error" not in output.lower()
+            self.log_update(f"Puppeteer output: {output}")
         except subprocess.CalledProcessError as e:
             output = (e.output or "No output") + (open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else "")
             passed = False
-            self.log_update(f"jsdom failed with: {output}")
+            self.log_update(f"Puppeteer failed with: {output}")
         except subprocess.TimeoutExpired as e:
             output = (e.output.decode('utf-8') if e.output else "Timeout") + (open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else "")
             passed = False
-            self.log_update(f"jsdom timed out: {output}")
+            self.log_update(f"Puppeteer timed out: {output}")
         except Exception as e:
-            output = f"Unexpected error in jsdom setup: {str(e)}"
+            output = f"Unexpected error: {str(e)}"
             passed = False
-            self.log_update(f"Unexpected jsdom setup error: {output}")
+            self.log_update(f"Puppeteer unexpected error: {output}")
         finally:
             for file in [js_file_path, f"{temp_file}.out"]:
                 if os.path.exists(file):
@@ -155,8 +126,7 @@ process.exit(consoleOutput.includes('Error') ? 1 : 0);
 
         test_result = tester_output if tester_output and isinstance(tester_output, TestResult) else TestResult(test_code="", passed=False)
         clean_code, is_browser_code = self.clean_code(code_output.code)
-        clean_test_code, _ = self.clean_code(test_result.test_code)
-        full_code = f"{clean_code}\n\n{clean_test_code}" if clean_test_code else clean_code
+        full_code = f"{clean_code}\n\n{self.clean_code(test_result.test_code)[0]}" if test_result.test_code else clean_code
 
         if not full_code.strip():
             self.log_update("No code to execute after cleaning")
@@ -176,8 +146,8 @@ process.exit(consoleOutput.includes('Error') ? 1 : 0);
                     output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
                     passed = True
                 elif is_browser_code or "window" in full_code or "document" in full_code:
-                    self.log_update("Detected browser-oriented code, using jsdom")
-                    passed, output = self.execute_with_jsdom(full_code, temp_file_path)
+                    self.log_update("Detected browser-oriented code, using Puppeteer")
+                    passed, output = self.execute_with_puppeteer(full_code, temp_file_path)
                 else:
                     cmd = config["execute_cmd"] + [temp_file_path]
                     self.log_update(f"Running command: {' '.join(cmd)}")
