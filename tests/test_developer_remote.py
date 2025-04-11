@@ -13,7 +13,7 @@ class TestDeveloperRemote(unittest.TestCase):
         if not self.api_key:
             self.skipTest("Skipping test: GOOGLE_AI_STUDIO_API_KEY not set in environment")
         self.session_id = "test_developer_remote_session"
-        self.model_manager = create_model_manager(provider="ollama", model_name="codellama")
+        self.model_manager = create_model_manager(provider="ollama", model_name="llama3.2:latest")
         self.developer = Developer(self.session_id, self.model_manager)
         for agent in self.developer.agents.values():
             agent.REMOTE_ENDPOINTS["google_ai_studio"]["api_key"] = self.api_key

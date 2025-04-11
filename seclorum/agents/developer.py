@@ -34,6 +34,10 @@ class Developer(Aggregate):
 
     def process_task(self, task: Task) -> Tuple[str, Any]:
         self.log_update(f"Developer processing Task {task.task_id}")
+        # Force remote inference for all agents if specified
+        if task.parameters.get("use_remote", False):
+            for agent in self.agents.values():
+                agent.infer = lambda prompt, **kwargs: agent.infer(prompt, use_remote=True, **kwargs)
         return self.orchestrate(task)
 
     def orchestrate(self, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:

@@ -20,6 +20,7 @@ class AbstractAgent(ABC, LoggerMixin):
         self.active: bool = False
         self.fs_manager = FileSystemManager()
         self.memory = self.get_or_create_memory(session_id)
+        self.logger.info(f"Using shared MemoryManager for session {session_id}")
 
     @classmethod
     def get_or_create_memory(cls, session_id: str) -> MemoryManager:
