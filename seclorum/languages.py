@@ -9,7 +9,7 @@ LANGUAGE_CONFIG = {
         "file_extension": ".py"
     },
     "javascript": {
-        "code_prompt": "Generate JavaScript code to {description}. Use the global THREE variable from a Three.js CDN (e.g., https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js) instead of imports. Return only the raw, executable JavaScript code without Markdown, comments, or explanations.",
+        "code_prompt": "Generate JavaScript code to {description}. Include the Three.js CDN (e.g., https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js) only if the description mentions 3D, Three.js, or graphics; otherwise, return plain JavaScript code. Return only the raw, executable JavaScript code without Markdown, comments, or explanations.",
         "test_prompt": "Generate a JavaScript unit test (using Jest syntax) for this code:\n{code}\nReturn only the raw, executable test code without Markdown, comments, or explanations.",
         "debug_prompt": "Fix this JavaScript code that failed with error:\n{error}\nOriginal code:\n{code}\nReturn only the corrected JavaScript code without Markdown or explanations.",
         "comment_prefix": "//",

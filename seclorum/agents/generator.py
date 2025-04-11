@@ -11,7 +11,7 @@ class Generator(Agent):
         self.task_id = task_id
         self.model = model_manager
         self.memory = memory or MemoryManager(session_id)
-        self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="codellama")
+        self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
         self.log_update(f"Generator initialized for Task {task_id} with model {self.model_manager.model_name}")
 
     def process_task(self, task: Task) -> Tuple[str, CodeOutput]:
@@ -19,7 +19,13 @@ class Generator(Agent):
         language = task.parameters.get("language", "python").lower()
         config = LANGUAGE_CONFIG.get(language, LANGUAGE_CONFIG["python"])
 
-        code_prompt = config["code_prompt"].format(description=task.description)
+        description = task.description.lower()
+        if language == "javascript" and any(keyword in description for keyword in ["3d", "three.js", "graphics"]):
+            code_prompt = config["code_prompt"].replace("only if the description mentions 3D, Three.js, or graphics; otherwise, return plain JavaScript code", "")
+        else:
+            code_prompt = "Generate JavaScript code to {description}. Return only the raw, executable JavaScript code without Markdown, comments, or explanations."
+
+        code_prompt = code_prompt.format(description=task.description)
         use_remote = task.parameters.get("use_remote", None)
         if use_remote:
             self.log_update("Using remote inference (Google AI Studio)")
