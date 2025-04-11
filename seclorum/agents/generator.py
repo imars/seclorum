@@ -23,20 +23,10 @@ class Generator(Agent):
             if language == "javascript" else ""
         )
         use_remote = task.parameters.get("use_remote", None)
-        code = self.infer(code_prompt, use_remote=use_remote)
+        raw_code = self.infer(code_prompt, use_remote=use_remote)
+        # Strip Markdown tags and extra whitespace
+        code = re.sub(r'```(?:javascript|python|cpp|css|html)?\n|\n```', '', raw_code).strip()
         self.log_update(f"Raw generated code:\n{code}")
-
-        tests = None
-        if task.parameters.get("generate_tests", False) and config["test_prompt"]:
-            test_prompt = config["test_prompt"].format(code=code)
-            tests = self.infer(test_prompt, use_remote=use_remote)
-            self.log_update(f"Generated tests:\n{tests}")
-
-        result = CodeOutput(code=code, tests=tests)
-        self.log_update(f"Storing CodeOutput: {result}")
-        self.store_output(task, "generated", result)  # Use generic storage
-        self.commit_changes(f"Generated {language} code for task")
-        return "generated", result
 
         tests = None
         if task.parameters.get("generate_tests", False) and config["test_prompt"]:
@@ -44,11 +34,13 @@ class Generator(Agent):
                 " Return only the raw Jest test code for Node.js, without Markdown or comments."
                 if language == "javascript" else ""
             )
-            tests = self.infer(test_prompt, use_remote=use_remote)
+            raw_tests = self.infer(test_prompt, use_remote=use_remote)
+            # Strip Markdown tags from tests
+            tests = re.sub(r'```(?:javascript|python|cpp)?\n|\n```', '', raw_tests).strip()
             self.log_update(f"Generated tests:\n{tests}")
 
         result = CodeOutput(code=code, tests=tests)
-        self.store_output(task, "generated", result)  # Uses "Generator_dev_task"
+        self.store_output(task, "generated", result)
         self.log_update(f"CodeOutput created: {result}")
         self.memory.save(response=result, task_id=task.task_id)
         task.parameters["Generator_dev_task"] = {"status": "generated", "result": result}
