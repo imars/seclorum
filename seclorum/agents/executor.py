@@ -31,9 +31,10 @@ const THREE = require('three');
 const fs = require('fs');
 const canvas = require('canvas');
 
+// Enhanced VirtualConsole for detailed logging
 const virtualConsole = new VirtualConsole();
 virtualConsole.on('error', (err) => console.error('JSDOM Error:', err));
-virtualConsole.on('jsdomError', (err) => console.error('jsdomError:', err));
+virtualConsole.on('jsdomError', (err) => console.error('jsdomError:', err.stack || err));
 
 const dom = new JSDOM('<!DOCTYPE html><body></body>', {
   virtualConsole,
@@ -49,16 +50,19 @@ global.navigator = { userAgent: 'node.js' };
 
 window.innerWidth = 800;
 window.innerHeight = 600;
-
 window.requestAnimationFrame = (callback) => setTimeout(callback, 1000 / 60);
 
-window.HTMLCanvasElement.prototype.getContext = function (type) {
+// Polyfill canvas for WebGL
+window.HTMLCanvasElement = canvas.HTMLCanvasElement;
+window.HTMLCanvasElement.prototype.getContext = function(type) {
   if (type === 'webgl') {
-    return canvas.createCanvas(this.width, this.height).getContext('webgl');
+    const canv = canvas.createCanvas(window.innerWidth, window.innerHeight);
+    return canv.getContext('webgl') || canv.getContext('experimental-webgl');
   }
   return null;
 };
 
+// Attach Three.js
 global.THREE = THREE;
 window.THREE = THREE;
 
@@ -73,12 +77,16 @@ console.error = (...args) => {
   originalConsoleLog(...args);
 };
 
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught:', err.stack);
+});
+
 try {
   const userCode = fs.readFileSync('{temp_file}', 'utf8');
   eval(userCode);
 
   if (typeof global.animate === 'function') {
-    global.animate();
+    global.animate(); // Run one frame
     console.log('Execution successful: animation ran');
   } else if (global.THREE && global.THREE.Scene) {
     console.log('Execution successful: Three.js scene detected');
@@ -86,7 +94,7 @@ try {
     console.log('No detectable functionality');
   }
 } catch (e) {
-  console.error('Execution error:', e.stack);
+  console.error('Execution failed:', e.stack);
 }
 
 fs.writeFileSync('{temp_file}.out', consoleOutput);
