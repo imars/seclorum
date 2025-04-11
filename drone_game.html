@@ -7,52 +7,35 @@
 </head>
 <body>
     <script type="module">
-        ```javascript
-const THREE = require('three');
-const OrbitControls = require('three/examples/jsm/controls/OrbitControls');
-
+        const THREE = require('three');
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-const controls = new OrbitControls(camera, renderer.domElement);
-
-const geometry = new THREE.BoxGeometry(1, 1, 1);
+const geometry = new THREE.BoxGeometry();
 const material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
 const drone = new THREE.Mesh(geometry, material);
 scene.add(drone);
 
 camera.position.z = 5;
 
-const speed = 0.1;
+const animate = function () {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+};
 
 document.addEventListener('keydown', (event) => {
-  switch (event.key) {
-    case 'ArrowUp':
-      drone.position.z += speed;
-      break;
-    case 'ArrowDown':
-      drone.position.z -= speed;
-      break;
-    case 'ArrowLeft':
-      drone.position.x -= speed;
-      break;
-    case 'ArrowRight':
-      drone.position.x += speed;
-      break;
-  }
+    switch (event.key) {
+        case 'ArrowUp': drone.position.z += 0.1; break;
+        case 'ArrowDown': drone.position.z -= 0.1; break;
+        case 'ArrowLeft': drone.position.x -= 0.1; break;
+        case 'ArrowRight': drone.position.x += 0.1; break;
+    }
 });
 
-
-function animate() {
-  requestAnimationFrame(animate);
-  renderer.render(scene, camera);
-}
-
 animate();
-```
     </script>
 </body>
 </html>
