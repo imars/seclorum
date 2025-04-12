@@ -6,14 +6,19 @@ import os
 from seclorum.utils.logger import LoggerMixin
 
 class FileSystemManager(LoggerMixin):
-    def __init__(self, repo_path: str = "."):
+    def __init__(self, repo_path: str = ".", require_git: bool = True):
         self.name = "FileSystemManager"  # For LoggerMixin
         super().__init__()
         self.repo_path = os.path.abspath(repo_path)
-        if not os.path.exists(os.path.join(self.repo_path, ".git")):
+        self.is_git_repo = False
+        if require_git and not os.path.exists(os.path.join(self.repo_path, ".git")):
             raise ValueError(f"{self.repo_path} is not a Git repository")
+        self.is_git_repo = os.path.exists(os.path.join(self.repo_path, ".git"))
 
     def commit_changes(self, message: str) -> bool:
+        if not self.is_git_repo:
+            self.log_update(f"Skipping commit in non-Git directory: {self.repo_path}")
+            return False
         try:
             # Stage all changes
             subprocess.run(["git", "add", "."], cwd=self.repo_path, check=True, capture_output=True, text=True)
@@ -31,11 +36,16 @@ class FileSystemManager(LoggerMixin):
             return False
 
     def save_file(self, filename: str, content: str):
-        with open(self.path / filename, "w") as f:
+        file_path = os.path.join(self.repo_path, filename)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, "w") as f:
             f.write(content)
-        self.repo.index.add([filename])
-        self.repo.index.commit(f"Update {filename}")
+        if self.is_git_repo:
+            subprocess.run(["git", "add", filename], cwd=self.repo_path, check=True, capture_output=True, text=True)
+            subprocess.run(["git", "commit", "-m", f"Update {filename}"], cwd=self.repo_path, check=True, capture_output=True, text=True)
+        self.log_update(f"Saved file: {filename}")
 
     def get_file(self, filename: str) -> str:
-        with open(self.path / filename, "r") as f:
+        file_path = os.path.join(self.repo_path, filename)
+        with open(file_path, "r") as f:
             return f.read()
