@@ -2,6 +2,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List
 import json
+import uuid
 
 class Task(BaseModel):
     task_id: str
@@ -44,3 +45,49 @@ class OutsourcedTaskInput(BaseModel):
 class OutsourcedTaskOutput(BaseModel):
     result: str
     confidence: float = Field(ge=0.0, le=1.0)
+
+class TaskFactory:
+    @staticmethod
+    def create_code_task(
+        description: str,
+        language: str,
+        generate_tests: bool = False,
+        execute: bool = False,
+        use_remote: bool = False,
+        task_id: Optional[str] = None
+    ) -> Task:
+        """Create a task for code generation, testing, and execution."""
+        task_id = task_id or str(uuid.uuid4())
+        parameters = {
+            "language": language.lower(),
+            "generate_tests": generate_tests,
+            "execute": execute,
+            "use_remote": use_remote
+        }
+        return Task(
+            task_id=task_id,
+            description=description,
+            parameters=parameters
+        )
+
+    @staticmethod
+    def create_message_task(
+        description: str,
+        sender: str,
+        receiver: str,
+        content: str,
+        task_id: Optional[str] = None
+    ) -> AgentMessage:
+        """Create an agent message with an embedded task."""
+        task_id = task_id or str(uuid.uuid4())
+        task = Task(
+            task_id=task_id,
+            description=description,
+            parameters={}
+        )
+        return AgentMessage(
+            sender=sender,
+            receiver=receiver,
+            task=task,
+            content=content
+        )

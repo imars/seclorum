@@ -1,31 +1,28 @@
 # seclorum/core/filesystem.py
 import git
-from pathlib import Path
-import subprocess
 import os
+import subprocess
+from pathlib import Path
 from seclorum.utils.logger import LoggerMixin
 
 class FileSystemManager(LoggerMixin):
     def __init__(self, repo_path: str = ".", require_git: bool = False):
-        self.name = "FileSystemManager"  # For LoggerMixin
+        self.name = "FileSystemManager"
         super().__init__()
         self.repo_path = os.path.abspath(repo_path)
         self.is_git_repo = os.path.exists(os.path.join(self.repo_path, ".git"))
         if require_git and not self.is_git_repo:
             raise ValueError(f"{self.repo_path} is not a Git repository")
-        self.log_update(f"Initialized FileSystemManager at {self.repo_path}, is_git_repo={self.is_git_repo}")
+        self.log_update(f"Initialized FileSystemManager at {self.repo_path}, is_git_repo: {self.is_git_repo}")
 
     def commit_changes(self, message: str) -> bool:
         if not self.is_git_repo:
             self.log_update(f"Skipping commit in non-Git directory: {self.repo_path}")
             return False
         try:
-            # Stage all changes
             subprocess.run(["git", "add", "."], cwd=self.repo_path, check=True, capture_output=True, text=True)
-            # Check if there’s anything to commit
             status = subprocess.run(["git", "status", "--porcelain"], cwd=self.repo_path, capture_output=True, text=True)
             if status.stdout.strip():
-                # Commit with message
                 subprocess.run(["git", "commit", "-m", message], cwd=self.repo_path, check=True, capture_output=True, text=True)
                 self.log_update(f"Committed changes: {message}")
             else:
