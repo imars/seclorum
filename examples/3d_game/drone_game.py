@@ -63,6 +63,13 @@ def create_drone_game():
     logger.info(f"Task completed with status: {status}")
     logger.info(f"Raw generated code:\n{code}")
 
+    # Save the JavaScript code to drone_game.js
+    js_path = os.path.join("examples", "3d_game", "drone_game.js")
+    os.makedirs(os.path.dirname(js_path), exist_ok=True)  # Ensure directory exists
+    with open(js_path, "w") as f:
+        f.write(code)
+    logger.info(f"JavaScript file '{js_path}' created.")
+
     html_content = f"""
 <!DOCTYPE html>
 <html>
@@ -73,15 +80,14 @@ def create_drone_game():
 <body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script>
-    {code}
-    </script>
+    <script src="drone_game.js"></script>
 </body>
 </html>
     """
-    with open("drone_game.html", "w") as f:
+    html_path = os.path.join("examples", "3d_game", "drone_game.html")
+    with open(html_path, "w") as f:
         f.write(html_content)
-    logger.info("HTML file 'drone_game.html' created.")
+    logger.info(f"HTML file '{html_path}' created.")
 
 if __name__ == "__main__":
     create_drone_game()
