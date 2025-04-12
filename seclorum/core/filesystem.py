@@ -6,14 +6,14 @@ import os
 from seclorum.utils.logger import LoggerMixin
 
 class FileSystemManager(LoggerMixin):
-    def __init__(self, repo_path: str = ".", require_git: bool = True):
+    def __init__(self, repo_path: str = ".", require_git: bool = False):
         self.name = "FileSystemManager"  # For LoggerMixin
         super().__init__()
         self.repo_path = os.path.abspath(repo_path)
-        self.is_git_repo = False
-        if require_git and not os.path.exists(os.path.join(self.repo_path, ".git")):
-            raise ValueError(f"{self.repo_path} is not a Git repository")
         self.is_git_repo = os.path.exists(os.path.join(self.repo_path, ".git"))
+        if require_git and not self.is_git_repo:
+            raise ValueError(f"{self.repo_path} is not a Git repository")
+        self.log_update(f"Initialized FileSystemManager at {self.repo_path}, is_git_repo={self.is_git_repo}")
 
     def commit_changes(self, message: str) -> bool:
         if not self.is_git_repo:
