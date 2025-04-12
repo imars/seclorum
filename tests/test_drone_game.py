@@ -2,23 +2,33 @@
 import subprocess
 import os
 import pytest
+from unittest.mock import patch
 from seclorum.models import Task
 from seclorum.agents.developer import Developer
 from seclorum.models import create_model_manager
+
+# Get the project root directory
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 @pytest.fixture
 def setup_drone_game(tmp_path):
     """Set up a temporary environment for testing drone_game.py."""
     # Copy drone_game.py to tmp_path
-    src = "examples/3d_game/drone_game.py"
+    src = os.path.join(PROJECT_ROOT, "examples", "3d_game", "drone_game.py")
     dst = tmp_path / "drone_game.py"
     with open(src, "r") as f:
         dst.write_text(f.read())
 
+    # Create a minimal Git repository to satisfy FileSystemManager
+    os.makedirs(tmp_path / ".git", exist_ok=True)
+    with open(tmp_path / ".git" / "config", "w") as f:
+        f.write("[core]\nrepositoryformatversion = 0\n")
+
     # Change to tmp_path for execution
+    original_cwd = os.getcwd()
     os.chdir(tmp_path)
     yield tmp_path
-    # Cleanup is handled by tmp_path fixture
+    os.chdir(original_cwd)
 
 def test_drone_game_generation(setup_drone_game):
     """Test that drone_game.py generates drone_game.js and drone_game.html."""
@@ -49,7 +59,7 @@ def test_drone_game_execution(setup_drone_game):
     assert js_path.exists(), "drone_game.js was not created before execution test"
 
     # Run Puppeteer test
-    puppeteer_script = "seclorum/scripts/run_puppeteer.js"
+    puppeteer_script = os.path.join(PROJECT_ROOT, "seclorum", "scripts", "run_puppeteer.js")
     result = subprocess.run(
         ["node", puppeteer_script, str(js_path)],
         capture_output=True,
