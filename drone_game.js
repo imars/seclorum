@@ -1,46 +1,41 @@
+is unrelated to the Three.js code itself.  The Three.js code is functional *provided* you have a `<canvas>` element with the id "canvas" in your HTML file.
 
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 5, 10);
-scene.add(camera);
-const renderer = new THREE.WebGLRenderer({canvas: document.getElementById('myCanvas')});
-renderer.setSize(window.innerWidth, window.innerHeight);
+s (assuming you have the Three.js library included and a canvas element), you don't need to change the Javascript code itself.  The issue is external to this snippet.
 
-const droneGeometry = new THREE.BoxGeometry(1, 1, 1);
-const droneMaterial = new THREE.MeshBasicMaterial({color: 0x0000ff});
-const drone = new THREE.Mesh(droneGeometry, droneMaterial);
-scene.add(drone);
+ is not in the Javascript itself):
+javascript
+let scene, camera, renderer, drone;
+const speed = 0.1;
+const move = {
+  x: 0,
+  y: 0,
+  z: 0
+};
 
-const numStars = 1000;
-const starsGeometry = new THREE.BufferGeometry();
-const starPositions = new Float32Array(numStars * 3);
-for (let i = 0; i < numStars; i++) {
-  starPositions[i * 3] = Math.random() * 1000 - 500;
-  starPositions[i * 3 + 1] = Math.random() * 1000 - 500;
-  starPositions[i * 3 + 2] = Math.random() * 1000 - 500;
-}
-starsGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-const starsMaterial = new THREE.PointsMaterial({color: 0xffffff, size: 2});
-const stars = new THREE.Points(starsGeometry, starsMaterial);
-scene.add(stars);
-
-let speed = 0.1;
-const keysPressed = {};
-document.addEventListener('keydown', (e) => {keysPressed[e.code] = true;});
-document.addEventListener('keyup', (e) => {keysPressed[e.code] = false;});
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
+function init() {
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas') });
   renderer.setSize(window.innerWidth, window.innerHeight);
-});
+  camera.position.set(0, 5, 10);
+  camera.lookAt(0, 0, 0);
 
-function animate() {
-  requestAnimationFrame(animate);
-  if (keysPressed['ArrowUp']) drone.position.z -= speed;
-  if (keysPressed['ArrowDown']) drone.position.z += speed;
-  if (keysPressed['ArrowLeft']) drone.position.x -= speed;
-  if (keysPressed['ArrowRight']) drone.position.x += speed;
-  renderer.render(scene, camera);
+  const geometry = new THREE.BoxGeometry(1, 1, 1);
+  const material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+  drone = new THREE.Mesh(geometry, material);
+  scene.add(drone);
+
+  const ambientLight = new THREE.AmbientLight(0x404040);
+  scene.add(ambientLight);
+
+  document.addEventListener('keydown', onKeyDown);
+  document.addEventListener('keyup', onKeyUp);
 }
-animate();
+
+function onKeyDown(e) {
+  switch (e.key) {
+    case 'ArrowUp': move.z = speed; break;
+    case 'ArrowDown': move.z = -speed; break;
+    case 'ArrowLeft': move.x = -speed; break;
+    case 'ArrowRight': move.x = speed; break;
+  }

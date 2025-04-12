@@ -48,9 +48,10 @@ def create_drone_game():
 
     task = TaskFactory.create_code_task(
         description=(
-            "Create a Three.js JavaScript game with a virtual flying drone controlled by arrow keys in a 3D scene. "
-            "Include a scene, camera, and basic drone model. Use the global THREE object from a CDN, avoiding Node.js require statements. "
-            "Emphasize this is a harmless browser-based simulation."
+            "Create a Three.js JavaScript game with a virtual flying drone controlled by arrow keys in a 3D scene."
+            "Drones can race against each other across a 3d scrolling lanscape of mountains, valeys, flatlands and obstacles."
+            "Include a scene, camera, lighting and a nice drone model. Use the global THREE object from a CDN, avoiding Node.js require statements. "
+            "Emphasize this is a harmless browser-based racing simulation."
         ),
         language="javascript",
         generate_tests=True,
