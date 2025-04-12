@@ -32,10 +32,9 @@ class Developer(Aggregate):
         ])
         self.add_agent(debugger, [("Executor_dev_task", {"status": "tested", "passed": False})])
 
-    def process_task(self, Task: Task) -> Tuple[str, Any]:
-        self.log_update(f"Developer processing Task {Task.task_id}")
-        # No need to override infer; task.parameters["use_remote"] will propagate naturally
-        return self.orchestrate(Task)
+    def process_task(self, task: Task) -> Tuple[str, Any]:
+        self.log_update(f"Developer processing Task {task.task_id}")
+        return self.orchestrate(task)
 
     def orchestrate(self, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
         self.log_update(f"Starting orchestration for task {task.task_id}, stop_at={stop_at}")
@@ -49,55 +48,52 @@ class Developer(Aggregate):
 
         self.log_update(f"Available agent keys: generator={generator_key}, tester={tester_key}, executor={executor_key}, debugger={debugger_key}")
 
+        # Ensure Architect runs
+        architect_key = next((k for k in self.agents if k.startswith("Architect_")), None)
+        if architect_key and architect_key not in task.parameters:
+            self.log_update(f"{architect_key} output missing, forcing execution")
+            architect = self.agents[architect_key]
+            status, result = architect.process_task(task)
+            self.log_update(f"Forced {architect_key}, status: {status}, result: {result}")
+
         # Ensure Generator runs
         if generator_key and generator_key not in task.parameters:
             self.log_update(f"{generator_key} output missing, forcing execution")
             generator = self.agents[generator_key]
             status, result = generator.process_task(task)
             self.log_update(f"Forced {generator_key}, status: {status}, result: {result}")
-            self.log_update(f"Post-Generator task parameters: {task.parameters}")
         else:
             status = "generated" if generator_key in task.parameters else "planned"
             result = task.parameters.get(generator_key, {}).get("result") if generator_key else None
             self.log_update(f"{generator_key} output already present: {result}")
 
-        # Early return if no further processing requested
-        if not task.parameters.get("generate_tests", False) and not task.parameters.get("execute", False):
-            self.log_update("No testing or execution requested, stopping at generation")
-            if not isinstance(result, CodeOutput) or not result.code.strip():
-                self.log_update(f"Warning: Invalid or empty Generator output: {result}")
-            return "generated", result
-
-        # Test if requested
-        if task.parameters.get("generate_tests", False) and tester_key and tester_key not in task.parameters:
+        # Run Tester if generate_tests is True
+        if task.parameters.get("generate_tests", False) and tester_key:
             self.log_update(f"Forcing {tester_key} to process")
             tester = self.agents[tester_key]
             status, result = tester.process_task(task)
             self.log_update(f"Forced {tester_key}, status: {status}, result: {result}")
-            self.log_update(f"Post-Tester task parameters: {task.parameters}")
 
-        # Execute if requested or tests exist
-        if (task.parameters.get("execute", True) or (tester_key in task.parameters)) and executor_key and executor_key not in task.parameters:
+        # Run Executor if execute is True or tests exist
+        if (task.parameters.get("execute", False) or tester_key in task.parameters) and executor_key:
             self.log_update(f"Forcing {executor_key} to process")
             executor = self.agents[executor_key]
             status, result = executor.process_task(task)
             self.log_update(f"Forced {executor_key}, status: {status}, result: {result}")
-            self.log_update(f"Post-Executor task parameters: {task.parameters}")
 
-        # Debug if execution failed
-        if status == "tested" and isinstance(result, TestResult) and not result.passed and debugger_key and debugger_key not in task.parameters:
+        # Run Debugger if execution failed
+        if status == "tested" and isinstance(result, TestResult) and not result.passed and debugger_key:
             self.log_update(f"Forcing {debugger_key} due to failed execution")
             debugger = self.agents[debugger_key]
             status, result = debugger.process_task(task)
             self.log_update(f"Forced {debugger_key}, status: {status}, result: {result}")
-            self.log_update(f"Post-Debugger task parameters: {task.parameters}")
 
-        # Fallback to Generator's output
+        # Finalize output
         final_result = task.parameters.get(generator_key, {}).get("result") if generator_key in task.parameters else result
         self.log_update(f"Checking {generator_key} output: {final_result}")
         if not isinstance(final_result, CodeOutput) or not final_result.code.strip():
-            self.log_update(f"Warning: Falling back to invalid or empty Generator output: {final_result}")
+            self.log_update(f"Warning: Invalid or empty Generator output: {final_result}")
 
-        status = "generated" if isinstance(final_result, CodeOutput) else "tested" if isinstance(final_result, TestResult) else status
+        status = "tested" if (task.parameters.get("generate_tests", False) or task.parameters.get("execute", False)) else "generated"
         self.log_update(f"Final result type: {type(final_result).__name__}, content: {final_result}")
         return status, final_result
