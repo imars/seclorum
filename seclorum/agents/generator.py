@@ -18,23 +18,26 @@ class Generator(Agent):
         language = task.parameters.get("language", "python").lower()
         config = LANGUAGE_CONFIG.get(language, LANGUAGE_CONFIG["python"])
 
-        code_prompt = config["code_prompt"].format(description=task.description) + (
-            " Return only the raw, executable code suitable for runtime environments, "
-            "without tags, markup, comments, or explanations."
-            if language == "javascript" else ""
-        )
+        code_prompt = config["code_prompt"].format(description=task.description)
+        if language == "javascript":
+            code_prompt += (
+                " Return only the raw, executable JavaScript code suitable for browser environments using the global THREE object from a CDN, "
+                "avoiding Node.js require statements, without tags, markup, comments, or explanations."
+            )
         use_remote = task.parameters.get("use_remote", None)
         raw_code = self.infer(code_prompt, use_remote=use_remote)
-        # Strip Markdown tags and extra whitespace
-        code = re.sub(r'```(?:javascript|python|cpp|css|html)?\n|\n```', '', raw_code).strip()
+        # Strip Markdown tags, require statements, and extra whitespace
+        code = re.sub(r'```(?:javascript|python|cpp|css|html)?\n|\n```', '', raw_code)
+        code = re.sub(r"const THREE = require\('three'\);\n?", "", code).strip()
         self.log_update(f"Raw generated code:\n{code}")
 
         tests = None
         if task.parameters.get("generate_tests", False) and config["test_prompt"]:
-            test_prompt = config["test_prompt"].format(code=code) + (
-                " Return only the raw Jest test code for Node.js, without Markdown or comments."
-                if language == "javascript" else ""
-            )
+            test_prompt = config["test_prompt"].format(code=code)
+            if language == "javascript":
+                test_prompt += (
+                    " Return only the raw Jest test code for Node.js, without Markdown or comments."
+                )
             raw_tests = self.infer(test_prompt, use_remote=use_remote)
             # Strip Markdown tags from tests
             tests = re.sub(r'```(?:javascript|python|cpp)?\n|\n```', '', raw_tests).strip()
