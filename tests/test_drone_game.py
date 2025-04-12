@@ -43,8 +43,13 @@ class TestDroneGame(unittest.TestCase):
 
     def test_drone_game_generation(self):
         """Test that drone_game.py generates drone_game.js and drone_game.html."""
-        # Run drone_game.py
-        result = subprocess.run(["python", "drone_game.py"], capture_output=True, text=True)
+        # Run drone_game.py from examples/3d_game
+        result = subprocess.run(
+            ["python", "drone_game.py"],
+            capture_output=True,
+            text=True,
+            cwd=self.tmp_path / "examples/3d_game"
+        )
         self.assertEqual(result.returncode, 0, f"drone_game.py failed: {result.stderr}")
 
         # Check if files were created
@@ -63,7 +68,11 @@ class TestDroneGame(unittest.TestCase):
     def test_drone_game_execution(self):
         """Test drone_game.js execution using Puppeteer."""
         # Ensure drone_game.js exists by running drone_game.py
-        subprocess.run(["python", "drone_game.py"], check=True)
+        subprocess.run(
+            ["python", "drone_game.py"],
+            check=True,
+            cwd=self.tmp_path / "examples/3d_game"
+        )
 
         js_path = self.tmp_path / "examples/3d_game/drone_game.js"
         self.assertTrue(js_path.exists(), "drone_game.js was not created before execution test")
@@ -97,10 +106,11 @@ class TestDroneGame(unittest.TestCase):
         task.parameters["language"] = "javascript"
         task.parameters["use_remote"] = True
         task.parameters["generate_tests"] = True
-        task.parameters["execute"] = True  # Ensure execution and testing
+        task.parameters["execute"] = True
 
         status, result = developer.process_task(task)
         self.assertEqual(status, "tested", f"Expected status 'tested', got '{status}'")
+        self.assertIsInstance(result, TestResult, f"Expected TestResult, got {type(result).__name__}")
         self.assertTrue(result.passed, f"Developer tests failed: {result.output}")
 
 if __name__ == "__main__":
