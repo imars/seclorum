@@ -52,6 +52,7 @@ def create_drone_game():
     task.parameters["language"] = "javascript"
     task.parameters["use_remote"] = True
     task.parameters["generate_tests"] = True
+    task.parameters["execute"] = True  # Ensure full pipeline
 
     status, result = developer.process_task(task)
 
@@ -75,14 +76,14 @@ def create_drone_game():
     os.makedirs(os.path.dirname(js_path), exist_ok=True)
     with open(js_path, "w") as f:
         f.write(code)
-    logger.info(f"JavaScript file '{js_path}' created.")
+    logger.info(f"JavaScript file '{js_path}' created, size: {os.path.getsize(js_path)} bytes")
 
     # Save tests if generated
     if tests:
         test_path = os.path.join("examples", "3d_game", "drone_game.test.js")
         with open(test_path, "w") as f:
             f.write(tests)
-        logger.info(f"Test file '{test_path}' created.")
+        logger.info(f"Test file '{test_path}' created, size: {os.path.getsize(test_path)} bytes")
 
     html_content = f"""
 <!DOCTYPE html>
@@ -101,7 +102,8 @@ def create_drone_game():
     html_path = os.path.join("examples", "3d_game", "drone_game.html")
     with open(html_path, "w") as f:
         f.write(html_content)
-    logger.info(f"HTML file '{html_path}' created.")
+    logger.info(f"HTML file '{html_path}' created, size: {os.path.getsize(html_path)} bytes")
+    logger.info(f"Run 'open {html_path}' to view the game in a browser.")
 
 if __name__ == "__main__":
     create_drone_game()
