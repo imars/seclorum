@@ -15,18 +15,28 @@ class TestDroneGame(unittest.TestCase):
     @pytest.fixture(autouse=True)
     def setup_drone_game(self, tmp_path):
         """Set up a temporary environment for testing drone_game.py."""
-        # Copy drone_game.py to tmp_path
+        # Create examples/3d_game structure in tmp_path
+        examples_dir = tmp_path / "examples/3d_game"
+        examples_dir.mkdir(parents=True)
+
+        # Copy drone_game.py to tmp_path/examples/3d_game
         src = PROJECT_ROOT / "examples/3d_game/drone_game.py"
-        dst = tmp_path / "drone_game.py"
+        dst = examples_dir / "drone_game.py"
         dst.write_text(src.read_text())
+
+        # Copy seclorum package to tmp_path for imports
+        seclorum_src = PROJECT_ROOT / "seclorum"
+        seclorum_dst = tmp_path / "seclorum"
+        import shutil
+        shutil.copytree(seclorum_src, seclorum_dst, dirs_exist_ok=True)
 
         # Initialize a Git repo for FileSystemManager
         subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
         subprocess.run(["git", "commit", "--allow-empty", "-m", "Initial commit"], cwd=tmp_path, check=True, capture_output=True)
 
-        # Change to tmp_path for execution
+        # Change to examples/3d_game for execution
         self.original_dir = os.getcwd()
-        os.chdir(tmp_path)
+        os.chdir(examples_dir)
         self.tmp_path = tmp_path
         yield tmp_path
         os.chdir(self.original_dir)
@@ -87,6 +97,7 @@ class TestDroneGame(unittest.TestCase):
         task.parameters["language"] = "javascript"
         task.parameters["use_remote"] = True
         task.parameters["generate_tests"] = True
+        task.parameters["execute"] = True  # Ensure execution and testing
 
         status, result = developer.process_task(task)
         self.assertEqual(status, "tested", f"Expected status 'tested', got '{status}'")
