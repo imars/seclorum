@@ -30,10 +30,6 @@ class TestDroneGame(unittest.TestCase):
         import shutil
         shutil.copytree(seclorum_src, seclorum_dst, dirs_exist_ok=True)
 
-        # Initialize a Git repo in examples/3d_game for FileSystemManager
-        subprocess.run(["git", "init"], cwd=examples_dir, check=True, capture_output=True)
-        subprocess.run(["git", "commit", "--allow-empty", "-m", "Initial commit"], cwd=examples_dir, check=True, capture_output=True)
-
         # Change to examples/3d_game for execution
         self.original_dir = os.getcwd()
         os.chdir(examples_dir)
