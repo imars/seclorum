@@ -1,52 +1,43 @@
-let scene, camera, renderer, droneModel, drones, terrain;
-const clock = new THREE.Clock();
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-init();
-animate();
+const droneGeometry = new THREE.BoxGeometry(1, 1, 1);
+const droneMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
 
-function init() {
-  scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-  renderer = new THREE.WebGLRenderer();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
-
-  const ambientLight = new THREE.AmbientLight(0x404040);
-  scene.add(ambientLight);
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-  scene.add(directionalLight);
-
-
-  //Load drone model (replace with your model path)
-  const loader = new THREE.GLTFLoader();
-  loader.load('drone.gltf', function(gltf){
-    droneModel = gltf.scene;
-    createDrones(3);
-  });
-
-  //Generate terrain (replace with your terrain generation)
-  terrain = new THREE.Mesh(new THREE.PlaneGeometry(1000,1000), new THREE.MeshBasicMaterial({color: 0x00ff00}));
-  scene.add(terrain);
-
-  camera.position.set(0, 50, 100);
-
-  window.addEventListener('keydown', onKeyDown);
+const drones = [];
+const numDrones = 3;
+for (let i = 0; i < numDrones; i++) {
+  const drone = new THREE.Mesh(droneGeometry, droneMaterial);
+  drone.position.set(0, 1, i * 5);
+  scene.add(drone);
+  drones.push({ mesh: drone, velocity: new THREE.Vector3(0, 0, 0), checkpointsPassed: 0 });
 }
 
-function createDrones(numDrones) {
-  drones = [];
-  for (let i = 0; i < numDrones; i++) {
-    const drone = droneModel.clone();
-    drone.position.set(i * 20, 10, 0);
-    scene.add(drone);
-    drones.push({ model: drone, speed: 0, acceleration: 0.1});
-  }
+const terrainGeometry = new THREE.PlaneGeometry(100, 100, 10, 10);
+const terrainMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+scene.add(terrain);
+
+const checkpoints = [];
+for (let i = 0; i < 5; i++) {
+  const checkpoint = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+  checkpoint.position.set(Math.random() * 50 -25, 1, Math.random() * 50 - 25);
+  scene.add(checkpoint);
+  checkpoints.push(checkpoint);
 }
 
+const ambientLight = new THREE.AmbientLight(0x404040);
+scene.add(ambientLight);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+scene.add(directionalLight);
 
-function onKeyDown(event) {
-  const speedIncrement = 0.5;
-  switch (event.key) {
-    case 'ArrowUp': drones.forEach(d => d.speed += speedIncrement); break;
-    case 'ArrowDown': drones.forEach(d => d.speed -= speedIncrement); break;
-    case 'Arrow
+camera.position.z = 5;
+
+let timer = 0;
+let gameStarted = false;
+
+const timerDisplay = document.getElementById('timer');
+const speedDisplay = document

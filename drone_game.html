@@ -1,15 +1,23 @@
-
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Drone Game</title>
-    <style>body { margin: 0; }</style>
+<title>Drone Race</title>
+<style>
+body { background-color: #222; color: #fff; font-family: sans-serif; }
+#ui { position: absolute; top: 10px; left: 10px; background-color: rgba(0,0,0,0.5); padding: 10px; }
+#timer, #speed, #standings { margin-bottom: 5px; }
+button { background-color: #4CAF50; border: none; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; cursor: pointer; }
+</style>
 </head>
 <body>
-    <canvas id="myCanvas"></canvas>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="drone_game.js"></script>
-</body>
+<canvas id="myCanvas"></canvas>
+<div id="ui">
+  <div id="timer">Timer: 00:00</div>
+  <div id="speed">Speed: 0</div>
+  <div id="standings">Standings:</div>
+  <button id="startButton">Start</button>
+  <button id="resetButton">Reset</button>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="drone_game.js"></script> </body>
 </html>
-    
