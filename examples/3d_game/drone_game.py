@@ -1,5 +1,38 @@
 # examples/3d_game/drone_game.py
-import argparse[ ... ]  # Keep existing imports
+import argparse
+import logging
+import os
+from pathlib import Path
+from seclorum.agents.developer import Developer
+from seclorum.models import Task, CodeOutput
+from seclorum.models import create_model_manager
+import re
+
+class SummaryFilter(logging.Filter):
+    def filter(self, record):
+        key_phrases = [
+            "Raw generated code",
+            "Execution output",
+            "Unexpected execution error",
+            "Final result",
+            "Task completed",
+        ]
+        return any(phrase in record.msg for phrase in key_phrases)
+
+def setup_logging(summary_mode=False):
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+
+    if summary_mode:
+        handler.addFilter(SummaryFilter())
+        formatter = logging.Formatter("%(levelname)s: %(message)s")
+    else:
+        formatter = logging.Formatter("%(levelname)s:%(name)s: %(message)s")
+
+    handler.setFormatter(formatter)
+    logger.handlers = [handler]
+    return logger
 
 def create_drone_game():
     parser = argparse.ArgumentParser(description="Generate a Three.js drone game.")
@@ -23,13 +56,19 @@ def create_drone_game():
     task.parameters["generate_tests"] = True
     task.parameters["execute"] = True
 
-    status, result = developer.process_task(task)
+    try:
+        status, result = developer.process_task(task)
+    except Exception as e:
+        logger.error(f"Developer pipeline failed: {str(e)}")
+        raise
 
-    # Ensure result is a CodeOutput with valid code
+    # Ensure result is valid
     if isinstance(result, CodeOutput) and result.code.strip():
-        # Clean up Node.js-specific require statements
         code = re.sub(r"const THREE = require\('three'\);\n?", "", result.code).strip()
         tests = result.tests.strip() if result.tests else None
+    elif isinstance(result, TestResult) and result.test_code.strip():
+        code = task.parameters.get("Generator_dev_task", {}).get("result", CodeOutput(code="")).code
+        tests = result.test_code.strip()
     else:
         code = "No valid code generated"
         tests = None
@@ -41,7 +80,7 @@ def create_drone_game():
         logger.info(f"Generated tests:\n{tests}")
 
     # Save the JavaScript code to drone_game.js
-    js_path = "drone_game.js"  # Relative path since we're in examples/3d_game
+    js_path = "drone_game.js"
     with open(js_path, "w") as f:
         f.write(code)
     logger.info(f"JavaScript file '{js_path}' created, size: {os.path.getsize(js_path)} bytes")
