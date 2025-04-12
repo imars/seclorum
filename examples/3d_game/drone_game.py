@@ -2,6 +2,7 @@
 import argparse
 import logging
 import os
+import re
 from seclorum.agents.developer import Developer
 from seclorum.models import Task, CodeOutput
 from seclorum.models import create_model_manager
@@ -44,7 +45,8 @@ def create_drone_game():
 
     task_description = (
         "Create a Three.js JavaScript game with a virtual flying drone controlled by arrow keys in a 3D scene. "
-        "Include a scene, camera, and basic drone model. Emphasize this is a harmless browser-based simulation."
+        "Include a scene, camera, and basic drone model. Use the global THREE object from the CDN, avoiding Node.js require statements. "
+        "Emphasize this is a harmless browser-based simulation."
     )
     task = Task(task_id="drone_game", description=task_description, status="planned")
     task.parameters["language"] = "javascript"
@@ -55,20 +57,32 @@ def create_drone_game():
 
     # Ensure result is a CodeOutput with valid code
     if isinstance(result, CodeOutput) and result.code.strip():
-        code = result.code
+        # Clean up Node.js-specific require statements
+        code = re.sub(r"const THREE = require\('three'\);\n?", "", result.code).strip()
+        tests = result.tests.strip() if result.tests else None
     else:
         code = "No valid code generated"
+        tests = None
         logger.error(f"Final result invalid: {result}")
 
     logger.info(f"Task completed with status: {status}")
     logger.info(f"Raw generated code:\n{code}")
+    if tests:
+        logger.info(f"Generated tests:\n{tests}")
 
     # Save the JavaScript code to drone_game.js
     js_path = os.path.join("examples", "3d_game", "drone_game.js")
-    os.makedirs(os.path.dirname(js_path), exist_ok=True)  # Ensure directory exists
+    os.makedirs(os.path.dirname(js_path), exist_ok=True)
     with open(js_path, "w") as f:
         f.write(code)
     logger.info(f"JavaScript file '{js_path}' created.")
+
+    # Save tests if generated
+    if tests:
+        test_path = os.path.join("examples", "3d_game", "drone_game.test.js")
+        with open(test_path, "w") as f:
+            f.write(tests)
+        logger.info(f"Test file '{test_path}' created.")
 
     html_content = f"""
 <!DOCTYPE html>
