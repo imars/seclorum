@@ -1,41 +1,48 @@
-is unrelated to the Three.js code itself.  The Three.js code is functional *provided* you have a `<canvas>` element with the id "canvas" in your HTML file.
+let scene, camera, renderer, drone, terrain;
+const clock = new THREE.Clock();
 
-s (assuming you have the Three.js library included and a canvas element), you don't need to change the Javascript code itself.  The issue is external to this snippet.
-
- is not in the Javascript itself):
-javascript
-let scene, camera, renderer, drone;
-const speed = 0.1;
-const move = {
-  x: 0,
-  y: 0,
-  z: 0
-};
+init();
+animate();
 
 function init() {
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas') });
+  renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  camera.position.set(0, 5, 10);
-  camera.lookAt(0, 0, 0);
-
-  const geometry = new THREE.BoxGeometry(1, 1, 1);
-  const material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-  drone = new THREE.Mesh(geometry, material);
-  scene.add(drone);
+  document.body.appendChild(renderer.domElement);
 
   const ambientLight = new THREE.AmbientLight(0x404040);
   scene.add(ambientLight);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+  scene.add(directionalLight);
 
-  document.addEventListener('keydown', onKeyDown);
-  document.addEventListener('keyup', onKeyUp);
+  const loader = new THREE.GLTFLoader();
+  loader.load('drone.glb', function (gltf) {
+    drone = gltf.scene;
+    scene.add(drone);
+    drone.position.set(0, 5, 0);
+  });
+
+
+  terrain = generateTerrain();
+  scene.add(terrain);
+
+  camera.position.set(0, 20, 30);
+  camera.lookAt(0, 0, 0);
+
+  window.addEventListener('keydown', onKeyDown);
 }
 
-function onKeyDown(e) {
-  switch (e.key) {
-    case 'ArrowUp': move.z = speed; break;
-    case 'ArrowDown': move.z = -speed; break;
-    case 'ArrowLeft': move.x = -speed; break;
-    case 'ArrowRight': move.x = speed; break;
+function generateTerrain() {
+  const geometry = new THREE.PlaneGeometry(100, 100, 100, 100);
+  const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+  const terrain = new THREE.Mesh(geometry, material);
+  terrain.rotation.x = -Math.PI / 2;
+  // geometry.vertices is deprecated.  Use geometry.attributes.position.array
+  const vertices = geometry.attributes.position.array;
+  for (let i = 0; i < vertices.length; i += 3) {
+    const x = vertices[i];
+    const y = vertices[i + 1];
+    vertices[i + 2] = Math.sin(x / 5) * Math.cos(y / 5) * 10;
   }
+  geometry.attributes.position.needs
