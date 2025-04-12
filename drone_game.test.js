@@ -1,27 +1,41 @@
-describe('Scene Setup', () => {
-  it('should create a scene with 3 drones', () => {
-    expect(drones.length).toBe(3);
+describe('Scene Initialization', () => {
+  it('should create a scene', () => {
+    expect(scene).toBeDefined();
   });
 
-  it('should position drones along the z-axis', () => {
-    expect(drones[0].mesh.position.z).toBe(0);
-    expect(drones[1].mesh.position.z).toBe(5);
-    expect(drones[2].mesh.position.z).toBe(10);
+  it('should create a camera', () => {
+    expect(camera).toBeDefined();
   });
 
-  it('should create a terrain', () => {
-    expect(terrain).toBeDefined();
+  it('should create a renderer', () => {
+    expect(renderer).toBeDefined();
   });
 
-  it('should create 5 checkpoints', () => {
-    expect(checkpoints.length).toBe(5);
+  it('should add terrain to the scene', () => {
+    expect(scene.children).toContain(terrain);
   });
 
-  it('should add lights to the scene', () => {
-    expect(scene.children.length).toBeGreaterThan(7);
+  it('should add checkpoints to the scene', () => {
+    expect(scene.children).toContain(checkpoints[0]);
+  });
+
+  it('should add drones to the scene', () => {
+    expect(drones.length).toBe(2);
+    expect(scene.children).toContain(drones[0]);
+    expect(scene.children).toContain(drones[1]);
+  });
+
+  it('should have ambient and directional lighting', () => {
+    expect(scene.children.some(child => child instanceof THREE.AmbientLight)).toBe(true);
+    expect(scene.children.some(child => child instanceof THREE.DirectionalLight)).toBe(true);
   });
 
   it('should set camera position', () => {
     expect(camera.position.z).toBe(5);
   });
+
+  it('should initialize clock', () => {
+    expect(clock).toBeDefined();
+  });
+
 });
