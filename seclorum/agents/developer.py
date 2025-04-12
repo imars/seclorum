@@ -1,5 +1,5 @@
 # seclorum/agents/developer.py
-from typing import Tuple, Any
+from typing import Tuple, Any, List, Dict, Optional
 from seclorum.agents.base import Aggregate
 from seclorum.models import Task, create_model_manager, CodeOutput, TestResult
 from seclorum.agents.generator import Generator
@@ -7,30 +7,49 @@ from seclorum.agents.tester import Tester
 from seclorum.agents.executor import Executor
 from seclorum.agents.architect import Architect
 from seclorum.agents.debugger import Debugger
-from typing import Optional
+import uuid
+import logging
 
 class Developer(Aggregate):
     def __init__(self, session_id: str, model_manager=None):
         super().__init__(session_id, model_manager)
         self.name = "Developer"
         self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
-        self.setup_workflow()
+        self.pipelines: Dict[str, List[dict]] = {}  # Maps task_id to pipeline configs
 
-    def setup_workflow(self):
-        architect = Architect("dev_task", self.session_id, self.model_manager)
-        generator = Generator("dev_task", self.session_id, self.model_manager)
-        tester = Tester("dev_task", self.session_id, self.model_manager)
-        executor = Executor("dev_task", self.session_id)
-        debugger = Debugger("dev_task", self.session_id, self.model_manager)
+    def setup_pipeline(self, task_id: str, language: str, output_file: str) -> List[dict]:
+        """Create a pipeline for a specific subtask."""
+        generator = Generator(f"{task_id}_{language}_gen", self.session_id, self.model_manager)
+        tester = Tester(f"{task_id}_{language}_test", self.session_id, self.model_manager)
+        executor = Executor(f"{task_id}_{language}_exec", self.session_id)
+        debugger = Debugger(f"{task_id}_{language}_debug", self.session_id, self.model_manager)
 
-        self.add_agent(architect)
-        self.add_agent(generator, [("Architect_dev_task", {"status": "planned"})])
-        self.add_agent(tester, [("Generator_dev_task", {"status": "generated"})])
-        self.add_agent(executor, [
-            ("Tester_dev_task", {"status": "tested"}),
-            ("Generator_dev_task", {"status": "generated"})
-        ])
-        self.add_agent(debugger, [("Executor_dev_task", {"status": "tested", "passed": False})])
+        pipeline = [
+            {"agent": generator, "name": generator.name, "deps": [(f"Architect_{task_id}", {"status": "planned"})], "output_file": output_file, "language": language},
+            {"agent": tester, "name": tester.name, "deps": [(generator.name, {"status": "generated"})], "output_file": f"{output_file}.test", "language": language},
+            {"agent": executor, "name": executor.name, "deps": [(tester.name, {"status": "tested"}), (generator.name, {"status": "generated"})], "output_file": None, "language": language},
+            {"agent": debugger, "name": debugger.name, "deps": [(executor.name, {"status": "tested", "passed": False})], "output_file": output_file, "language": language},
+        ]
+
+        for step in pipeline:
+            self.add_agent(step["agent"], step["deps"])
+        return pipeline
+
+    def infer_pipelines(self, task: Task, plan: str) -> List[Dict[str, Any]]:
+        """Infer required pipelines based on the Architect's plan."""
+        prompt = (
+            f"Given the following development plan:\n{plan}\n\n"
+            "Analyze the plan and determine the necessary development pipelines. Each pipeline should handle a specific output file and language (e.g., JavaScript, HTML, Python). "
+            "Return a JSON list of objects, each with 'language' (e.g., 'javascript', 'html', 'python') and 'output_file' (e.g., 'drone_game.js')."
+        )
+        response = self.infer(prompt, task, use_remote=task.parameters.get("use_remote", False))
+        try:
+            import json
+            pipelines = json.loads(response)
+            return pipelines
+        except json.JSONDecodeError:
+            self.log_update(f"Failed to parse pipeline inference, defaulting to single pipeline")
+            return [{"language": "javascript", "output_file": "drone_game.js"}, {"language": "html", "output_file": "drone_game.html"}]
 
     def process_task(self, task: Task) -> Tuple[str, Any]:
         self.log_update(f"Developer processing Task {task.task_id}")
@@ -40,95 +59,70 @@ class Developer(Aggregate):
         self.log_update(f"Starting orchestration for task {task.task_id}, stop_at={stop_at}")
         self.log_update(f"Initial task parameters: {task.parameters}")
 
-        # Dynamically find agent keys
-        architect_key = next((k for k in self.agents if k.startswith("Architect_")), None)
-        generator_key = next((k for k in self.agents if k.startswith("Generator_")), None)
-        tester_key = next((k for k in self.agents if k.startswith("Tester_")), None)
-        executor_key = next((k for k in self.agents if k.startswith("Executor_")), None)
-        debugger_key = next((k for k in self.agents if k.startswith("Debugger_")), None)
-
-        self.log_update(f"Available agent keys: architect={architect_key}, generator={generator_key}, tester={tester_key}, executor={executor_key}, debugger={debugger_key}")
-
         # Run Architect
-        if architect_key:
-            try:
-                architect = self.agents[architect_key]
-                status, result = architect.process_task(task)
-                self.log_update(f"{architect_key} executed, status: {status}, result: {result}")
-                task.parameters[architect_key] = {"status": status, "result": result}
-            except Exception as e:
-                self.log_update(f"{architect_key} failed: {str(e)}")
-                task.parameters[architect_key] = {"status": "failed", "result": ""}
+        architect_key = f"Architect_{task.task_id}"
+        architect = Architect(task.task_id, self.session_id, self.model_manager)
+        self.add_agent(architect)
+        try:
+            status, plan = architect.process_task(task)
+            self.log_update(f"{architect_key} executed, status: {status}, plan: {plan}")
+            task.parameters[architect_key] = {"status": status, "result": plan}
+        except Exception as e:
+            self.log_update(f"{architect_key} failed: {str(e)}")
+            task.parameters[architect_key] = {"status": "failed", "result": ""}
+            return "failed", CodeOutput(code="", tests=None)
 
-        # Run Generator
-        if generator_key:
-            try:
-                generator = self.agents[generator_key]
-                status, result = generator.process_task(task)
-                self.log_update(f"{generator_key} executed, status: {status}, result: {result}")
-                task.parameters[generator_key] = {"status": status, "result": result}
-            except Exception as e:
-                self.log_update(f"{generator_key} failed: {str(e)}")
-                task.parameters[generator_key] = {"status": "failed", "result": CodeOutput(code="", tests=None)}
+        # Infer required pipelines
+        pipeline_configs = self.infer_pipelines(task, plan)
+        self.log_update(f"Inferred pipelines: {pipeline_configs}")
+        self.pipelines[task.task_id] = []
 
-        # Run Tester if generate_tests is True
+        # Setup pipelines
+        for config in pipeline_configs:
+            language = config["language"].lower()
+            output_file = config["output_file"]
+            pipeline = self.setup_pipeline(task.task_id, language, output_file)
+            self.pipelines[task.task_id].extend(pipeline)
+
+        # Run pipelines
+        final_outputs = []
+        for pipeline in self.pipelines[task.task_id]:
+            agent = pipeline["agent"]
+            agent_name = pipeline["name"]
+            output_file = pipeline["output_file"]
+            language = pipeline["language"]
+
+            try:
+                # Create subtask with specific language and output
+                subtask = Task(
+                    task_id=f"{task.task_id}_{agent_name}",
+                    description=f"{task.description}\nFocus on generating {language} code for {output_file}",
+                    parameters={**task.parameters, "language": language, "output_file": output_file}
+                )
+                status, result = agent.process_task(subtask)
+                self.log_update(f"{agent_name} executed, status: {status}, result: {result}")
+                task.parameters[agent_name] = {"status": status, "result": result, "output_file": output_file}
+
+                if isinstance(result, CodeOutput) and result.code.strip():
+                    final_outputs.append({"output_file": output_file, "code": result.code, "tests": result.tests})
+            except Exception as e:
+                self.log_update(f"{agent_name} failed: {str(e)}")
+                task.parameters[agent_name] = {"status": "failed", "result": CodeOutput(code="", tests=None), "output_file": output_file}
+
+        # Consolidate outputs
         final_status = "generated"
-        final_result = task.parameters.get(generator_key, {}).get("result") if generator_key else None
-        if task.parameters.get("generate_tests", False) and tester_key:
-            try:
-                tester = self.agents[tester_key]
-                status, result = tester.process_task(task)
-                self.log_update(f"{tester_key} executed, status: {status}, result: {result}")
-                task.parameters[tester_key] = {"status": status, "result": result}
-                final_status = "tested"
-                final_result = result
-            except Exception as e:
-                self.log_update(f"{tester_key} failed: {str(e)}")
-                task.parameters[tester_key] = {"status": "failed", "result": TestResult(test_code="", passed=False, output=str(e))}
+        final_result = CodeOutput(code="", tests=None)
+        for output in final_outputs:
+            if output["output_file"].endswith(".js"):
+                final_result.code = output["code"]
+                final_result.tests = output["tests"]
+            elif output["output_file"].endswith(".html"):
+                final_result.code += f"\n<!-- HTML -->\n{output['code']}"
 
-        # Run Executor if execute is True or Tester ran
-        if (task.parameters.get("execute", False) or tester_key in task.parameters) and executor_key:
-            try:
-                executor = self.agents[executor_key]
-                status, result = executor.process_task(task)
-                self.log_update(f"{executor_key} executed, status: {status}, result: {result}")
-                task.parameters[executor_key] = {"status": status, "result": result}
-                final_status = "tested"
-                final_result = result
-            except Exception as e:
-                self.log_update(f"{executor_key} failed: {str(e)}")
-                task.parameters[executor_key] = {"status": "failed", "result": TestResult(test_code="", passed=False, output=str(e))}
-
-        # Run Debugger if tests failed
-        if final_status == "tested" and isinstance(final_result, TestResult) and not final_result.passed and debugger_key:
-            try:
-                debugger = self.agents[debugger_key]
-                status, result = debugger.process_task(task)
-                self.log_update(f"{debugger_key} executed, status: {status}, result: {result}")
-                task.parameters[debugger_key] = {"status": status, "result": result}
-                final_status = "debugged"
-                final_result = result
-            except Exception as e:
-                self.log_update(f"{debugger_key} failed: {str(e)}")
-                task.parameters[debugger_key] = {"status": "failed", "result": CodeOutput(code="", tests=None)}
-
-        # Select final code output
-        if final_status == "debugged" and debugger_key in task.parameters:
-            final_result = task.parameters[debugger_key].get("result")
-            self.log_update("Selected Debugger output as final result")
-        elif generator_key in task.parameters:
-            final_result = task.parameters[generator_key].get("result")
-            self.log_update("Selected Generator output as final result")
-        else:
-            self.log_update("Warning: No valid output from any agent")
+        if not final_result.code.strip():
+            self.log_update("No valid output from pipelines")
             final_status = "failed"
             final_result = CodeOutput(code="", tests=None)
 
-        # Validate final output
-        if not isinstance(final_result, CodeOutput) or not final_result.code.strip():
-            self.log_update(f"Invalid final output: {final_result}")
-            final_status = "failed"
-            final_result = CodeOutput(code="", tests=None)
-
-        self.log_update(f"Final result type: {type(final_result).__name__}, content: {final_result}")
+        self.log_update(f"Final result type: {type(final_result).__name__}, outputs: {[o['output_file'] for o in final_outputs]}")
         return final_status, final_result

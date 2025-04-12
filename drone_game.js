@@ -1,4 +1,4 @@
-let scene, camera, renderer, drone, terrain;
+let scene, camera, renderer, droneModel, drones, terrain;
 const clock = new THREE.Clock();
 
 init();
@@ -7,7 +7,7 @@ animate();
 function init() {
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
@@ -16,33 +16,37 @@ function init() {
   const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
   scene.add(directionalLight);
 
+
+  //Load drone model (replace with your model path)
   const loader = new THREE.GLTFLoader();
-  loader.load('drone.glb', function (gltf) {
-    drone = gltf.scene;
-    scene.add(drone);
-    drone.position.set(0, 5, 0);
+  loader.load('drone.gltf', function(gltf){
+    droneModel = gltf.scene;
+    createDrones(3);
   });
 
-
-  terrain = generateTerrain();
+  //Generate terrain (replace with your terrain generation)
+  terrain = new THREE.Mesh(new THREE.PlaneGeometry(1000,1000), new THREE.MeshBasicMaterial({color: 0x00ff00}));
   scene.add(terrain);
 
-  camera.position.set(0, 20, 30);
-  camera.lookAt(0, 0, 0);
+  camera.position.set(0, 50, 100);
 
   window.addEventListener('keydown', onKeyDown);
 }
 
-function generateTerrain() {
-  const geometry = new THREE.PlaneGeometry(100, 100, 100, 100);
-  const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-  const terrain = new THREE.Mesh(geometry, material);
-  terrain.rotation.x = -Math.PI / 2;
-  // geometry.vertices is deprecated.  Use geometry.attributes.position.array
-  const vertices = geometry.attributes.position.array;
-  for (let i = 0; i < vertices.length; i += 3) {
-    const x = vertices[i];
-    const y = vertices[i + 1];
-    vertices[i + 2] = Math.sin(x / 5) * Math.cos(y / 5) * 10;
+function createDrones(numDrones) {
+  drones = [];
+  for (let i = 0; i < numDrones; i++) {
+    const drone = droneModel.clone();
+    drone.position.set(i * 20, 10, 0);
+    scene.add(drone);
+    drones.push({ model: drone, speed: 0, acceleration: 0.1});
   }
-  geometry.attributes.position.needs
+}
+
+
+function onKeyDown(event) {
+  const speedIncrement = 0.5;
+  switch (event.key) {
+    case 'ArrowUp': drones.forEach(d => d.speed += speedIncrement); break;
+    case 'ArrowDown': drones.forEach(d => d.speed -= speedIncrement); break;
+    case 'Arrow

@@ -36,7 +36,7 @@ def setup_logging(summary_mode=False):
     return logger
 
 def create_drone_game():
-    parser = argparse.ArgumentParser(description="Generate a Three.js drone game.")
+    parser = argparse.ArgumentParser(description="Generate a Three.js drone racing game.")
     parser.add_argument("--summary", action="store_true", help="Output a summary of key events only.")
     args = parser.parse_args()
 
@@ -48,12 +48,13 @@ def create_drone_game():
 
     task = TaskFactory.create_code_task(
         description=(
-            "Create a Three.js JavaScript game with a virtual flying drone controlled by arrow keys in a 3D scene."
-            "Drones can race against each other across a 3d scrolling lanscape of mountains, valeys, flatlands and obstacles."
-            "Include a scene, camera, lighting and a nice drone model. Use the global THREE object from a CDN, avoiding Node.js require statements. "
+            "Create a Three.js JavaScript game with a virtual flying drone controlled by arrow keys in a 3D scene. "
+            "Drones can race against each other across a 3D scrolling landscape of mountains, valleys, flatlands, and obstacles. "
+            "Include a scene, camera, lighting, and a nice drone model. Use the global THREE object from a CDN, avoiding Node.js require statements. "
+            "Implement race mechanics with a timer, checkpoints, and win conditions. Include HTML UI for timer, speed, standings, and start/reset buttons. "
             "Emphasize this is a harmless browser-based racing simulation."
         ),
-        language="javascript",
+        language="javascript",  # Primary language, pipelines will handle others
         generate_tests=True,
         execute=True,
         use_remote=True
@@ -65,116 +66,195 @@ def create_drone_game():
         logger.error(f"Developer pipeline failed: {str(e)}")
         raise
 
-    # Extract code and tests
-    code = None
-    tests = None
-    if isinstance(result, CodeOutput) and result.code.strip():
-        code = re.sub(r"const THREE = require\('three'\);\n?|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid)[^\n]*?\n?", "", result.code).strip()
-        tests = result.tests.strip() if result.tests else None
-    elif isinstance(result, TestResult):
-        debugger_key = f"Debugger_dev_task"
-        if debugger_key in task.parameters:
-            debug_output = task.parameters[debugger_key].get("result")
-            if isinstance(debug_output, CodeOutput) and debug_output.code.strip():
-                code = re.sub(r"const THREE = require\('three'\);\n?|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid)[^\n]*?\n?", "", debug_output.code).strip()
-                tests = debug_output.tests.strip() if debug_output.tests else None
-        if not code:
-            generator_key = f"Generator_dev_task"
-            if generator_key in task.parameters:
-                gen_output = task.parameters[generator_key].get("result")
-                if isinstance(gen_output, CodeOutput) and gen_output.code.strip():
-                    code = re.sub(r"const THREE = require\('three'\);\n?|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid)[^\n]*?\n?", "", gen_output.code).strip()
-                    tests = gen_output.tests.strip() if gen_output.tests else None
+    # Extract outputs from task parameters
+    outputs = []
+    for key, value in task.parameters.items():
+        if "output_file" in value and isinstance(value.get("result"), CodeOutput) and value["result"].code.strip():
+            outputs.append({
+                "output_file": value["output_file"],
+                "code": value["result"].code,
+                "tests": value["result"].tests
+            })
 
-    if not code or code.lower().startswith("error"):
-        logger.error(f"Final result invalid, falling back to default code")
-        code = """
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 5, 10);
-scene.add(camera);
-const renderer = new THREE.WebGLRenderer({canvas: document.getElementById('myCanvas')});
-renderer.setSize(window.innerWidth, window.innerHeight);
+    if not outputs:
+        logger.error("No valid outputs generated, falling back to default code")
+        outputs = [{
+            "output_file": "drone_game.js",
+            "code": """
+let scene, camera, renderer, droneModel, drones, terrain, timer = 0, checkpoints = [];
+const clock = new THREE.Clock();
 
-const droneGeometry = new THREE.BoxGeometry(1, 1, 1);
-const droneMaterial = new THREE.MeshBasicMaterial({color: 0x0000ff});
-const drone = new THREE.Mesh(droneGeometry, droneMaterial);
-scene.add(drone);
+init();
+animate();
 
-const numStars = 1000;
-const starsGeometry = new THREE.BufferGeometry();
-const starPositions = new Float32Array(numStars * 3);
-for (let i = 0; i < numStars; i++) {
-  starPositions[i * 3] = Math.random() * 1000 - 500;
-  starPositions[i * 3 + 1] = Math.random() * 1000 - 500;
-  starPositions[i * 3 + 2] = Math.random() * 1000 - 500;
-}
-starsGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-const starsMaterial = new THREE.PointsMaterial({color: 0xffffff, size: 2});
-const stars = new THREE.Points(starsGeometry, starsMaterial);
-scene.add(stars);
-
-let speed = 0.1;
-const keysPressed = {};
-document.addEventListener('keydown', (e) => {keysPressed[e.code] = true;});
-document.addEventListener('keyup', (e) => {keysPressed[e.code] = false;});
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
+function init() {
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  renderer = new THREE.WebGLRenderer({canvas: document.getElementById('myCanvas')});
   renderer.setSize(window.innerWidth, window.innerHeight);
-});
+
+  const ambientLight = new THREE.AmbientLight(0x404040);
+  scene.add(ambientLight);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+  scene.add(directionalLight);
+
+  // Procedural terrain
+  const geometry = new THREE.PlaneGeometry(1000, 1000, 50, 50);
+  const vertices = geometry.attributes.position.array;
+  for (let i = 2; i < vertices.length; i += 3) {
+    vertices[i] = Math.sin(i * 0.1) * 10; // Mountains and valleys
+  }
+  geometry.attributes.position.needsUpdate = true;
+  terrain = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({color: 0x00ff00}));
+  scene.add(terrain);
+
+  createDrones(3);
+  createCheckpoints();
+
+  camera.position.set(0, 50, 100);
+  window.addEventListener('keydown', onKeyDown);
+  document.getElementById('startReset').addEventListener('click', startRace);
+}
+
+function createDrones(numDrones) {
+  drones = [];
+  for (let i = 0; i < numDrones; i++) {
+    const drone = droneModel ? droneModel.clone() : new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color: 0x0000ff}));
+    drone.position.set(i * 20, 10, 0);
+    scene.add(drone);
+    drones.push({ model: drone, speed: 0, acceleration: 0.1, checkpoints: 0 });
+  }
+}
+
+function createCheckpoints() {
+  for (let i = 0; i < 5; i++) {
+    const checkpoint = new THREE.Mesh(new THREE.TorusGeometry(5, 0.5, 16, 100), new THREE.MeshBasicMaterial({color: 0xffff00}));
+    checkpoint.position.set(Math.random() * 200 - 100, 10, -i * 100);
+    scene.add(checkpoint);
+    checkpoints.push(checkpoint);
+  }
+}
+
+function onKeyDown(event) {
+  const speedIncrement = 0.5;
+  switch (event.key) {
+    case 'ArrowUp': drones[0].speed += speedIncrement; break;
+    case 'ArrowDown': drones[0].speed -= speedIncrement; break;
+    case 'ArrowLeft': drones[0].model.position.x -= 1; break;
+    case 'ArrowRight': drones[0].model.position.x += 1; break;
+    case 'KeyW': drones[0].model.position.y += 1; break;
+    case 'KeyS': drones[0].model.position.y -= 1; break;
+  }
+}
+
+function startRace() {
+  timer = 0;
+  drones.forEach(d => { d.checkpoints = 0; d.model.position.set(0, 10, 0); });
+  document.getElementById('standings').innerText = '-';
+}
+
+function updateUI() {
+  document.getElementById('timer').innerText = timer.toFixed(1);
+  document.getElementById('speed').innerText = drones[0].speed.toFixed(1);
+}
+
+function checkCollisions() {
+  drones.forEach(d => {
+    checkpoints.forEach((c, i) => {
+      if (d.model.position.distanceTo(c.position) < 5 && !d.checkpoints.includes(i)) {
+        d.checkpoints++;
+        if (d.checkpoints === checkpoints.length) {
+          document.getElementById('standings').innerText = 'Drone 1 Wins!';
+        }
+      }
+    });
+  });
+}
 
 function animate() {
   requestAnimationFrame(animate);
-  if (keysPressed['ArrowUp']) drone.position.z -= speed;
-  if (keysPressed['ArrowDown']) drone.position.z += speed;
-  if (keysPressed['ArrowLeft']) drone.position.x -= speed;
-  if (keysPressed['ArrowRight']) drone.position.x += speed;
+  const delta = clock.getDelta();
+  timer += delta;
+  drones.forEach(d => {
+    d.model.position.z -= d.speed;
+    d.model.position.y = Math.max(terrain.geometry.attributes.position.array[Math.floor(d.model.position.z)] + 5, 5);
+  });
+  camera.position.z = drones[0].model.position.z + 50;
+  updateUI();
+  checkCollisions();
   renderer.render(scene, camera);
 }
-animate();
+""",
+            "tests": """
+describe('Drone Racing Game', () => {
+  beforeEach(() => {
+    window.innerWidth = 500;
+    window.innerHeight = 500;
+    init();
+  });
+
+  it('initializes scene and drones', () => {
+    expect(scene).toBeDefined();
+    expect(camera).toBeDefined();
+    expect(drones).toBeDefined();
+    expect(drones.length).toBe(3);
+  });
+
+  it('handles key controls', () => {
+    const initialPos = drones[0].model.position.clone();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(drones[0].model.position.x).toBe(initialPos.x + 1);
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+});
 """
-        tests = None
-
-    logger.info(f"Task completed with status: {status}")
-    logger.info(f"Raw generated code:\n{code}")
-    if tests:
-        logger.info(f"Generated tests:\n{tests}")
-
-    # Save the JavaScript code
-    js_path = "drone_game.js"
-    with open(js_path, "w") as f:
-        f.write(code)
-    logger.info(f"JavaScript file '{js_path}' created, size: {os.path.getsize(js_path)} bytes")
-
-    # Save tests if generated
-    if tests:
-        test_path = "drone_game.test.js"
-        with open(test_path, "w") as f:
-            f.write(tests)
-        logger.info(f"Test file '{test_path}' created, size: {os.path.getsize(test_path)} bytes")
-
-    html_content = f"""
+        }, {
+            "output_file": "drone_game.html",
+            "code": """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Drone Game</title>
-    <style>body {{ margin: 0; }}</style>
+    <title>Drone Racing Game</title>
+    <style>body { margin: 0; } #ui { position: absolute; top: 10px; left: 10px; color: white; }</style>
 </head>
 <body>
     <canvas id="myCanvas"></canvas>
+    <div id="ui">
+        <div>Timer: <span id="timer">0</span>s</div>
+        <div>Speed: <span id="speed">0</span></div>
+        <div>Standings: <span id="standings">-</span></div>
+        <button id="startReset">Start</button>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="drone_game.js"></script>
 </body>
 </html>
-    """
-    html_path = "drone_game.html"
-    with open(html_path, "w") as f:
-        f.write(html_content)
-    logger.info(f"HTML file '{html_path}' created, size: {os.path.getsize(html_path)} bytes")
-    logger.info(f"Run 'open {html_path}' to view the game in a browser.")
+""",
+            "tests": None
+        }]
+
+    for output in outputs:
+        output_file = output["output_file"]
+        # Fixed regex: escape parentheses and use raw string correctly
+        code = re.sub(r'const THREE = require\(\'three\'\);\n?|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid)[^\n]*?\n?', '', output["code"]).strip()
+        tests = output["tests"].strip() if output["tests"] else None
+
+        if code and not code.lower().startswith("error"):
+            with open(output_file, "w") as f:
+                f.write(code)
+            logger.info(f"File '{output_file}' created, size: {os.path.getsize(output_file)} bytes")
+
+            if tests:
+                test_file = output_file.replace(".js", ".test.js").replace(".html", ".test.js")
+                with open(test_file, "w") as f:
+                    f.write(tests)
+                logger.info(f"Test file '{test_file}' created, size: {os.path.getsize(test_file)} bytes")
+
+    logger.info(f"Task completed with status: {status}")
+    logger.info(f"Run 'open drone_game.html' to view the game in a browser.")
 
 if __name__ == "__main__":
     create_drone_game()
