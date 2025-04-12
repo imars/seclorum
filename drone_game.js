@@ -1,40 +1,57 @@
-var scene, camera, renderer, drone, terrain, checkpoints, clock, startTime,  opponentDrone;
-const droneSpeed = 0.1;
-const gravity = -0.001;
+var scene, camera, renderer, drone, checkpoints, clock;
 const checkpointRadius = 1;
+const droneSpeed = 0.2;
+const numCheckpoints = 5;
 
 init();
 animate();
 
 function init() {
-scene = new THREE.Scene();
-camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-const ambientLight = new THREE.AmbientLight(0x404040);
-scene.add(ambientLight);
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-scene.add(directionalLight);
+    camera.position.z = 5;
 
-// Placeholder for drone model loading
-drone = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0x0000ff }));
-scene.add(drone);
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+    drone = new THREE.Mesh(geometry, material);
+    scene.add(drone);
 
-// Placeholder for terrain generation
-terrain = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshBasicMaterial({ color: 0x808080 }));
-scene.add(terrain);
+    checkpoints = [];
+    for (let i = 0; i < numCheckpoints; i++) {
+        const cpGeometry = new THREE.SphereGeometry(checkpointRadius, 32, 32);
+        const cpMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const checkpoint = new THREE.Mesh(cpGeometry, cpMaterial);
+        checkpoint.position.set(Math.random() * 10 - 5, Math.random() * 5 - 2.5, Math.random() * 10 - 5);
+        scene.add(checkpoint);
+        checkpoints.push(checkpoint);
+    }
 
-checkpoints = [];
-for (let i = 0; i < 3; i++) {
-    const checkpoint = new THREE.Mesh(new THREE.SphereGeometry(checkpointRadius, 32, 32), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
-    checkpoint.position.set(Math.random() * 50 - 25, 0, Math.random() * 50 -25);
-    checkpoints.push(checkpoint);
-    scene.add(checkpoint);
+    clock = new THREE.Clock();
+    window.addEventListener('keydown', onKeyDown, false);
 }
 
-// Placeholder for opponent drone
-opponentDrone = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
-opponentDrone.position.set(Math.random() * 50 - 25, 0, Math.random() * 50 - 25);
-scene.add(opponentDrone);
+function onKeyDown(e) {
+    switch (e.keyCode) {
+        case 87: // W
+            drone.position.z -= droneSpeed;
+            break;
+        case 83: // S
+            drone.position.z += droneSpeed;
+            break;
+        case 65: // A
+            drone.position.x -= droneSpeed;
+            break;
+        case 68: // D
+            drone.position.x += droneSpeed;
+            break;
+    }
+}
+
+
+function animate() {
+    requestAnimationFrame(animate);
+    const

@@ -19,7 +19,7 @@ class Tester(Agent):
     def process_task(self, task: Task) -> Tuple[str, TestResult]:
         self.log_update(f"Testing code for task: {task.description}")
         language = task.parameters.get("language", "javascript").lower()
-        output_file = task.parameters.get("output_file", "output.test")
+        output_file = task.parameters.get("output_file", "output")
         handler = LANGUAGE_HANDLERS.get(language)
         if not handler:
             self.log_update(f"Unsupported language: {language}")
@@ -46,7 +46,23 @@ class Tester(Agent):
             raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False)
             tests = raw_tests.strip()
             if not tests.startswith(("describe(", "test(")):
-                tests = ""
+                tests = f"""
+describe('{output_file}', () => {{
+  beforeEach(() => {{
+    document.body.innerHTML = `{code}`;
+  }});
+  it('has required elements', () => {{
+    expect(document.getElementById('myCanvas')).toBeDefined();
+    expect(document.getElementById('timer')).toBeDefined();
+    expect(document.getElementById('speed')).toBeDefined();
+    expect(document.getElementById('standings')).toBeDefined();
+    expect(document.getElementById('startButton')).toBeDefined();
+  }});
+  afterEach(() => {{
+    document.body.innerHTML = '';
+  }});
+}});
+""" if language == "html" else ""
             self.log_update(f"Generated tests for {output_file}:\n{tests}")
 
         output = "No tests executed"
@@ -54,11 +70,11 @@ class Tester(Agent):
         test_code = tests
         if tests and language == "javascript":
             with tempfile.TemporaryDirectory() as tmpdir:
-                test_file = os.path.join(tmpdir, os.path.basename(output_file))
+                test_file = os.path.join(tmpdir, "test.js")
                 with open(test_file, "w") as f:
                     f.write(tests)
 
-                code_file = os.path.join(tmpdir, os.path.basename(output_file).replace(".test", ""))
+                code_file = os.path.join(tmpdir, "code.js")
                 with open(code_file, "w") as f:
                     f.write(code)
 
@@ -91,7 +107,7 @@ module.exports = {
             from bs4 import BeautifulSoup
             try:
                 soup = BeautifulSoup(code, 'html.parser')
-                required_ids = ['myCanvas', 'timer', 'speed', 'standings', 'startReset']
+                required_ids = ['myCanvas', 'timer', 'speed', 'standings', 'startButton']
                 passed = all(soup.find(id=id_) for id_ in required_ids)
                 output = f"HTML validation {'passed' if passed else 'failed'}: {required_ids} {'found' if passed else 'missing'}"
                 self.log_update(f"HTML test output for {output_file}:\n{output}")

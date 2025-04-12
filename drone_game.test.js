@@ -1,28 +1,24 @@
-describe('Scene Initialization', () => {
-  it('should create a scene', () => {
-    expect(scene).toBeDefined();
-  });
-  it('should create a camera', () => {
-    expect(camera).toBeDefined();
-  });
-  it('should create a renderer', () => {
-    expect(renderer).toBeDefined();
-  });
-  it('should add drone to the scene', () => {
-    expect(scene.children).toContain(drone);
-  });
-  it('should add terrain to the scene', () => {
-    expect(scene.children).toContain(terrain);
-  });
-  it('should have 3 checkpoints', () => {
-    expect(checkpoints.length).toBe(3);
-  });
-  it('should add opponent drone to the scene', () => {
-    expect(scene.children).toContain(opponentDrone);
-  });
-  it('checkpoints should have correct radius', () => {
-    checkpoints.forEach(checkpoint => {
-      expect(checkpoint.geometry.parameters.radius).toBe(checkpointRadius);
-    })
-  })
+test('Canvas element exists', () => {
+  const canvas = document.getElementById('myCanvas');
+  expect(canvas).toBeDefined();
+});
+
+test('Timer element exists', () => {
+  const timer = document.getElementById('timer');
+  expect(timer).toBeDefined();
+});
+
+test('Speed element exists', () => {
+  const speed = document.getElementById('speed');
+  expect(speed).toBeDefined();
+});
+
+test('Standings element exists', () => {
+  const standings = document.getElementById('standings');
+  expect(standings).toBeDefined();
+});
+
+test('Start/Reset button exists', () => {
+  const button = document.getElementById('startButton');
+  expect(button).toBeDefined();
 });

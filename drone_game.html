@@ -2,26 +2,15 @@
 <html>
 <head>
 <title>Drone Race</title>
-<style>
-body { background-color: #222; color: white; font-family: monospace; }
-#ui { position: absolute; top: 10px; left: 10px; background-color: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; }
-#ui h2 { margin-top: 0; }
-button { background-color: #4CAF50; border: none; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; border-radius: 5px; }
-</style>
 </head>
-<body>
-<canvas id="myCanvas"></canvas>
-<div id="ui">
-  <h2>Drone Race</h2>
-  <div>Timer: <span id="timer">0</span></div>
-  <div>Speed: <span id="speed">0</span></div>
-  <table>
-    <thead><tr><th>Drone</th><th>Lap</th><th>Time</th></tr></thead>
-    <tbody id="standings"></tbody>
-  </table>
-  <button id="startButton">Start</button>
-  <button id="resetButton">Reset</button>
+<body style="background-color:black; color:white;">
+<canvas id="myCanvas" width="800" height="600"></canvas>
+<div style="position:absolute; top:10px; left:10px; background-color:rgba(0,0,0,0.5); padding:10px; border-radius:5px;">
+  <p>Race Timer: <span id="timer">00:00</span></p>
+  <p>Drone Speed: <span id="speed">0</span> km/h</p>
+  <p>Race Standings:</p>
+  <ul id="standings"></ul>
+  <button style="background-color:#4CAF50; border:none; color:white; padding:10px 20px; text-align:center; text-decoration:none; display:inline-block; font-size:16px; border-radius:5px;" id="startButton">Start Race</button>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="drone_game.js"></script> </body>
+</body>
 </html>
