@@ -34,8 +34,7 @@ class Generator(Agent):
             "avoiding Node.js require statements, without tags, markup, comments, or explanations."
             if language == "javascript" else ""
         )
-        use_remote = task.parameters.get("use_remote", False)
-        raw_code = self.infer(code_prompt, task, use_remote=use_remote, use_context=False)
+        raw_code = self.infer(code_prompt, task, use_remote=task.parameters.get("use_remote", False), use_context=False)
         code = re.sub(r'```(?:javascript|python|cpp|css|html)?\n|\n```|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid)[^\n]*?\n?', '', raw_code).strip()
         if not code or code.lower().startswith(("error", "invalid")):
             self.log_update("Invalid code generated, discarding")
@@ -50,7 +49,7 @@ class Generator(Agent):
                 "(e.g., scene, camera, drone) and avoid require statements."
                 if language == "javascript" else ""
             )
-            raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False)
+            raw_tests = self.infer(test_prompt, task, use_remote=task.parameters.get("use_remote", False), use_context=False)
             tests = re.sub(r'```(?:javascript|python|cpp)?\n|\n```|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid|mock|recommended)[^\n]*?\n?', '', raw_tests).strip()
             if not tests.startswith("describe(") and not tests.startswith("test("):
                 tests = None

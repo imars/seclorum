@@ -19,8 +19,7 @@ class Architect(Agent):
             "Return only the plan as a concise, structured text (e.g., numbered list or bullet points), "
             "without generating code, comments, or explanations."
         )
-        use_remote = task.parameters.get("use_remote", False)
-        plan = self.infer(prompt, task, use_remote=use_remote, use_context=False)
+        plan = self.infer(prompt, task, use_remote=task.parameters.get("use_remote", False), use_context=False)
         plan = plan.strip()
         self.log_update(f"Generated plan:\n{plan}")
         self.save_output(task, plan, status="planned")
