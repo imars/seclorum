@@ -6,7 +6,7 @@ from seclorum.models import Task, TestResult, CodeOutput
 from seclorum.utils.logger import LoggerMixin
 from seclorum.models.manager import ModelManager, create_model_manager
 from seclorum.core.filesystem import FileSystemManager
-from seclorum.agents.memory.core import Memory  # Updated import
+from seclorum.agents.memory.core import Memory
 from seclorum.agents.remote import Remote
 import logging
 
@@ -18,7 +18,7 @@ class AbstractAgent(ABC, LoggerMixin):
         super().__init__()
         self.session_id: str = session_id
         self.active: bool = False
-        self.fs_manager = FileSystemManager()
+        self.fs_manager = FileSystemManager(require_git=quiet)
         self.memory = self.get_or_create_memory(session_id)
         self.logger.info(f"Using shared MemoryManager for session {session_id}")
 
@@ -38,10 +38,53 @@ class AbstractAgent(ABC, LoggerMixin):
 
     def stop(self) -> None:
         self.active = False
+        self.memory.stop()
         self.log_update(f"Stopping {self.name}")
 
-    def commit_changes(self, message: str) -> None:
-        self.fs_manager.commit_changes(message)
+    def commit_changes(self, message: str) -> bool:
+        """Commit changes to the Git repository with agent prefix."""
+        return self.fs_manager.commit_changes(f"{self.name}: {message}")
+
+    def save_output(self, task: Task, output: Any, status: str = "completed") -> None:
+        """Save output to memory and task parameters."""
+        self.memory.save(
+            prompt=task.description,
+            response=output,
+            task_id=task.task_id,
+            agent_name=self.name
+        )
+        self.store_output(task, status, output)
+        self.log_update(f"Saved output for task {task.task_id}: {status}")
+
+    def infer(self, prompt: str, task: Task, use_remote: Optional[bool] = None, use_context: bool = False, endpoint: str = "google_ai_studio", **kwargs) -> str:
+        """Run inference with optional history and similar tasks."""
+        # Use task.parameters.use_remote if use_remote is None
+        use_remote = use_remote if use_remote is not None else task.parameters.get("use_remote", False)
+        if use_context:
+            history = self.memory.load_conversation_history(task_id=task.task_id, agent_name=self.name)
+            formatted_history = self.memory.format_history(history) if history else ""
+            similar_tasks = self.memory.find_similar(task.description, task_id=None, n_results=3)
+            formatted_similar = "\n".join(f"- {task}" for task in similar_tasks) if similar_tasks else ""
+
+            context = []
+            if formatted_similar:
+                context.append(f"Relevant Past Tasks:\n{formatted_similar}")
+            if formatted_history:
+                context.append(f"Task History:\n{formatted_history}")
+            context.append(f"Current Prompt:\n{prompt}")
+            full_prompt = "\n\n".join(context) if context else prompt
+        else:
+            full_prompt = prompt
+
+        self.log_update(f"Inferring {'with context ' if use_context else ''}(length: {len(full_prompt)} chars, remote: {use_remote})")
+        return self._run_inference(full_prompt, use_remote, endpoint, **kwargs)
+
+    def _run_inference(self, prompt: str, use_remote: bool, endpoint: str, **kwargs) -> str:
+        """Helper method to handle inference with logging."""
+        if use_remote:
+            self.log_update(f"Running remote inference to {endpoint}")
+            return self.remote_infer(prompt, endpoint=endpoint, **kwargs)
+        return self.model.infer(prompt, **kwargs)
 
 class Agent(AbstractAgent, Remote):
     def __init__(self, name: str, session_id: str, model_manager: Optional[ModelManager] = None, model_name: str = "llama3.2:latest"):
@@ -50,8 +93,31 @@ class Agent(AbstractAgent, Remote):
         self.model = model_manager or create_model_manager(provider="ollama", model_name=model_name)
         self.available_models = {"default": self.model}
         self.current_model_key = "default"
-        self.memory = self.get_or_create_memory(session_id)  # Consistent with AbstractAgent
+        self.memory = self.get_or_create_memory(session_id)
         self.log_update(f"Agent {name} initialized with model {self.model.model_name}")
+
+    def remote_infer(self, prompt: str, endpoint: str = "google_ai_studio", **kwargs) -> str:
+        """Run inference remotely with logging for rate limits."""
+        self.log_update(f"Running remote inference to {endpoint}")
+        if endpoint == "google_ai_studio":
+            api_key = os.getenv("GOOGLE_AI_STUDIO_API_KEY")
+            if not api_key:
+                raise ValueError("GOOGLE_AI_STUDIO_API_KEY not set")
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"maxOutputTokens": 512, "temperature": 0.7}
+            }
+            try:
+                response = requests.post(url, json=payload, timeout=30)
+                response.raise_for_status()
+                result = response.json()
+                return result["candidates"][0]["content"]["parts"][0]["text"]
+            except requests.RequestException as e:
+                self.log_update(f"Remote inference failed: {str(e)}")
+                raise
+        else:
+            raise ValueError(f"Unsupported endpoint: {endpoint}")
 
     def add_model(self, model_key: str, model_manager: ModelManager) -> None:
         """Add a new model to the agent's model pool."""

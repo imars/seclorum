@@ -18,36 +18,46 @@ class Generator(Agent):
         language = task.parameters.get("language", "python").lower()
         config = LANGUAGE_CONFIG.get(language, LANGUAGE_CONFIG["python"])
 
-        code_prompt = config["code_prompt"].format(description=task.description)
-        if language == "javascript":
-            code_prompt += (
-                " Return only the raw, executable JavaScript code suitable for browser environments using the global THREE object from a CDN, "
-                "avoiding Node.js require statements, without tags, markup, comments, or explanations."
-            )
-        use_remote = task.parameters.get("use_remote", None)
-        raw_code = self.infer(code_prompt, use_remote=use_remote)
-        # Strip Markdown tags, require statements, and extra whitespace
-        code = re.sub(r'```(?:javascript|python|cpp|css|html)?\n|\n```', '', raw_code)
-        code = re.sub(r"const THREE = require\('three'\);\n?", "", code).strip()
+        # Include Architect's plan if available
+        architect_key = f"Architect_{self.task_id}"
+        plan = task.parameters.get(architect_key, {}).get("result", "")
+        if isinstance(plan, str) and plan.strip():
+            self.log_update(f"Using Architect plan:\n{plan}")
+        else:
+            plan = ""
+            self.log_update("No valid Architect plan found")
+
+        code_prompt = (
+            f"Architect's Plan:\n{plan}\n\n" if plan else ""
+        ) + config["code_prompt"].format(description=task.description) + (
+            " Return only the raw, executable JavaScript code suitable for browser environments using the global THREE object from a CDN, "
+            "avoiding Node.js require statements, without tags, markup, comments, or explanations."
+            if language == "javascript" else ""
+        )
+        use_remote = task.parameters.get("use_remote", False)
+        raw_code = self.infer(code_prompt, task, use_remote=use_remote, use_context=False)
+        code = re.sub(r'```(?:javascript|python|cpp|css|html)?\n|\n```|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid)[^\n]*?\n?', '', raw_code).strip()
+        if not code or code.lower().startswith(("error", "invalid")):
+            self.log_update("Invalid code generated, discarding")
+            code = ""
         self.log_update(f"Raw generated code:\n{code}")
 
         tests = None
-        if task.parameters.get("generate_tests", False) and config["test_prompt"]:
-            test_prompt = config["test_prompt"].format(code=code)
-            if language == "javascript":
-                test_prompt += (
-                    " Return only the raw Jest test code for Node.js, without Markdown or comments."
-                )
-            raw_tests = self.infer(test_prompt, use_remote=use_remote)
-            # Strip Markdown tags from tests
-            tests = re.sub(r'```(?:javascript|python|cpp)?\n|\n```', '', raw_tests).strip()
+        if task.parameters.get("generate_tests", False) and config["test_prompt"] and code:
+            test_prompt = config["test_prompt"].format(code=code) + (
+                " Return only the raw, executable Jest test code for Node.js, compatible with Three.js browser code, "
+                "without Markdown, comments, instructions, or explanations. Ensure tests reference the code via global variables "
+                "(e.g., scene, camera, drone) and avoid require statements."
+                if language == "javascript" else ""
+            )
+            raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False)
+            tests = re.sub(r'```(?:javascript|python|cpp)?\n|\n```|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid|mock|recommended)[^\n]*?\n?', '', raw_tests).strip()
+            if not tests.startswith("describe(") and not tests.startswith("test("):
+                tests = None
             self.log_update(f"Generated tests:\n{tests}")
 
         result = CodeOutput(code=code, tests=tests)
-        self.store_output(task, "generated", result)
-        self.log_update(f"CodeOutput created: {result}")
-        self.memory.save(response=result, task_id=task.task_id)
-        task.parameters["Generator_dev_task"] = {"status": "generated", "result": result}
+        self.save_output(task, result, status="generated")
         self.commit_changes(f"Generated {language} code and tests for {task.task_id}")
         return "generated", result
 

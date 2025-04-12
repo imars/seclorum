@@ -41,66 +41,94 @@ class Developer(Aggregate):
         self.log_update(f"Initial task parameters: {task.parameters}")
 
         # Dynamically find agent keys
+        architect_key = next((k for k in self.agents if k.startswith("Architect_")), None)
         generator_key = next((k for k in self.agents if k.startswith("Generator_")), None)
         tester_key = next((k for k in self.agents if k.startswith("Tester_")), None)
         executor_key = next((k for k in self.agents if k.startswith("Executor_")), None)
         debugger_key = next((k for k in self.agents if k.startswith("Debugger_")), None)
 
-        self.log_update(f"Available agent keys: generator={generator_key}, tester={tester_key}, executor={executor_key}, debugger={debugger_key}")
+        self.log_update(f"Available agent keys: architect={architect_key}, generator={generator_key}, tester={tester_key}, executor={executor_key}, debugger={debugger_key}")
 
-        # Ensure Architect runs
-        architect_key = next((k for k in self.agents if k.startswith("Architect_")), None)
-        if architect_key and architect_key not in task.parameters:
-            self.log_update(f"{architect_key} output missing, forcing execution")
-            architect = self.agents[architect_key]
-            status, result = architect.process_task(task)
-            self.log_update(f"Forced {architect_key}, status: {status}, result: {result}")
+        # Run Architect
+        if architect_key:
+            try:
+                architect = self.agents[architect_key]
+                status, result = architect.process_task(task)
+                self.log_update(f"{architect_key} executed, status: {status}, result: {result}")
+                task.parameters[architect_key] = {"status": status, "result": result}
+            except Exception as e:
+                self.log_update(f"{architect_key} failed: {str(e)}")
+                task.parameters[architect_key] = {"status": "failed", "result": ""}
 
-        # Ensure Generator runs
-        if generator_key and generator_key not in task.parameters:
-            self.log_update(f"{generator_key} output missing, forcing execution")
-            generator = self.agents[generator_key]
-            status, result = generator.process_task(task)
-            self.log_update(f"Forced {generator_key}, status: {status}, result: {result}")
-        else:
-            status = "generated" if generator_key in task.parameters else "planned"
-            result = task.parameters.get(generator_key, {}).get("result") if generator_key else None
-            self.log_update(f"{generator_key} output already present: {result}")
+        # Run Generator
+        if generator_key:
+            try:
+                generator = self.agents[generator_key]
+                status, result = generator.process_task(task)
+                self.log_update(f"{generator_key} executed, status: {status}, result: {result}")
+                task.parameters[generator_key] = {"status": status, "result": result}
+            except Exception as e:
+                self.log_update(f"{generator_key} failed: {str(e)}")
+                task.parameters[generator_key] = {"status": "failed", "result": CodeOutput(code="", tests=None)}
 
         # Run Tester if generate_tests is True
+        final_status = "generated"
+        final_result = task.parameters.get(generator_key, {}).get("result") if generator_key else None
         if task.parameters.get("generate_tests", False) and tester_key:
-            self.log_update(f"Forcing {tester_key} to process")
-            tester = self.agents[tester_key]
-            status, result = tester.process_task(task)
-            self.log_update(f"Forced {tester_key}, status: {status}, result: {result}")
+            try:
+                tester = self.agents[tester_key]
+                status, result = tester.process_task(task)
+                self.log_update(f"{tester_key} executed, status: {status}, result: {result}")
+                task.parameters[tester_key] = {"status": status, "result": result}
+                final_status = "tested"
+                final_result = result
+            except Exception as e:
+                self.log_update(f"{tester_key} failed: {str(e)}")
+                task.parameters[tester_key] = {"status": "failed", "result": TestResult(test_code="", passed=False, output=str(e))}
 
-        # Run Executor if execute is True or tests exist
+        # Run Executor if execute is True or Tester ran
         if (task.parameters.get("execute", False) or tester_key in task.parameters) and executor_key:
-            self.log_update(f"Forcing {executor_key} to process")
-            executor = self.agents[executor_key]
-            status, result = executor.process_task(task)
-            self.log_update(f"Forced {executor_key}, status: {status}, result: {result}")
+            try:
+                executor = self.agents[executor_key]
+                status, result = executor.process_task(task)
+                self.log_update(f"{executor_key} executed, status: {status}, result: {result}")
+                task.parameters[executor_key] = {"status": status, "result": result}
+                final_status = "tested"
+                final_result = result
+            except Exception as e:
+                self.log_update(f"{executor_key} failed: {str(e)}")
+                task.parameters[executor_key] = {"status": "failed", "result": TestResult(test_code="", passed=False, output=str(e))}
 
-        # Run Debugger if execution failed
-        if status == "tested" and isinstance(result, TestResult) and not result.passed and debugger_key:
-            self.log_update(f"Forcing {debugger_key} due to failed execution")
-            debugger = self.agents[debugger_key]
-            status, result = debugger.process_task(task)
-            self.log_update(f"Forced {debugger_key}, status: {status}, result: {result}")
+        # Run Debugger if tests failed
+        if final_status == "tested" and isinstance(final_result, TestResult) and not final_result.passed and debugger_key:
+            try:
+                debugger = self.agents[debugger_key]
+                status, result = debugger.process_task(task)
+                self.log_update(f"{debugger_key} executed, status: {status}, result: {result}")
+                task.parameters[debugger_key] = {"status": status, "result": result}
+                final_status = "debugged"
+                final_result = result
+            except Exception as e:
+                self.log_update(f"{debugger_key} failed: {str(e)}")
+                task.parameters[debugger_key] = {"status": "failed", "result": CodeOutput(code="", tests=None)}
 
-        # Finalize output
-        if task.parameters.get("generate_tests", False) or task.parameters.get("execute", False):
-            # Prioritize Tester or Executor output
-            final_result = task.parameters.get(executor_key, {}).get("result") if executor_key in task.parameters else \
-                           task.parameters.get(tester_key, {}).get("result") if tester_key in task.parameters else \
-                           task.parameters.get(generator_key, {}).get("result") if generator_key in task.parameters else result
-            status = "tested"
+        # Select final code output
+        if final_status == "debugged" and debugger_key in task.parameters:
+            final_result = task.parameters[debugger_key].get("result")
+            self.log_update("Selected Debugger output as final result")
+        elif generator_key in task.parameters:
+            final_result = task.parameters[generator_key].get("result")
+            self.log_update("Selected Generator output as final result")
         else:
-            final_result = task.parameters.get(generator_key, {}).get("result") if generator_key in task.parameters else result
-            status = "generated"
+            self.log_update("Warning: No valid output from any agent")
+            final_status = "failed"
+            final_result = CodeOutput(code="", tests=None)
+
+        # Validate final output
+        if not isinstance(final_result, CodeOutput) or not final_result.code.strip():
+            self.log_update(f"Invalid final output: {final_result}")
+            final_status = "failed"
+            final_result = CodeOutput(code="", tests=None)
 
         self.log_update(f"Final result type: {type(final_result).__name__}, content: {final_result}")
-        if not final_result or (isinstance(final_result, CodeOutput) and not final_result.code.strip()):
-            self.log_update(f"Warning: Invalid or empty output: {final_result}")
-
-        return status, final_result
+        return final_status, final_result
