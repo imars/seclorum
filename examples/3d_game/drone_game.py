@@ -40,7 +40,11 @@ def create_drone_game():
     args = parser.parse_args()
 
     logger = setup_logging(args.summary)
-    logger.info(f"Running from: {os.getcwd()}")
+
+    # Set working directory to script location
+    script_dir = Path(__file__).parent.resolve()
+    os.chdir(script_dir)
+    logger.info(f"Running from: {script_dir}")
 
     model_manager = create_model_manager(provider="ollama", model_name="llama3.2:latest")
     developer = Developer("drone_game_session", model_manager)
@@ -62,7 +66,7 @@ def create_drone_game():
         logger.error(f"Developer pipeline failed: {str(e)}")
         raise
 
-    # Ensure result is valid
+    # Handle both CodeOutput and TestResult
     if isinstance(result, CodeOutput) and result.code.strip():
         code = re.sub(r"const THREE = require\('three'\);\n?", "", result.code).strip()
         tests = result.tests.strip() if result.tests else None
@@ -79,25 +83,22 @@ def create_drone_game():
     if tests:
         logger.info(f"Generated tests:\n{tests}")
 
-    # Save the JavaScript code to drone_game.js
-    js_path = "drone_game.js"
-    with open(js_path, "w") as f:
-        f.write(code)
-    logger.info(f"JavaScript file '{js_path}' created, size: {os.path.getsize(js_path)} bytes")
+    # Save files relative to script directory
+    js_path = script_dir / "drone_game.js"
+    js_path.write_text(code)
+    logger.info(f"JavaScript file '{js_path}' created, size: {js_path.stat().st_size} bytes")
 
-    # Save tests if generated
     if tests:
-        test_path = "drone_game.test.js"
-        with open(test_path, "w") as f:
-            f.write(tests)
-        logger.info(f"Test file '{test_path}' created, size: {os.path.getsize(test_path)} bytes")
+        test_path = script_dir / "drone_game.test.js"
+        test_path.write_text(tests)
+        logger.info(f"Test file '{test_path}' created, size: {test_path.stat().st_size} bytes")
 
-    html_content = f"""
+    html_content = """
 <!DOCTYPE html>
 <html>
 <head>
     <title>Drone Game</title>
-    <style>body {{ margin: 0; }}</style>
+    <style>body { margin: 0; }</style>
 </head>
 <body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -106,10 +107,9 @@ def create_drone_game():
 </body>
 </html>
     """
-    html_path = "drone_game.html"
-    with open(html_path, "w") as f:
-        f.write(html_content)
-    logger.info(f"HTML file '{html_path}' created, size: {os.path.getsize(html_path)} bytes")
+    html_path = script_dir / "drone_game.html"
+    html_path.write_text(html_content.strip())
+    logger.info(f"HTML file '{html_path}' created, size: {html_path.stat().st_size} bytes")
     logger.info(f"Run 'open {html_path}' to view the game in a browser.")
 
 if __name__ == "__main__":
