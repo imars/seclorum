@@ -69,6 +69,11 @@ def create_drone_game():
     # Extract outputs from task parameters
     outputs = []
     for key, value in task.parameters.items():
+        # Skip non-dict values (e.g., booleans from commit_changes)
+        if not isinstance(value, dict):
+            logger.debug(f"Skipping invalid parameter value for {key}: {value}")
+            continue
+        # Check for valid output_file and CodeOutput result
         if "output_file" in value and isinstance(value.get("result"), CodeOutput) and value["result"].code.strip():
             outputs.append({
                 "output_file": value["output_file"],
@@ -190,6 +195,7 @@ describe('Drone Racing Game', () => {
   beforeEach(() => {
     window.innerWidth = 500;
     window.innerHeight = 500;
+    document.body.innerHTML = '<canvas id="myCanvas"></canvas><div id="ui"><span id="timer"></span><span id="speed"></span><span id="standings"></span><button id="startReset"></button></div>';
     init();
   });
 
@@ -206,6 +212,12 @@ describe('Drone Racing Game', () => {
     expect(drones[0].model.position.x).toBe(initialPos.x + 1);
   });
 
+  it('updates UI', () => {
+    updateUI();
+    expect(document.getElementById('timer').innerText).not.toBe('');
+    expect(document.getElementById('speed').innerText).not.toBe('');
+  });
+
   afterEach(() => {
     document.body.innerHTML = '';
   });
@@ -218,7 +230,14 @@ describe('Drone Racing Game', () => {
 <html>
 <head>
     <title>Drone Racing Game</title>
-    <style>body { margin: 0; } #ui { position: absolute; top: 10px; left: 10px; color: white; }</style>
+    <style>
+        body { margin: 0; background: #000; }
+        #myCanvas { display: block; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial, sans-serif; font-size: 16px; }
+        #ui div { margin-bottom: 5px; }
+        #startReset { padding: 5px 10px; background: #007bff; border: none; color: white; cursor: pointer; }
+        #startReset:hover { background: #0056b3; }
+    </style>
 </head>
 <body>
     <canvas id="myCanvas"></canvas>
@@ -233,12 +252,28 @@ describe('Drone Racing Game', () => {
 </body>
 </html>
 """,
-            "tests": None
+            "tests": """
+describe('Drone Game UI', () => {
+  beforeEach(() => {
+    document.body.innerHTML = document.querySelector('html').innerHTML;
+  });
+
+  it('has UI elements', () => {
+    expect(document.getElementById('timer')).toBeDefined();
+    expect(document.getElementById('speed')).toBeDefined();
+    expect(document.getElementById('standings')).toBeDefined();
+    expect(document.getElementById('startReset')).toBeDefined();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+});
+"""
         }]
 
     for output in outputs:
         output_file = output["output_file"]
-        # Fixed regex: escape parentheses and use raw string correctly
         code = re.sub(r'const THREE = require\(\'three\'\);\n?|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid)[^\n]*?\n?', '', output["code"]).strip()
         tests = output["tests"].strip() if output["tests"] else None
 

@@ -32,16 +32,11 @@ class Tester(Agent):
             code_output = task.parameters[generator_key].get("result")
 
         if not code_output or not code_output.code.strip():
-            self.log_update("No valid code to test")
+            self.log_update(f"No valid {language} code to test for {output_file}")
             return "tested", TestResult(test_code="", passed=False, output="No code provided")
 
         code = code_output.code
         tests = code_output.tests if code_output.tests else ""
-
-        # Validate tests
-        if tests and language == "javascript" and not (tests.startswith("describe(") or tests.startswith("test(")):
-            self.log_update("Invalid test code detected, discarding")
-            tests = ""
 
         # Generate tests if not provided
         if not tests and config["test_prompt"]:
@@ -50,7 +45,8 @@ class Tester(Agent):
                 "(e.g., scene, camera, drone existence) without requiring Three.js imports or complex rendering. "
                 "Use global variables (e.g., scene, camera, drone) and avoid require statements."
                 if language == "javascript" else
-                " Return only the raw HTML validation script, without comments or explanations."
+                " Return only the raw Jest test code to validate HTML structure, checking for canvas and UI elements (timer, speed, standings, start/reset button), "
+                "without comments or explanations."
                 if language == "html" else ""
             )
             use_remote = task.parameters.get("use_remote", False)
@@ -65,6 +61,24 @@ describe('{output_file}', () => {{
   }});
   it('initializes correctly', () => {{
     expect(true).toBe(true); // Placeholder test
+  }});
+}});
+"""
+            if language == "html" and not tests.startswith(("describe(", "test(")):
+                tests = f"""
+describe('{output_file}', () => {{
+  beforeEach(() => {{
+    document.body.innerHTML = `{code}`;
+  }});
+  it('has UI elements', () => {{
+    expect(document.getElementById('myCanvas')).toBeDefined();
+    expect(document.getElementById('timer')).toBeDefined();
+    expect(document.getElementById('speed')).toBeDefined();
+    expect(document.getElementById('standings')).toBeDefined();
+    expect(document.getElementById('startReset')).toBeDefined();
+  }});
+  afterEach(() => {{
+    document.body.innerHTML = '';
   }});
 }});
 """
@@ -111,6 +125,19 @@ module.exports = {
                     output = e.output
                     passed = False
                     self.log_update(f"Test execution failed for {output_file}:\n{output}")
+        elif tests and language == "html":
+            # Validate HTML structure
+            from bs4 import BeautifulSoup
+            try:
+                soup = BeautifulSoup(code, 'html.parser')
+                required_ids = ['myCanvas', 'timer', 'speed', 'standings', 'startReset']
+                passed = all(soup.find(id=id_) for id_ in required_ids)
+                output = f"HTML validation {'passed' if passed else 'failed'}: {required_ids} {'found' if passed else 'missing'}"
+                self.log_update(f"HTML test output for {output_file}:\n{output}")
+            except Exception as e:
+                output = f"HTML validation failed: {str(e)}"
+                passed = False
+                self.log_update(f"HTML test failed for {output_file}:\n{output}")
 
         result = TestResult(test_code=test_code, passed=passed, output=output)
         self.save_output(task, result, status="tested")

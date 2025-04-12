@@ -48,8 +48,11 @@ class Developer(Aggregate):
             pipelines = json.loads(response)
             return pipelines
         except json.JSONDecodeError:
-            self.log_update(f"Failed to parse pipeline inference, defaulting to single pipeline")
-            return [{"language": "javascript", "output_file": "drone_game.js"}, {"language": "html", "output_file": "drone_game.html"}]
+            self.log_update(f"Failed to parse pipeline inference, defaulting to JavaScript and HTML")
+            return [
+                {"language": "javascript", "output_file": "drone_game.js"},
+                {"language": "html", "output_file": "drone_game.html"}
+            ]
 
     def process_task(self, task: Task) -> Tuple[str, Any]:
         self.log_update(f"Developer processing Task {task.task_id}")
@@ -101,13 +104,24 @@ class Developer(Aggregate):
                 )
                 status, result = agent.process_task(subtask)
                 self.log_update(f"{agent_name} executed, status: {status}, result: {result}")
-                task.parameters[agent_name] = {"status": status, "result": result, "output_file": output_file}
+                # Explicitly store output to avoid overwrites
+                task.parameters[agent_name] = {
+                    "status": status,
+                    "result": result,
+                    "output_file": output_file if output_file else None,
+                    "language": language
+                }
 
                 if isinstance(result, CodeOutput) and result.code.strip():
                     final_outputs.append({"output_file": output_file, "code": result.code, "tests": result.tests})
             except Exception as e:
                 self.log_update(f"{agent_name} failed: {str(e)}")
-                task.parameters[agent_name] = {"status": "failed", "result": CodeOutput(code="", tests=None), "output_file": output_file}
+                task.parameters[agent_name] = {
+                    "status": "failed",
+                    "result": CodeOutput(code="", tests=None),
+                    "output_file": output_file if output_file else None,
+                    "language": language
+                }
 
         # Consolidate outputs
         final_status = "generated"

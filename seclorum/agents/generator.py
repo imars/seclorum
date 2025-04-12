@@ -37,16 +37,17 @@ class Generator(Agent):
             "Return only the raw, executable JavaScript code suitable for browser environments using the global THREE object from a CDN, "
             "avoiding Node.js require statements, without tags, markup, comments, or explanations."
             if language == "javascript" else
-            "Return only the raw HTML content, including necessary UI elements, without comments or explanations."
+            "Return only the raw HTML content, including a canvas with id='myCanvas' and a styled UI div with elements for timer, speed, standings, and a start/reset button, "
+            "without comments or explanations. Include inline CSS for a dark background, white text, and button styling."
             if language == "html" else
             config["code_prompt"].format(description=task.description)
         )
 
         use_remote = task.parameters.get("use_remote", False)
-        raw_code = self.infer(code_prompt, task, use_remote=use_remote, use_context=False)
+        raw_code = self.infer(code_prompt, task, use_remote=use_remote, use_context=False, max_tokens=1000)
         code = re.sub(r'```(?:javascript|html|python|cpp|css)?\n|\n```|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid)[^\n]*?\n?', '', raw_code).strip()
         if not code or code.lower().startswith(("error", "invalid")):
-            self.log_update("Invalid code generated, discarding")
+            self.log_update(f"Invalid {language} code generated for {output_file}, discarding")
             code = ""
         self.log_update(f"Raw generated code for {output_file}:\n{code}")
 
@@ -57,13 +58,32 @@ class Generator(Agent):
                 "without Markdown, comments, instructions, or explanations. Ensure tests reference the code via global variables "
                 "(e.g., scene, camera, drone) and avoid require statements."
                 if language == "javascript" else
-                " Return only the raw HTML test code or validation script, without comments or explanations."
+                " Return only the raw Jest test code to validate HTML structure, checking for canvas and UI elements (timer, speed, standings, start/reset button), "
+                "without comments or explanations."
                 if language == "html" else ""
             )
-            raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False)
+            raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False, max_tokens=500)
             tests = re.sub(r'```(?:javascript|html|python|cpp)?\n|\n```|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid|mock|recommended)[^\n]*?\n?', '', raw_tests).strip()
             if language == "javascript" and not tests.startswith(("describe(", "test(")):
                 tests = None
+            if language == "html" and not tests.startswith(("describe(", "test(")):
+                tests = f"""
+describe('{output_file}', () => {{
+  beforeEach(() => {{
+    document.body.innerHTML = `{code}`;
+  }});
+  it('has UI elements', () => {{
+    expect(document.getElementById('myCanvas')).toBeDefined();
+    expect(document.getElementById('timer')).toBeDefined();
+    expect(document.getElementById('speed')).toBeDefined();
+    expect(document.getElementById('standings')).toBeDefined();
+    expect(document.getElementById('startReset')).toBeDefined();
+  }});
+  afterEach(() => {{
+    document.body.innerHTML = '';
+  }});
+}});
+"""
             self.log_update(f"Generated tests for {output_file}:\n{tests}")
 
         result = CodeOutput(code=code, tests=tests)
