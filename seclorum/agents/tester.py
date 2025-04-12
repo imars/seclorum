@@ -61,6 +61,11 @@ class Tester(Agent):
                         f"    expect(document.getElementById('standings')).toBeDefined();\n"
                         f"    expect(document.getElementById('startButton')).toBeDefined();\n"
                         f"  }});\n"
+                        f"  it('includes Three.js script', () => {{\n"
+                        f"    const scripts = document.getElementsByTagName('script');\n"
+                        f"    const threeJs = Array.from(scripts).find(s => s.src.includes('three.js'));\n"
+                        f"    expect(threeJs).toBeDefinedUND();\n"
+                        f"  }});\n"
                         f"  afterEach(() => {{\n"
                         f"    document.body.innerHTML = '';\n"
                         f"  }});\n"
@@ -73,7 +78,19 @@ class Tester(Agent):
         output = "No tests executed"
         passed = False
         test_code = tests
-        if tests and language == "javascript":
+        if language == "html":
+            try:
+                soup = BeautifulSoup(code, 'html.parser')
+                required_ids = ['myCanvas', 'timer', 'speed', 'standings', 'startButton']
+                has_three_js = any('three.js' in tag.get('src', '') for tag in soup.find_all('script'))
+                passed = all(soup.find(id=id_) for id_ in required_ids) and has_three_js
+                output = f"HTML validation {'passed' if passed else 'failed'}: {required_ids} {'and Three.js script ' if has_three_js else ''}{'found' if passed else 'missing'}"
+                self.log_update(f"HTML test output for {output_file}:\n{output}")
+            except Exception as e:
+                output = f"HTML validation failed: {str(e)}"
+                passed = False
+                self.log_update(f"HTML test failed for {output_file}:\n{output}")
+        elif tests and language == "javascript":
             with tempfile.TemporaryDirectory() as tmpdir:
                 test_file = os.path.join(tmpdir, os.path.basename(output_file))
                 with open(test_file, "w") as f:
@@ -108,17 +125,6 @@ module.exports = {
                     output = e.output
                     passed = False
                     self.log_update(f"Test execution failed for {output_file}:\n{output}")
-        elif language == "html":
-            try:
-                soup = BeautifulSoup(code, 'html.parser')
-                required_ids = ['myCanvas', 'timer', 'speed', 'standings', 'startButton']
-                passed = all(soup.find(id=id_) for id_ in required_ids)
-                output = f"HTML validation {'passed' if passed else 'failed'}: {required_ids} {'found' if passed else 'missing'}"
-                self.log_update(f"HTML test output for {output_file}:\n{output}")
-            except Exception as e:
-                output = f"HTML validation failed: {str(e)}"
-                passed = False
-                self.log_update(f"HTML test failed for {output_file}:\n{output}")
 
         result = TestResult(test_code=test_code, passed=passed, output=output)
         self.save_output(task, result, status="tested")

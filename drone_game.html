@@ -1,43 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Drone Race Game</title>
-<style>
-body {
-  background-color: #222;
-  color: white;
-}
-#uiPanel {
-  background-color: rgba(0, 0, 0, 0.5);
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 10px;
-}
-#startButton {
-  background-color: #4CAF50;
-  border: none;
-  color: white;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 16px;
-  margin: 4px 2px;
-  cursor: pointer;
-}
-#startButton:hover {
-  background-color: #3e8e41;
-}
-</style>
+<title>Drone Race</title>
 </head>
-<body>
+<body style="background-color:#222; color:white;">
 <canvas id="myCanvas"></canvas>
-<div id="uiPanel">
-  <div>Timer: <span id="timer">0</span></div>
-  <div>Speed: <span id="speed">0</span></div>
-  <div>Standings: <span id="standings"></span></div>
-  <button id="startButton">Start</button>
+<div id="uiPanel" style="position:absolute; top:0; left:0; width:200px; height:100%; background-color:rgba(0,0,0,0.5); padding:10px;">
+  <p>Timer: <span id="timer">0</span></p>
+  <p>Speed: <span id="speed">0</span></p>
+  <p>Standings: <span id="standings"></span></p>
+  <button id="startButton" style="background-color:#4CAF50; color:white; padding:10px; border:none; cursor:pointer; width:100%;">Start</button>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="drone_game.js"></script>

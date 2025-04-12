@@ -125,7 +125,7 @@ function createDrones(numDrones) {
     const drone = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color: i === 0 ? 0x0000ff : 0x00ff00}));
     drone.position.set(i * 20, 10, 0);
     scene.add(drone);
-    drones.push({ model: drone, speed: 0, acceleration: 0.1, checkpoints: 0 });
+    drones.push({ model: drone, speed: 0, acceleration: 0.1, checkpoints: [] });
   }
 }
 
@@ -160,7 +160,7 @@ function onKeyDown(event) {
 
 function startRace() {
   timer = 0;
-  drones.forEach(d => { d.checkpoints = 0; d.model.position.set(0, 10, 0); });
+  drones.forEach(d => { d.checkpoints = []; d.model.position.set(0, 10, 0); });
   document.getElementById('standings').innerText = '-';
 }
 
@@ -173,8 +173,8 @@ function checkCollisions() {
   drones.forEach((d, idx) => {
     checkpoints.forEach((c, i) => {
       if (d.model.position.distanceTo(c.position) < 5 && !d.checkpoints.includes(i)) {
-        d.checkpoints++;
-        if (d.checkpoints === checkpoints.length) {
+        d.checkpoints.push(i);
+        if (d.checkpoints.length === checkpoints.length) {
           document.getElementById('standings').innerText = `Drone ${idx + 1} Wins!`;
         }
       }
@@ -188,10 +188,11 @@ function animate() {
   timer += delta;
   drones.forEach(d => {
     d.model.position.z -= d.speed;
-    d.model.position.y = Math.max(10, 10);
+    d.model.position.y = Math.max(10, d.model.position.y);
   });
   camera.position.z = drones[0].model.position.z + 50;
   camera.position.x = drones[0].model.position.x;
+  camera.position.y = drones[0].model.position.y + 20;
   updateUI();
   checkCollisions();
   renderer.render(scene, camera);
@@ -213,6 +214,11 @@ describe('Drone Racing Game', () => {
     expect(drones.length).toBe(3);
   });
 
+  it('generates procedural terrain', () => {
+    expect(terrain).toBeDefined();
+    expect(terrain.geometry.type).toBe('PlaneGeometry');
+  });
+
   it('handles key controls', () => {
     const initialPos = drones[0].model.position.clone();
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
@@ -227,6 +233,11 @@ describe('Drone Racing Game', () => {
 
   it('has checkpoints', () => {
     expect(checkpoints.length).toBe(5);
+  });
+
+  it('start button resets race', () => {
+    document.getElementById('startButton').click();
+    expect(document.getElementById('standings').innerText).toBe('-');
   });
 
   afterEach(() => {
@@ -301,7 +312,7 @@ describe('Drone Game UI', () => {
             logger.info(f"File '{output_file}' created, size: {os.path.getsize(output_file)} bytes")
 
             if tests:
-                test_file = output_file.replace(".js", ".test.js").replace(".html", ".test.js")
+                test_file = output_file.replace(".js", ".test.js").replace(".html", ".html.test.js")
                 with open(test_file, "w") as f:
                     f.write(tests)
                 logger.info(f"Test file '{test_file}' created, size: {os.path.getsize(test_file)} bytes")

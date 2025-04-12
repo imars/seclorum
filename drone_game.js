@@ -1,57 +1,48 @@
-var scene, camera, renderer, drone, checkpoints, clock;
-const checkpointRadius = 1;
-const droneSpeed = 0.2;
-const numCheckpoints = 5;
-
-init();
-animate();
+let scene, camera, renderer, drones = [], checkpoints = [], terrain, clock;
+const droneGeometry = new THREE.BoxGeometry(1, 1, 2);
+const checkpointGeometry = new THREE.TorusGeometry(1, 0.2, 16, 100);
+const speeds = [];
+const checkpointOrder = [];
 
 function init() {
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    renderer = new THREE.WebGLRenderer();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-
-    camera.position.z = 5;
-
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-    drone = new THREE.Mesh(geometry, material);
-    scene.add(drone);
-
-    checkpoints = [];
-    for (let i = 0; i < numCheckpoints; i++) {
-        const cpGeometry = new THREE.SphereGeometry(checkpointRadius, 32, 32);
-        const cpMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-        const checkpoint = new THREE.Mesh(cpGeometry, cpMaterial);
-        checkpoint.position.set(Math.random() * 10 - 5, Math.random() * 5 - 2.5, Math.random() * 10 - 5);
-        scene.add(checkpoint);
-        checkpoints.push(checkpoint);
-    }
-
-    clock = new THREE.Clock();
-    window.addEventListener('keydown', onKeyDown, false);
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+  camera.position.set(0, 50, 0);
+  scene.add(camera);
+  clock = new THREE.Clock();
+  generateTerrain();
+  createCheckpoints();
+  createDrones();
+  document.getElementById('startButton').addEventListener('click', startRace);
 }
 
-function onKeyDown(e) {
-    switch (e.keyCode) {
-        case 87: // W
-            drone.position.z -= droneSpeed;
-            break;
-        case 83: // S
-            drone.position.z += droneSpeed;
-            break;
-        case 65: // A
-            drone.position.x -= droneSpeed;
-            break;
-        case 68: // D
-            drone.position.x += droneSpeed;
-            break;
-    }
-}
-
-
-function animate() {
-    requestAnimationFrame(animate);
-    const
+function generateTerrain() {
+  const size = 1000;
+  const data = new Float32Array(size * size);
+  for (let i = 0; i < size * size; i++) {
+    data[i] = Math.sin(i / 100) * 10;
+  }
+  const geometry = new THREE.PlaneGeometry(size, size, size - 1, size - 1);
+  geometry.setAttribute('a_height', new THREE.BufferAttribute(data, 1));
+  const material = new THREE.ShaderMaterial({
+    vertexShader: `
+      varying float vHeight;
+      attribute float a_height;
+      void main() {
+        vHeight = a_height;
+        vec3 pos = position;
+        pos.y += a_height * 5;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying float vHeight;
+      void main() {
+        gl_FragColor = vec4(vec3(vHeight / 50 + 0.5), 1.0);
+      }
+    `
+  });
+  terrain = new THREE.

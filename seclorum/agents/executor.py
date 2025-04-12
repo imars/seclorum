@@ -19,7 +19,7 @@ class Executor(Agent):
     def process_task(self, task: Task) -> Tuple[str, TestResult]:
         self.log_update(f"Executing code for task: {task.description}")
         language = task.parameters.get("language", "javascript").lower()
-        output_file = task.parameters.get("output_file", None)
+        output_file = task.parameters.get("output_file", "temp")
         handler = LANGUAGE_HANDLERS.get(language)
         if not handler:
             self.log_update(f"Unsupported language: {language}")
@@ -39,21 +39,21 @@ class Executor(Agent):
             code_output = task.parameters[generator_key].get("result")
 
         if not code_output or not code_output.code.strip():
-            self.log_update("No valid code to execute")
+            self.log_update(f"No valid code to execute for {output_file}")
             return "tested", TestResult(test_code=test_code, passed=False, output="No code provided")
 
         code = code_output.code
-        self.log_update(f"Executing code:\n{code}")
+        self.log_update(f"Executing code for {output_file}:\n{code}")
 
         output = "No execution performed"
         passed = False
         if language == "javascript" and test_code:
             with tempfile.TemporaryDirectory() as tmpdir:
-                code_file = os.path.join(tmpdir, "code.js" if output_file else "temp.js")
+                code_file = os.path.join(tmpdir, f"{os.path.basename(output_file)}.js")
                 with open(code_file, "w") as f:
                     f.write(code)
 
-                test_file = os.path.join(tmpdir, "code.test.js" if output_file else "temp.test.js")
+                test_file = os.path.join(tmpdir, f"{os.path.basename(output_file)}.test.js")
                 with open(test_file, "w") as f:
                     f.write(test_code)
 
@@ -77,23 +77,23 @@ module.exports = {
                     )
                     output = result.stdout + result.stderr
                     passed = result.returncode == 0
-                    self.log_update(f"Execution output:\n{output}")
+                    self.log_update(f"Execution output for {output_file}:\n{output}")
                 except subprocess.CalledProcessError as e:
                     output = e.output
                     passed = False
-                    self.log_update(f"Unexpected execution error:\n{output}")
+                    self.log_update(f"Unexpected execution error for {output_file}:\n{output}")
                 finally:
                     self.log_update(f"Cleaning up {test_file}")
                     if os.path.exists(test_file):
                         os.remove(test_file)
         elif language == "html":
-            output = "HTML execution skipped; validated by Tester"
-            passed = True  # Rely on Tester's validation
+            output = f"HTML execution skipped for {output_file}; validated by Tester"
+            passed = True
             self.log_update(output)
 
         result = TestResult(test_code=test_code, passed=passed, output=output)
         self.save_output(task, result, status="tested")
-        self.commit_changes(f"Executed {language} code for {output_file or 'task'} for {task.task_id}")
+        self.commit_changes(f"Executed {language} code for {output_file} for {task.task_id}")
         return "tested", result
 
     def start(self):

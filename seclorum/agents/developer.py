@@ -28,7 +28,7 @@ class Developer(Aggregate):
         pipeline = [
             {"agent": generator, "name": generator.name, "deps": [(f"Architect_{task_id}", {"status": "planned"})], "output_file": output_file, "language": language},
             {"agent": tester, "name": tester.name, "deps": [(generator.name, {"status": "generated"})], "output_file": f"{output_file}.test", "language": language},
-            {"agent": executor, "name": executor.name, "deps": [(tester.name, {"status": "tested"}), (generator.name, {"status": "generated"})], "output_file": None, "language": language},
+            {"agent": executor, "name": executor.name, "deps": [(tester.name, {"status": "tested"}), (generator.name, {"status": "generated"})], "output_file": output_file, "language": language},
             {"agent": debugger, "name": debugger.name, "deps": [(executor.name, {"status": "tested", "passed": False})], "output_file": output_file, "language": language},
         ]
 
@@ -99,14 +99,14 @@ class Developer(Aggregate):
                 subtask = Task(
                     task_id=f"{task.task_id}_{agent_name}",
                     description=f"{task.description}\nGenerate {language} code for {output_file}",
-                    parameters={**task.parameters, "language": language, "output_file": output_file}
+                    parameters={**task.parameters, "language": language, "output_file": output_file or f"temp_{language}"}
                 )
                 status, result = agent.process_task(subtask)
                 self.log_update(f"{agent_name} executed, status: {status}, result: {result}")
                 task.parameters[agent_name] = {
                     "status": status,
                     "result": result,
-                    "output_file": output_file if output_file else None,
+                    "output_file": output_file,
                     "language": language
                 }
 
@@ -117,7 +117,7 @@ class Developer(Aggregate):
                 task.parameters[agent_name] = {
                     "status": "failed",
                     "result": CodeOutput(code="", tests=None),
-                    "output_file": output_file if output_file else None,
+                    "output_file": output_file,
                     "language": language
                 }
 
