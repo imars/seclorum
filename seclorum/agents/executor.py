@@ -49,11 +49,11 @@ class Executor(Agent):
         passed = False
         if language == "javascript" and test_code:
             with tempfile.TemporaryDirectory() as tmpdir:
-                code_file = os.path.join(tmpdir, "code.js")
+                code_file = os.path.join(tmpdir, "code.js" if output_file else "temp.js")
                 with open(code_file, "w") as f:
                     f.write(code)
 
-                test_file = os.path.join(tmpdir, "test.js")
+                test_file = os.path.join(tmpdir, "code.test.js" if output_file else "temp.test.js")
                 with open(test_file, "w") as f:
                     f.write(test_code)
 
@@ -82,8 +82,12 @@ module.exports = {
                     output = e.output
                     passed = False
                     self.log_update(f"Unexpected execution error:\n{output}")
+                finally:
+                    self.log_update(f"Cleaning up {test_file}")
+                    if os.path.exists(test_file):
+                        os.remove(test_file)
         elif language == "html":
-            output = "HTML execution skipped, validated by Tester"
+            output = "HTML execution skipped; validated by Tester"
             passed = True  # Rely on Tester's validation
             self.log_update(output)
 

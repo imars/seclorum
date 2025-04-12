@@ -7,6 +7,7 @@ from seclorum.models import Task, TestResult, create_model_manager, ModelManager
 from seclorum.languages import LANGUAGE_HANDLERS
 from typing import Tuple, Optional
 import logging
+from bs4 import BeautifulSoup
 
 class Tester(Agent):
     def __init__(self, task_id: str, session_id: str, model_manager: ModelManager):
@@ -19,7 +20,7 @@ class Tester(Agent):
     def process_task(self, task: Task) -> Tuple[str, TestResult]:
         self.log_update(f"Testing code for task: {task.description}")
         language = task.parameters.get("language", "javascript").lower()
-        output_file = task.parameters.get("output_file", "output")
+        output_file = task.parameters.get("output_file", "output.test")
         handler = LANGUAGE_HANDLERS.get(language)
         if not handler:
             self.log_update(f"Unsupported language: {language}")
@@ -43,26 +44,30 @@ class Tester(Agent):
         if not tests:
             test_prompt = handler.get_test_prompt(code)
             use_remote = task.parameters.get("use_remote", False)
-            raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False)
+            raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False, max_tokens=2000)
             tests = raw_tests.strip()
             if not tests.startswith(("describe(", "test(")):
-                tests = f"""
-describe('{output_file}', () => {{
-  beforeEach(() => {{
-    document.body.innerHTML = `{code}`;
-  }});
-  it('has required elements', () => {{
-    expect(document.getElementById('myCanvas')).toBeDefined();
-    expect(document.getElementById('timer')).toBeDefined();
-    expect(document.getElementById('speed')).toBeDefined();
-    expect(document.getElementById('standings')).toBeDefined();
-    expect(document.getElementById('startButton')).toBeDefined();
-  }});
-  afterEach(() => {{
-    document.body.innerHTML = '';
-  }});
-}});
-""" if language == "html" else ""
+                if language == "html":
+                    escaped_code = code.replace('`', '\\`')
+                    tests = (
+                        f"describe('{output_file}', () => {{\n"
+                        f"  beforeEach(() => {{\n"
+                        f"    document.body.innerHTML = `{escaped_code}`;\n"
+                        f"  }});\n"
+                        f"  it('has required elements', () => {{\n"
+                        f"    expect(document.getElementById('myCanvas')).toBeDefined();\n"
+                        f"    expect(document.getElementById('timer')).toBeDefined();\n"
+                        f"    expect(document.getElementById('speed')).toBeDefined();\n"
+                        f"    expect(document.getElementById('standings')).toBeDefined();\n"
+                        f"    expect(document.getElementById('startButton')).toBeDefined();\n"
+                        f"  }});\n"
+                        f"  afterEach(() => {{\n"
+                        f"    document.body.innerHTML = '';\n"
+                        f"  }});\n"
+                        f"}});"
+                    )
+                else:
+                    tests = ""
             self.log_update(f"Generated tests for {output_file}:\n{tests}")
 
         output = "No tests executed"
@@ -70,11 +75,11 @@ describe('{output_file}', () => {{
         test_code = tests
         if tests and language == "javascript":
             with tempfile.TemporaryDirectory() as tmpdir:
-                test_file = os.path.join(tmpdir, "test.js")
+                test_file = os.path.join(tmpdir, os.path.basename(output_file))
                 with open(test_file, "w") as f:
                     f.write(tests)
 
-                code_file = os.path.join(tmpdir, "code.js")
+                code_file = os.path.join(tmpdir, os.path.basename(output_file).replace(".test", ""))
                 with open(code_file, "w") as f:
                     f.write(code)
 
@@ -103,8 +108,7 @@ module.exports = {
                     output = e.output
                     passed = False
                     self.log_update(f"Test execution failed for {output_file}:\n{output}")
-        elif tests and language == "html":
-            from bs4 import BeautifulSoup
+        elif language == "html":
             try:
                 soup = BeautifulSoup(code, 'html.parser')
                 required_ids = ['myCanvas', 'timer', 'speed', 'standings', 'startButton']

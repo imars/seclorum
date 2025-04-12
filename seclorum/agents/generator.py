@@ -31,7 +31,8 @@ class Generator(Agent):
         if not handler.validate_code(code):
             self.log_update(f"Invalid {language} code generated for {output_file}, discarding")
             code = ""
-        self.log_update(f"Raw generated code for {output_file}:\n{code}")
+        else:
+            self.log_update(f"Raw generated code for {output_file}:\n{code}")
 
         tests = None
         if task.parameters.get("generate_tests", False) and code:

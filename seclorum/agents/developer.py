@@ -10,6 +10,7 @@ from seclorum.agents.debugger import Debugger
 import uuid
 import logging
 import re
+import json
 
 class Developer(Aggregate):
     def __init__(self, session_id: str, model_manager=None):
@@ -26,7 +27,7 @@ class Developer(Aggregate):
 
         pipeline = [
             {"agent": generator, "name": generator.name, "deps": [(f"Architect_{task_id}", {"status": "planned"})], "output_file": output_file, "language": language},
-            {"agent": tester, "name": tester.name, "deps": [(generator.name, {"status": "generated"})], "output_file": output_file, "language": language},
+            {"agent": tester, "name": tester.name, "deps": [(generator.name, {"status": "generated"})], "output_file": f"{output_file}.test", "language": language},
             {"agent": executor, "name": executor.name, "deps": [(tester.name, {"status": "tested"}), (generator.name, {"status": "generated"})], "output_file": None, "language": language},
             {"agent": debugger, "name": debugger.name, "deps": [(executor.name, {"status": "tested", "passed": False})], "output_file": output_file, "language": language},
         ]
@@ -38,19 +39,20 @@ class Developer(Aggregate):
     def infer_pipelines(self, task: Task, plan: str) -> List[Dict[str, Any]]:
         prompt = (
             f"Given the following development plan:\n{plan}\n\n"
-            "Analyze the plan and determine the necessary development pipelines. Each pipeline should handle a specific output file and language (e.g., JavaScript, HTML). "
-            "Return a JSON list of objects, each with 'language' ('javascript' or 'html') and 'output_file' (e.g., 'drone_game.js', 'drone_game.html'). "
-            "Ensure output_file is a valid source file, not a test file (no '.test' or '.spec' extensions)."
+            "Analyze the plan and identify required development pipelines for a Three.js drone racing game. "
+            "Each pipeline should specify a language ('javascript' or 'html') and an output file (e.g., 'drone_game.js', 'drone_game.html'). "
+            "Consider the need for JavaScript to handle game logic, scene, drones, terrain, and race mechanics, and HTML for the UI (canvas, timer, speed, standings, button). "
+            "Return a JSON list of objects, each with 'language' and 'output_file'. Ensure filenames are valid without '.test' or other suffixes. "
+            "Example: [{'language': 'javascript', 'output_file': 'drone_game.js'}, {'language': 'html', 'output_file': 'drone_game.html'}]"
         )
-        response = self.infer(prompt, task, use_remote=task.parameters.get("use_remote", False))
+        response = self.infer(prompt, task, use_remote=task.parameters.get("use_remote", False), max_tokens=1000)
         try:
-            import json
-            pipelines = json.loads(response)
+            pipelines = json.loads(response.strip())
             for p in pipelines:
                 p["output_file"] = re.sub(r'\.(test|spec)$', '', p["output_file"])
             return pipelines
-        except json.JSONDecodeError:
-            self.log_update("Failed to parse pipeline inference, defaulting to JavaScript and HTML")
+        except (json.JSONDecodeError, ValueError) as e:
+            self.log_update(f"Failed to parse pipeline inference: {str(e)}, defaulting to JavaScript and HTML")
             return [
                 {"language": "javascript", "output_file": "drone_game.js"},
                 {"language": "html", "output_file": "drone_game.html"}
@@ -94,14 +96,9 @@ class Developer(Aggregate):
             language = pipeline["language"]
 
             try:
-                subtask_description = (
-                    f"{task.description}\nGenerate {language} code for {output_file}."
-                    if language == "javascript" else
-                    f"{task.description}\nGenerate HTML code for {output_file}, including a canvas and UI elements."
-                )
                 subtask = Task(
                     task_id=f"{task.task_id}_{agent_name}",
-                    description=subtask_description,
+                    description=f"{task.description}\nGenerate {language} code for {output_file}",
                     parameters={**task.parameters, "language": language, "output_file": output_file}
                 )
                 status, result = agent.process_task(subtask)
@@ -109,7 +106,7 @@ class Developer(Aggregate):
                 task.parameters[agent_name] = {
                     "status": status,
                     "result": result,
-                    "output_file": output_file,
+                    "output_file": output_file if output_file else None,
                     "language": language
                 }
 
@@ -120,7 +117,7 @@ class Developer(Aggregate):
                 task.parameters[agent_name] = {
                     "status": "failed",
                     "result": CodeOutput(code="", tests=None),
-                    "output_file": output_file,
+                    "output_file": output_file if output_file else None,
                     "language": language
                 }
 

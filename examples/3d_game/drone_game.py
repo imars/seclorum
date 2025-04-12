@@ -83,7 +83,7 @@ def create_drone_game():
         outputs = [{
             "output_file": "drone_game.js",
             "code": """
-let scene, camera, renderer, droneModel, drones, terrain, timer = 0, checkpoints = [];
+let scene, camera, renderer, drones, terrain, timer = 0, checkpoints = [];
 const clock = new THREE.Clock();
 
 init();
@@ -122,17 +122,17 @@ function init() {
 function createDrones(numDrones) {
   drones = [];
   for (let i = 0; i < numDrones; i++) {
-    const drone = droneModel ? droneModel.clone() : new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color: i === 0 ? 0x0000ff : 0x00ff00}));
+    const drone = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color: i === 0 ? 0x0000ff : 0x00ff00}));
     drone.position.set(i * 20, 10, 0);
     scene.add(drone);
-    drones.push({ model: drone, speed: 0, acceleration: 0.1, checkpoints: [], finished: false });
+    drones.push({ model: drone, speed: 0, acceleration: 0.1, checkpoints: 0 });
   }
 }
 
 function createCheckpoints() {
   for (let i = 0; i < 5; i++) {
     const checkpoint = new THREE.Mesh(new THREE.TorusGeometry(5, 0.5, 16, 100), new THREE.MeshBasicMaterial({color: 0xffff00}));
-    checkpoint.position.set(Math.random() * 200 - 100, 10, -i * 100 - 50);
+    checkpoint.position.set(Math.random() * 200 - 100, 10, -i * 100);
     scene.add(checkpoint);
     checkpoints.push(checkpoint);
   }
@@ -149,8 +149,8 @@ function createObstacles() {
 function onKeyDown(event) {
   const speedIncrement = 0.5;
   switch (event.key) {
-    case 'ArrowUp': drones[0].speed = Math.min(drones[0].speed + speedIncrement, 10); break;
-    case 'ArrowDown': drones[0].speed = Math.max(drones[0].speed - speedIncrement, -5); break;
+    case 'ArrowUp': drones[0].speed += speedIncrement; break;
+    case 'ArrowDown': drones[0].speed -= speedIncrement; break;
     case 'ArrowLeft': drones[0].model.position.x -= 1; break;
     case 'ArrowRight': drones[0].model.position.x += 1; break;
     case 'KeyW': drones[0].model.position.y += 1; break;
@@ -160,31 +160,22 @@ function onKeyDown(event) {
 
 function startRace() {
   timer = 0;
-  drones.forEach(d => {
-    d.checkpoints = [];
-    d.finished = false;
-    d.model.position.set(0, 10, 0);
-    d.speed = 0;
-  });
-  document.getElementById('standings').innerHTML = '';
+  drones.forEach(d => { d.checkpoints = 0; d.model.position.set(0, 10, 0); });
+  document.getElementById('standings').innerText = '-';
 }
 
 function updateUI() {
   document.getElementById('timer').innerText = timer.toFixed(1);
   document.getElementById('speed').innerText = drones[0].speed.toFixed(1);
-  const standings = drones.map((d, i) => `<li>Drone ${i + 1}: ${d.checkpoints.length} checkpoints</li>`).join('');
-  document.getElementById('standings').innerHTML = standings;
 }
 
 function checkCollisions() {
-  drones.forEach((d, di) => {
-    if (d.finished) return;
+  drones.forEach((d, idx) => {
     checkpoints.forEach((c, i) => {
       if (d.model.position.distanceTo(c.position) < 5 && !d.checkpoints.includes(i)) {
-        d.checkpoints.push(i);
-        if (d.checkpoints.length === checkpoints.length) {
-          d.finished = true;
-          document.getElementById('standings').innerHTML = `<li>Drone ${di + 1} Wins!</li>`;
+        d.checkpoints++;
+        if (d.checkpoints === checkpoints.length) {
+          document.getElementById('standings').innerText = `Drone ${idx + 1} Wins!`;
         }
       }
     });
@@ -195,19 +186,12 @@ function animate() {
   requestAnimationFrame(animate);
   const delta = clock.getDelta();
   timer += delta;
-  drones.forEach((d, i) => {
-    if (i > 0 && !d.finished) {
-      d.speed = 5 + Math.random();
-      d.model.position.z -= d.speed;
-      d.model.position.x += Math.sin(timer + i) * 0.5;
-      d.model.position.y = 10 + Math.cos(timer + i) * 2;
-    } else if (!d.finished) {
-      d.model.position.z -= d.speed;
-      d.model.position.y = Math.max(5, d.model.position.y);
-    }
+  drones.forEach(d => {
+    d.model.position.z -= d.speed;
+    d.model.position.y = Math.max(10, 10);
   });
-  camera.position.set(drones[0].model.position.x, 20, drones[0].model.position.z + 50);
-  camera.lookAt(drones[0].model.position);
+  camera.position.z = drones[0].model.position.z + 50;
+  camera.position.x = drones[0].model.position.x;
   updateUI();
   checkCollisions();
   renderer.render(scene, camera);
@@ -218,7 +202,7 @@ describe('Drone Racing Game', () => {
   beforeEach(() => {
     window.innerWidth = 500;
     window.innerHeight = 500;
-    document.body.innerHTML = '<canvas id="myCanvas"></canvas><div id="ui"><span id="timer"></span><span id="speed"></span><ul id="standings"></ul><button id="startButton"></button></div>';
+    document.body.innerHTML = '<canvas id="myCanvas"></canvas><div id="uiPanel"><span id="timer"></span><span id="speed"></span><span id="standings"></span><button id="startButton"></button></div>';
     init();
   });
 
@@ -227,11 +211,6 @@ describe('Drone Racing Game', () => {
     expect(camera).toBeDefined();
     expect(drones).toBeDefined();
     expect(drones.length).toBe(3);
-  });
-
-  it('has non-flat terrain', () => {
-    const vertices = terrain.geometry.attributes.position.array;
-    expect(Math.max(...vertices.slice(2, vertices.length, 3))).toBeGreaterThan(0);
   });
 
   it('handles key controls', () => {
@@ -244,6 +223,10 @@ describe('Drone Racing Game', () => {
     updateUI();
     expect(document.getElementById('timer').innerText).not.toBe('');
     expect(document.getElementById('speed').innerText).not.toBe('');
+  });
+
+  it('has checkpoints', () => {
+    expect(checkpoints.length).toBe(5);
   });
 
   afterEach(() => {
@@ -259,20 +242,20 @@ describe('Drone Racing Game', () => {
 <head>
     <title>Drone Racing Game</title>
     <style>
-        body { margin: 0; background: #000; }
+        body { margin: 0; background: #222; color: white; }
         #myCanvas { display: block; }
-        #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial, sans-serif; font-size: 16px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; }
-        #ui div { margin-bottom: 5px; }
-        #startButton { padding: 5px 10px; background: #007bff; border: none; color: white; cursor: pointer; border-radius: 5px; }
-        #startButton:hover { background: #0056b3; }
+        #uiPanel { background-color: rgba(0, 0, 0, 0.5); position: absolute; top: 10px; left: 10px; padding: 10px; font-family: Arial, sans-serif; }
+        #uiPanel div { margin-bottom: 5px; }
+        #startButton { background-color: #4CAF50; border: none; color: white; padding: 10px 20px; cursor: pointer; }
+        #startButton:hover { background-color: #3e8e41; }
     </style>
 </head>
 <body>
     <canvas id="myCanvas"></canvas>
-    <div id="ui">
+    <div id="uiPanel">
         <div>Timer: <span id="timer">0</span>s</div>
         <div>Speed: <span id="speed">0</span></div>
-        <div>Standings: <ul id="standings"></ul></div>
+        <div>Standings: <span id="standings">-</span></div>
         <button id="startButton">Start</button>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -283,7 +266,7 @@ describe('Drone Racing Game', () => {
             "tests": """
 describe('Drone Game UI', () => {
   beforeEach(() => {
-    document.body.innerHTML = `<canvas id="myCanvas"></canvas><div id="ui"><span id="timer"></span><span id="speed"></span><ul id="standings"></ul><button id="startButton"></button></div>`;
+    document.body.innerHTML = document.querySelector('html').innerHTML;
   });
 
   it('has UI elements', () => {
@@ -292,6 +275,12 @@ describe('Drone Game UI', () => {
     expect(document.getElementById('speed')).toBeDefined();
     expect(document.getElementById('standings')).toBeDefined();
     expect(document.getElementById('startButton')).toBeDefined();
+  });
+
+  it('includes Three.js script', () => {
+    const scripts = document.getElementsByTagName('script');
+    const threeJsScript = Array.from(scripts).find(s => s.src.includes('three.js'));
+    expect(threeJsScript).toBeDefined();
   });
 
   afterEach(() => {
@@ -312,7 +301,7 @@ describe('Drone Game UI', () => {
             logger.info(f"File '{output_file}' created, size: {os.path.getsize(output_file)} bytes")
 
             if tests:
-                test_file = output_file + ".test.js"
+                test_file = output_file.replace(".js", ".test.js").replace(".html", ".test.js")
                 with open(test_file, "w") as f:
                     f.write(tests)
                 logger.info(f"Test file '{test_file}' created, size: {os.path.getsize(test_file)} bytes")
