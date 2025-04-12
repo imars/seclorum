@@ -1,48 +1,37 @@
-let scene, camera, renderer, drones = [], checkpoints = [], terrain, clock;
-const droneGeometry = new THREE.BoxGeometry(1, 1, 2);
-const checkpointGeometry = new THREE.TorusGeometry(1, 0.2, 16, 100);
-const speeds = [];
-const checkpointOrder = [];
+let scene, camera, renderer, playerDrone, drones, checkpoints, obstacles, clock, timer, speedDisplay, standingsDisplay;
+
+const checkpointCount = 5;
+const obstacleCount = 10;
+const droneCount = 3;
+
+init();
+animate();
 
 function init() {
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-  renderer = new THREE.WebGLRenderer();
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('myCanvas') });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
-  camera.position.set(0, 50, 0);
-  scene.add(camera);
-  clock = new THREE.Clock();
-  generateTerrain();
-  createCheckpoints();
-  createDrones();
-  document.getElementById('startButton').addEventListener('click', startRace);
-}
 
-function generateTerrain() {
-  const size = 1000;
-  const data = new Float32Array(size * size);
-  for (let i = 0; i < size * size; i++) {
-    data[i] = Math.sin(i / 100) * 10;
+  const terrainSize = 1000;
+  const terrainGeometry = new THREE.PlaneGeometry(terrainSize, terrainSize, 100, 100);
+  const terrainVertices = terrainGeometry.attributes.position.array;
+  for (let i = 0; i < terrainVertices.length; i += 3) {
+    terrainVertices[i + 1] = Math.sin(terrainVertices[i] / 10) * 10 + Math.random() * 20 - 10;
   }
-  const geometry = new THREE.PlaneGeometry(size, size, size - 1, size - 1);
-  geometry.setAttribute('a_height', new THREE.BufferAttribute(data, 1));
-  const material = new THREE.ShaderMaterial({
-    vertexShader: `
-      varying float vHeight;
-      attribute float a_height;
-      void main() {
-        vHeight = a_height;
-        vec3 pos = position;
-        pos.y += a_height * 5;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-      }
-    `,
-    fragmentShader: `
-      varying float vHeight;
-      void main() {
-        gl_FragColor = vec4(vec3(vHeight / 50 + 0.5), 1.0);
-      }
-    `
-  });
-  terrain = new THREE.
+  const terrainMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+  const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+  scene.add(terrain);
+
+
+  drones = [];
+  for (let i = 0; i < droneCount; i++) {
+    const droneGeometry = new THREE.BoxGeometry(5, 2, 5);
+    const droneMaterial = new THREE.MeshBasicMaterial({ color: i === 0 ? 0xff0000 : 0x0000ff });
+    const drone = new THREE.Mesh(droneGeometry, droneMaterial);
+    drone.position.set(Math.random() * 200 - 100, 20, Math.random() * 200 -100);
+    scene.add(drone);
+    drones.push(drone);
+  }
+  playerDrone = drones[0];
+  camera.position.set(playerDrone.position.x, playerDrone.position.y + 20, playerDrone.position.z + 30

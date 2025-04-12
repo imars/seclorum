@@ -1,12 +1,18 @@
 test('Canvas element exists', () => {
-  expect(document.getElementById('myCanvas')).toBeDefined();
+  const canvas = document.getElementById('myCanvas');
+  expect(canvas).toBeDefined();
 });
 
 test('UI elements exist', () => {
-  expect(document.getElementById('timer')).toBeDefined();
-  expect(document.getElementById('speed')).toBeDefined();
-  expect(document.getElementById('standings')).toBeDefined();
-  expect(document.getElementById('startButton')).toBeDefined();
+  const timer = document.getElementById('timer');
+  const speed = document.getElementById('speed');
+  const standings = document.getElementById('standings');
+  const startButton = document.getElementById('startButton');
+
+  expect(timer).toBeDefined();
+  expect(speed).toBeDefined();
+  expect(standings).toBeDefined();
+  expect(startButton).toBeDefined();
 });
 
 test('Three.js script tag exists', () => {
