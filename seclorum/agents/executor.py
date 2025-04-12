@@ -1,146 +1,95 @@
 # seclorum/agents/executor.py
-import subprocess
 import os
-import re
+import subprocess
 import tempfile
-from typing import Tuple
+from typing import Tuple, Optional
 from seclorum.agents.base import Agent
-from seclorum.models import Task, CodeOutput, TestResult
-from seclorum.languages import LANGUAGE_CONFIG
+from seclorum.models import Task, TestResult, create_model_manager, ModelManager
+from seclorum.languages import LANGUAGE_HANDLERS
+import logging
 
 class Executor(Agent):
-    def __init__(self, task_id: str, session_id: str):
+    def __init__(self, task_id: str, session_id: str, model_manager: Optional[ModelManager] = None):
         super().__init__(f"Executor_{task_id}", session_id)
         self.task_id = task_id
-        # Adjust path to scripts directory relative to executor.py
-        self.script_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts"))
-        self.log_update(f"Executor initialized for task {task_id}, script_dir={self.script_dir}")
-
-    def clean_code(self, code: str) -> Tuple[str, bool]:
-        """Extract code from <script> tags if present, return cleaned code and browser flag."""
-        script_match = re.search(r'<\s*script[^>]*>(.*?)<\s*/\s*script\s*>', code, re.DOTALL)
-        if script_match:
-            cleaned = script_match.group(1).strip()
-            self.log_update(f"Extracted code from <script> tags:\n{cleaned}")
-            return cleaned, True
-        return code.strip(), False
-
-    def execute_with_puppeteer(self, code: str, temp_file: str) -> Tuple[bool, str]:
-        """Execute JavaScript code using an external Puppeteer script."""
-        puppeteer_script = os.path.join(self.script_dir, "run_puppeteer.js")
-        if not os.path.exists(puppeteer_script):
-            self.log_update(f"Puppeteer script not found at {puppeteer_script}")
-            return False, f"Puppeteer script not found at {puppeteer_script}"
-
-        try:
-            self.log_update(f"Running Puppeteer script: node {puppeteer_script} {temp_file}")
-            output = subprocess.check_output(
-                ["node", puppeteer_script, temp_file],
-                stderr=subprocess.STDOUT,
-                text=True,
-                timeout=20
-            )
-            output += open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else ""
-            passed = "Error" not in output
-            self.log_update(f"Puppeteer output: {output}")
-        except subprocess.CalledProcessError as e:
-            output = (e.output or "No output") + (open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else "")
-            passed = False
-            self.log_update(f"Puppeteer failed with: {output}")
-        except subprocess.TimeoutExpired as e:
-            output = (e.output.decode('utf-8') if e.output else "Timeout") + (open(f"{temp_file}.out", "r").read() if os.path.exists(f"{temp_file}.out") else "")
-            passed = False
-            self.log_update(f"Puppeteer timed out: {output}")
-        except Exception as e:
-            output = f"Unexpected error: {str(e)}"
-            passed = False
-            self.log_update(f"Puppeteer unexpected error: {output}")
-        finally:
-            if os.path.exists(f"{temp_file}.out"):
-                os.remove(f"{temp_file}.out")
-
-        return passed, output
+        self.model = model_manager
+        self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
+        self.log_update(f"Executor initialized for Task {task_id}")
 
     def process_task(self, task: Task) -> Tuple[str, TestResult]:
-        self.log_update(f"Executing task {task.task_id}")
-        generator_key = next((key for key in task.parameters if key.startswith("Generator_")), None)
-        generator_output = task.parameters.get(generator_key, {}).get("result") if generator_key else None
-        tester_key = next((key for key in task.parameters if key.startswith("Tester_")), None)
-        tester_output = task.parameters.get(tester_key, {}).get("result") if tester_key else None
-        language = task.parameters.get("language", "python").lower()
-        config = LANGUAGE_CONFIG.get(language, LANGUAGE_CONFIG["python"])
+        self.log_update(f"Executing code for task: {task.description}")
+        language = task.parameters.get("language", "javascript").lower()
+        output_file = task.parameters.get("output_file", None)
+        handler = LANGUAGE_HANDLERS.get(language)
+        if not handler:
+            self.log_update(f"Unsupported language: {language}")
+            return "tested", TestResult(test_code="", passed=False, output=f"Language {language} not supported")
 
-        if not generator_output or not isinstance(generator_output, CodeOutput):
-            self.log_update(f"No valid code from generator (checked key: {generator_key})")
-            result = TestResult(test_code="", passed=False, output="No code provided")
-            self.store_output(task, "tested", result)
-            return "tested", result
+        tester_key = next((k for k in task.parameters if k.startswith("Tester_") and k.endswith("_test")), None)
+        generator_key = next((k for k in task.parameters if k.startswith("Generator_") and k.endswith("_gen")), None)
+        code_output = None
+        test_code = ""
+        if tester_key and tester_key in task.parameters:
+            test_result = task.parameters[tester_key].get("result")
+            if isinstance(test_result, TestResult):
+                test_code = test_result.test_code
+                if test_result.passed:
+                    code_output = task.parameters.get(generator_key, {}).get("result")
+        elif generator_key and generator_key in task.parameters:
+            code_output = task.parameters[generator_key].get("result")
 
-        code_output = generator_output
-        self.log_update(f"Executing code:\n{code_output.code}")
+        if not code_output or not code_output.code.strip():
+            self.log_update("No valid code to execute")
+            return "tested", TestResult(test_code=test_code, passed=False, output="No code provided")
 
-        test_result = tester_output if tester_output and isinstance(tester_output, TestResult) else TestResult(test_code="", passed=False)
-        clean_code, is_browser_code = self.clean_code(code_output.code)
-        full_code = f"{clean_code}\n\n{self.clean_code(test_result.test_code)[0]}" if test_result.test_code else clean_code
+        code = code_output.code
+        self.log_update(f"Executing code:\n{code}")
 
-        if not full_code.strip():
-            self.log_update("No code to execute after cleaning")
-            result = TestResult(test_code=test_result.test_code, passed=False, output="No executable code after cleaning")
-            self.store_output(task, "tested", result)
-            return "tested", result
+        output = "No execution performed"
+        passed = False
+        if language == "javascript" and test_code:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                code_file = os.path.join(tmpdir, "code.js" if output_file else "temp.js")
+                with open(code_file, "w") as f:
+                    f.write(code)
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix=config['file_extension'], delete=False) as temp_file:
-            temp_file.write(full_code)
-            temp_file_path = temp_file.name
+                test_file = os.path.join(tmpdir, "code.test.js" if output_file else "temp.test.js")
+                with open(test_file, "w") as f:
+                    f.write(test_code)
 
-        try:
-            if language == "javascript":
-                if test_result.test_code:
-                    cmd = ["npx", "jest", temp_file_path, "--silent"]
-                    self.log_update(f"Running test command: {' '.join(cmd)}")
-                    output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
-                    passed = True
-                elif is_browser_code or "window" in full_code or "document" in full_code:
-                    self.log_update("Detected browser-oriented code, using Puppeteer")
-                    passed, output = self.execute_with_puppeteer(full_code, temp_file_path)
-                else:
-                    cmd = config["execute_cmd"] + [temp_file_path]
-                    self.log_update(f"Running command: {' '.join(cmd)}")
-                    output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
-                    passed = True
-            elif language == "python":
-                cmd = config["execute_cmd"] + [temp_file_path]
-                self.log_update(f"Running command: {' '.join(cmd)}")
-                output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10)
-                passed = True
-            else:
-                self.log_update(f"Unsupported language: {language}")
-                result = TestResult(test_code=test_result.test_code, passed=False, output=f"Language {language} not supported")
-                self.store_output(task, "tested", result)
-                return "tested", result
+                jest_config = """
+module.exports = {
+  testEnvironment: 'jsdom',
+  testMatch: ['**/*.test.js'],
+};
+"""
+                config_file = os.path.join(tmpdir, "jest.config.js")
+                with open(config_file, "w") as f:
+                    f.write(jest_config)
 
-            self.log_update(f"Execution output: {output}")
-        except subprocess.CalledProcessError as e:
-            self.log_update(f"Execution failed with error: {e.output}")
-            output = e.output
-            passed = False
-        except subprocess.TimeoutExpired as e:
-            self.log_update(f"Execution timed out: {e.output}")
-            output = e.output.decode('utf-8') if e.output else "Timeout"
-            passed = False
-        except Exception as e:
-            self.log_update(f"Unexpected execution error: {str(e)}")
-            output = str(e)
-            passed = False
-        finally:
-            if os.path.exists(temp_file_path):
-                self.log_update(f"Cleaning up {temp_file_path}")
-                os.remove(temp_file_path)
+                try:
+                    result = subprocess.run(
+                        ["npx", "jest", test_file, "--config", config_file, "--silent"],
+                        capture_output=True,
+                        text=True,
+                        cwd=tmpdir,
+                        env={**os.environ, "TOKENIZERS_PARALLELISM": "false"}
+                    )
+                    output = result.stdout + result.stderr
+                    passed = result.returncode == 0
+                    self.log_update(f"Execution output:\n{output}")
+                except subprocess.CalledProcessError as e:
+                    output = e.output
+                    passed = False
+                    self.log_update(f"Unexpected execution error:\n{output}")
+                finally:
+                    self.log_update(f"Cleaning up {test_file}")
+                    if os.path.exists(test_file):
+                        os.remove(test_file)
 
-        result = TestResult(test_code=test_result.test_code, passed=passed, output=output)
-        self.log_update(f"Final result: passed={result.passed}, output={result.output}")
-        self.store_output(task, "tested", result)
-        self.commit_changes(f"Executed {language} code for task {task.task_id}")
+        result = TestResult(test_code=test_code, passed=passed, output=output)
+        self.save_output(task, result, status="tested")
+        self.commit_changes(f"Executed {language} code for {output_file or 'task'} for {task.task_id}")
         return "tested", result
 
     def start(self):

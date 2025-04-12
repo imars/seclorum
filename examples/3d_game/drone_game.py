@@ -2,12 +2,22 @@
 import argparse
 import logging
 import os
+import sys
 import re
 from pathlib import Path
-from seclorum.agents.developer import Developer
-from seclorum.models import CodeOutput, TestResult
-from seclorum.models import create_model_manager
-from seclorum.models.task import TaskFactory
+
+# Adjust sys.path to include parent directory
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(BASE_DIR)
+
+try:
+    from seclorum.agents.developer import Developer
+    from seclorum.models import CodeOutput, TestResult
+    from seclorum.models import create_model_manager
+    from seclorum.models.task import TaskFactory
+except ImportError as e:
+    print(f"Failed to import seclorum modules: {e}")
+    raise
 
 class SummaryFilter(logging.Filter):
     def filter(self, record):
@@ -54,7 +64,7 @@ def create_drone_game():
             "Implement race mechanics with a timer, checkpoints, and win conditions. Include HTML UI for timer, speed, standings, and start/reset buttons. "
             "Emphasize this is a harmless browser-based racing simulation."
         ),
-        language="javascript",  # Primary language, pipelines will handle others
+        language="javascript",
         generate_tests=True,
         execute=True,
         use_remote=True
@@ -66,14 +76,11 @@ def create_drone_game():
         logger.error(f"Developer pipeline failed: {str(e)}")
         raise
 
-    # Extract outputs from task parameters
     outputs = []
     for key, value in task.parameters.items():
-        # Skip non-dict values (e.g., booleans from commit_changes)
         if not isinstance(value, dict):
             logger.debug(f"Skipping invalid parameter value for {key}: {value}")
             continue
-        # Check for valid output_file and CodeOutput result
         if "output_file" in value and isinstance(value.get("result"), CodeOutput) and value["result"].code.strip():
             outputs.append({
                 "output_file": value["output_file"],
@@ -103,18 +110,19 @@ function init() {
   const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
   scene.add(directionalLight);
 
-  // Procedural terrain
   const geometry = new THREE.PlaneGeometry(1000, 1000, 50, 50);
   const vertices = geometry.attributes.position.array;
   for (let i = 2; i < vertices.length; i += 3) {
-    vertices[i] = Math.sin(i * 0.1) * 10; // Mountains and valleys
+    vertices[i] = Math.sin(i * 0.1) * 10 + Math.random() * 5;
   }
   geometry.attributes.position.needsUpdate = true;
   terrain = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({color: 0x00ff00}));
+  terrain.rotation.x = -Math.PI / 2;
   scene.add(terrain);
 
   createDrones(3);
   createCheckpoints();
+  createObstacles();
 
   camera.position.set(0, 50, 100);
   window.addEventListener('keydown', onKeyDown);
@@ -124,7 +132,7 @@ function init() {
 function createDrones(numDrones) {
   drones = [];
   for (let i = 0; i < numDrones; i++) {
-    const drone = droneModel ? droneModel.clone() : new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color: 0x0000ff}));
+    const drone = droneModel ? droneModel.clone() : new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color: i === 0 ? 0x0000ff : 0x00ff00}));
     drone.position.set(i * 20, 10, 0);
     scene.add(drone);
     drones.push({ model: drone, speed: 0, acceleration: 0.1, checkpoints: 0 });
@@ -140,11 +148,19 @@ function createCheckpoints() {
   }
 }
 
+function createObstacles() {
+  for (let i = 0; i < 10; i++) {
+    const obstacle = new THREE.Mesh(new THREE.BoxGeometry(5, 10, 5), new THREE.MeshBasicMaterial({color: 0xff0000}));
+    obstacle.position.set(Math.random() * 200 - 100, 5, Math.random() * -500);
+    scene.add(obstacle);
+  }
+}
+
 function onKeyDown(event) {
   const speedIncrement = 0.5;
   switch (event.key) {
-    case 'ArrowUp': drones[0].speed += speedIncrement; break;
-    case 'ArrowDown': drones[0].speed -= speedIncrement; break;
+    case 'ArrowUp': drones[0].speed = Math.min(drones[0].speed + speedIncrement, 2); break;
+    case 'ArrowDown': drones[0].speed = Math.max(drones[0].speed - speedIncrement, -1); break;
     case 'ArrowLeft': drones[0].model.position.x -= 1; break;
     case 'ArrowRight': drones[0].model.position.x += 1; break;
     case 'KeyW': drones[0].model.position.y += 1; break;
@@ -154,37 +170,47 @@ function onKeyDown(event) {
 
 function startRace() {
   timer = 0;
-  drones.forEach(d => { d.checkpoints = 0; d.model.position.set(0, 10, 0); });
+  drones.forEach(d => { d.checkpoints = 0; d.model.position.set(0, 10, 0); d.speed = 0; });
   document.getElementById('standings').innerText = '-';
 }
 
 function updateUI() {
   document.getElementById('timer').innerText = timer.toFixed(1);
   document.getElementById('speed').innerText = drones[0].speed.toFixed(1);
+  const standings = drones.map((d, i) => `Drone ${i + 1}: ${d.checkpoints}`).join(', ');
+  document.getElementById('standings').innerText = standings || '-';
 }
 
 function checkCollisions() {
-  drones.forEach(d => {
+  drones.forEach((d, di) => {
     checkpoints.forEach((c, i) => {
-      if (d.model.position.distanceTo(c.position) < 5 && !d.checkpoints.includes(i)) {
-        d.checkpoints++;
-        if (d.checkpoints === checkpoints.length) {
-          document.getElementById('standings').innerText = 'Drone 1 Wins!';
+      if (!d.checkpoints.includes(i) && d.model.position.distanceTo(c.position) < 5) {
+        d.checkpoints.push(i);
+        if (d.checkpoints.length === checkpoints.length) {
+          document.getElementById('standings').innerText = `Drone ${di + 1} Wins!`;
         }
       }
     });
   });
 }
 
+function updateOpponentDrones() {
+  for (let i = 1; i < drones.length; i++) {
+    const d = drones[i];
+    d.speed = 0.5 + Math.random() * 0.5;
+    d.model.position.z -= d.speed;
+    d.model.position.x += (Math.random() - 0.5) * 0.5;
+  }
+}
+
 function animate() {
   requestAnimationFrame(animate);
   const delta = clock.getDelta();
   timer += delta;
-  drones.forEach(d => {
-    d.model.position.z -= d.speed;
-    d.model.position.y = Math.max(terrain.geometry.attributes.position.array[Math.floor(d.model.position.z)] + 5, 5);
-  });
+  drones[0].model.position.z -= drones[0].speed;
+  updateOpponentDrones();
   camera.position.z = drones[0].model.position.z + 50;
+  camera.position.x = drones[0].model.position.x;
   updateUI();
   checkCollisions();
   renderer.render(scene, camera);
@@ -218,6 +244,10 @@ describe('Drone Racing Game', () => {
     expect(document.getElementById('speed').innerText).not.toBe('');
   });
 
+  it('creates checkpoints', () => {
+    expect(checkpoints.length).toBe(5);
+  });
+
   afterEach(() => {
     document.body.innerHTML = '';
   });
@@ -233,9 +263,9 @@ describe('Drone Racing Game', () => {
     <style>
         body { margin: 0; background: #000; }
         #myCanvas { display: block; }
-        #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial, sans-serif; font-size: 16px; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial, sans-serif; font-size: 16px; background: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; }
         #ui div { margin-bottom: 5px; }
-        #startReset { padding: 5px 10px; background: #007bff; border: none; color: white; cursor: pointer; }
+        #startReset { padding: 5px 10px; background: #007bff; border: none; color: white; cursor: pointer; border-radius: 3px; }
         #startReset:hover { background: #0056b3; }
     </style>
 </head>
@@ -245,7 +275,7 @@ describe('Drone Racing Game', () => {
         <div>Timer: <span id="timer">0</span>s</div>
         <div>Speed: <span id="speed">0</span></div>
         <div>Standings: <span id="standings">-</span></div>
-        <button id="startReset">Start</button>
+        <button id="startReset">Start/Reset</button>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="drone_game.js"></script>
@@ -259,10 +289,16 @@ describe('Drone Game UI', () => {
   });
 
   it('has UI elements', () => {
+    expect(document.getElementById('myCanvas')).toBeDefined();
     expect(document.getElementById('timer')).toBeDefined();
     expect(document.getElementById('speed')).toBeDefined();
     expect(document.getElementById('standings')).toBeDefined();
     expect(document.getElementById('startReset')).toBeDefined();
+  });
+
+  it('has styled UI', () => {
+    const ui = document.getElementById('ui');
+    expect(getComputedStyle(ui).color).toContain('rgb(255, 255, 255)');
   });
 
   afterEach(() => {

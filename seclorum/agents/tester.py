@@ -4,7 +4,7 @@ import subprocess
 import tempfile
 from seclorum.agents.base import Agent
 from seclorum.models import Task, TestResult, create_model_manager, ModelManager
-from seclorum.languages import LANGUAGE_CONFIG
+from seclorum.languages import LANGUAGE_HANDLERS
 from typing import Tuple, Optional
 import logging
 
@@ -20,9 +20,11 @@ class Tester(Agent):
         self.log_update(f"Testing code for task: {task.description}")
         language = task.parameters.get("language", "javascript").lower()
         output_file = task.parameters.get("output_file", "output.test")
-        config = LANGUAGE_CONFIG.get(language, LANGUAGE_CONFIG["javascript"])
+        handler = LANGUAGE_HANDLERS.get(language)
+        if not handler:
+            self.log_update(f"Unsupported language: {language}")
+            return "tested", TestResult(test_code="", passed=False, output=f"Language {language} not supported")
 
-        # Get generated code
         generator_key = next((k for k in task.parameters if k.startswith("Generator_") and k.endswith("_gen")), None)
         debugger_key = next((k for k in task.parameters if k.startswith("Debugger_") and k.endswith("_debug")), None)
         code_output = None
@@ -38,53 +40,15 @@ class Tester(Agent):
         code = code_output.code
         tests = code_output.tests if code_output.tests else ""
 
-        # Generate tests if not provided
-        if not tests and config["test_prompt"]:
-            test_prompt = config["test_prompt"].format(code=code) + (
-                " Return only the raw, executable Jest test code for Node.js, testing basic functionality "
-                "(e.g., scene, camera, drone existence) without requiring Three.js imports or complex rendering. "
-                "Use global variables (e.g., scene, camera, drone) and avoid require statements."
-                if language == "javascript" else
-                " Return only the raw Jest test code to validate HTML structure, checking for canvas and UI elements (timer, speed, standings, start/reset button), "
-                "without comments or explanations."
-                if language == "html" else ""
-            )
+        if not tests:
+            test_prompt = handler.get_test_prompt(code)
             use_remote = task.parameters.get("use_remote", False)
             raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False)
             tests = raw_tests.strip()
-            if language == "javascript" and not tests.startswith(("describe(", "test(")):
-                tests = f"""
-describe('{output_file}', () => {{
-  beforeEach(() => {{
-    window.innerWidth = 500;
-    window.innerHeight = 500;
-  }});
-  it('initializes correctly', () => {{
-    expect(true).toBe(true); // Placeholder test
-  }});
-}});
-"""
-            if language == "html" and not tests.startswith(("describe(", "test(")):
-                tests = f"""
-describe('{output_file}', () => {{
-  beforeEach(() => {{
-    document.body.innerHTML = `{code}`;
-  }});
-  it('has UI elements', () => {{
-    expect(document.getElementById('myCanvas')).toBeDefined();
-    expect(document.getElementById('timer')).toBeDefined();
-    expect(document.getElementById('speed')).toBeDefined();
-    expect(document.getElementById('standings')).toBeDefined();
-    expect(document.getElementById('startReset')).toBeDefined();
-  }});
-  afterEach(() => {{
-    document.body.innerHTML = '';
-  }});
-}});
-"""
+            if not tests.startswith(("describe(", "test(")):
+                tests = ""
             self.log_update(f"Generated tests for {output_file}:\n{tests}")
 
-        # Save and run tests
         output = "No tests executed"
         passed = False
         test_code = tests
@@ -98,7 +62,6 @@ describe('{output_file}', () => {{
                 with open(code_file, "w") as f:
                     f.write(code)
 
-                # Create Jest config
                 jest_config = """
 module.exports = {
   testEnvironment: 'jsdom',
@@ -109,7 +72,6 @@ module.exports = {
                 with open(config_file, "w") as f:
                     f.write(jest_config)
 
-                # Run Jest
                 try:
                     result = subprocess.run(
                         ["npx", "jest", test_file, "--config", config_file, "--silent"],
@@ -126,7 +88,6 @@ module.exports = {
                     passed = False
                     self.log_update(f"Test execution failed for {output_file}:\n{output}")
         elif tests and language == "html":
-            # Validate HTML structure
             from bs4 import BeautifulSoup
             try:
                 soup = BeautifulSoup(code, 'html.parser')

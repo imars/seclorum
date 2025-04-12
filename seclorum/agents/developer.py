@@ -9,16 +9,16 @@ from seclorum.agents.architect import Architect
 from seclorum.agents.debugger import Debugger
 import uuid
 import logging
+import re
 
 class Developer(Aggregate):
     def __init__(self, session_id: str, model_manager=None):
         super().__init__(session_id, model_manager)
         self.name = "Developer"
         self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
-        self.pipelines: Dict[str, List[dict]] = {}  # Maps task_id to pipeline configs
+        self.pipelines: Dict[str, List[dict]] = {}
 
     def setup_pipeline(self, task_id: str, language: str, output_file: str) -> List[dict]:
-        """Create a pipeline for a specific subtask."""
         generator = Generator(f"{task_id}_{language}_gen", self.session_id, self.model_manager)
         tester = Tester(f"{task_id}_{language}_test", self.session_id, self.model_manager)
         executor = Executor(f"{task_id}_{language}_exec", self.session_id)
@@ -36,19 +36,22 @@ class Developer(Aggregate):
         return pipeline
 
     def infer_pipelines(self, task: Task, plan: str) -> List[Dict[str, Any]]:
-        """Infer required pipelines based on the Architect's plan."""
         prompt = (
             f"Given the following development plan:\n{plan}\n\n"
-            "Analyze the plan and determine the necessary development pipelines. Each pipeline should handle a specific output file and language (e.g., JavaScript, HTML, Python). "
-            "Return a JSON list of objects, each with 'language' (e.g., 'javascript', 'html', 'python') and 'output_file' (e.g., 'drone_game.js')."
+            "Analyze the plan and determine the necessary development pipelines. Each pipeline should handle a specific output file and language (e.g., JavaScript, HTML). "
+            "Return a JSON list of objects, each with 'language' ('javascript' or 'html') and 'output_file' (e.g., 'drone_game.js', 'drone_game.html'). "
+            "Ensure output_file is a valid filename without extensions like '.test'."
         )
         response = self.infer(prompt, task, use_remote=task.parameters.get("use_remote", False))
         try:
             import json
             pipelines = json.loads(response)
+            # Validate and clean filenames
+            for p in pipelines:
+                p["output_file"] = re.sub(r'\.(test|spec)$', '', p["output_file"])
             return pipelines
         except json.JSONDecodeError:
-            self.log_update(f"Failed to parse pipeline inference, defaulting to JavaScript and HTML")
+            self.log_update("Failed to parse pipeline inference, defaulting to JavaScript and HTML")
             return [
                 {"language": "javascript", "output_file": "drone_game.js"},
                 {"language": "html", "output_file": "drone_game.html"}
@@ -62,7 +65,6 @@ class Developer(Aggregate):
         self.log_update(f"Starting orchestration for task {task.task_id}, stop_at={stop_at}")
         self.log_update(f"Initial task parameters: {task.parameters}")
 
-        # Run Architect
         architect_key = f"Architect_{task.task_id}"
         architect = Architect(task.task_id, self.session_id, self.model_manager)
         self.add_agent(architect)
@@ -75,19 +77,16 @@ class Developer(Aggregate):
             task.parameters[architect_key] = {"status": "failed", "result": ""}
             return "failed", CodeOutput(code="", tests=None)
 
-        # Infer required pipelines
         pipeline_configs = self.infer_pipelines(task, plan)
         self.log_update(f"Inferred pipelines: {pipeline_configs}")
         self.pipelines[task.task_id] = []
 
-        # Setup pipelines
         for config in pipeline_configs:
             language = config["language"].lower()
             output_file = config["output_file"]
             pipeline = self.setup_pipeline(task.task_id, language, output_file)
             self.pipelines[task.task_id].extend(pipeline)
 
-        # Run pipelines
         final_outputs = []
         for pipeline in self.pipelines[task.task_id]:
             agent = pipeline["agent"]
@@ -96,7 +95,6 @@ class Developer(Aggregate):
             language = pipeline["language"]
 
             try:
-                # Create subtask with specific language and output
                 subtask = Task(
                     task_id=f"{task.task_id}_{agent_name}",
                     description=f"{task.description}\nFocus on generating {language} code for {output_file}",
@@ -104,7 +102,6 @@ class Developer(Aggregate):
                 )
                 status, result = agent.process_task(subtask)
                 self.log_update(f"{agent_name} executed, status: {status}, result: {result}")
-                # Explicitly store output to avoid overwrites
                 task.parameters[agent_name] = {
                     "status": status,
                     "result": result,
@@ -123,14 +120,13 @@ class Developer(Aggregate):
                     "language": language
                 }
 
-        # Consolidate outputs
         final_status = "generated"
         final_result = CodeOutput(code="", tests=None)
         for output in final_outputs:
-            if output["output_file"].endswith(".js"):
+            if output["output_file"] and output["output_file"].endswith(".js"):
                 final_result.code = output["code"]
                 final_result.tests = output["tests"]
-            elif output["output_file"].endswith(".html"):
+            elif output["output_file"] and output["output_file"].endswith(".html"):
                 final_result.code += f"\n<!-- HTML -->\n{output['code']}"
 
         if not final_result.code.strip():
@@ -138,5 +134,5 @@ class Developer(Aggregate):
             final_status = "failed"
             final_result = CodeOutput(code="", tests=None)
 
-        self.log_update(f"Final result type: {type(final_result).__name__}, outputs: {[o['output_file'] for o in final_outputs]}")
+        self.log_update(f"Final result type: {type(final_result).__name__}, outputs: {[o['output_file'] for o in final_outputs if o['output_file']]}")
         return final_status, final_result
