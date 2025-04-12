@@ -89,11 +89,18 @@ class Developer(Aggregate):
             self.log_update(f"Forced {debugger_key}, status: {status}, result: {result}")
 
         # Finalize output
-        final_result = task.parameters.get(generator_key, {}).get("result") if generator_key in task.parameters else result
-        self.log_update(f"Checking {generator_key} output: {final_result}")
-        if not isinstance(final_result, CodeOutput) or not final_result.code.strip():
-            self.log_update(f"Warning: Invalid or empty Generator output: {final_result}")
+        if task.parameters.get("generate_tests", False) or task.parameters.get("execute", False):
+            # Prioritize Tester or Executor output
+            final_result = task.parameters.get(executor_key, {}).get("result") if executor_key in task.parameters else \
+                           task.parameters.get(tester_key, {}).get("result") if tester_key in task.parameters else \
+                           task.parameters.get(generator_key, {}).get("result") if generator_key in task.parameters else result
+            status = "tested"
+        else:
+            final_result = task.parameters.get(generator_key, {}).get("result") if generator_key in task.parameters else result
+            status = "generated"
 
-        status = "tested" if (task.parameters.get("generate_tests", False) or task.parameters.get("execute", False)) else "generated"
         self.log_update(f"Final result type: {type(final_result).__name__}, content: {final_result}")
+        if not final_result or (isinstance(final_result, CodeOutput) and not final_result.code.strip()):
+            self.log_update(f"Warning: Invalid or empty output: {final_result}")
+
         return status, final_result
