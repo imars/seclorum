@@ -114,8 +114,9 @@ class Developer(Aggregate):
         for config in pipeline_configs:
             language = config["language"].lower()
             output_file = config["output_file"]
-            pipeline = self.setup_pipeline(task.id, language, output_file)
+            pipeline = self.setup_pipeline(task.task_id, language, output_file)
             self.pipelines[task.task_id].extend(pipeline)
+            logger.debug(f"Setup pipeline for task={task.task_id}, language={language}, output_file={output_file}")
 
         final_outputs = []
         for pipeline in self.pipelines[task.task_id]:
