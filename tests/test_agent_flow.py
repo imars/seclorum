@@ -3,15 +3,15 @@ import pytest
 import logging
 from unittest.mock import patch
 from seclorum.agents.developer import Developer
-from seclorum.models import Task, CodeOutput, TestResult, CodeResult, create_model_manager
+from seclorum.models import Task, CodeOutput, CodeResult, create_model_manager
 from seclorum.models.task import TaskFactory
 from seclorum.agents.base import AbstractAgent
 
-# Configure minimal logging
-logging.basicConfig(level=logging.DEBUG)  # Debug to trace mock calls
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("AgentFlowTest")
 
-# Store agent flow for verification
+# Store agent flow
 agent_flow = []
 
 def setup_module():
@@ -19,29 +19,22 @@ def setup_module():
     agent_flow.clear()
 
 class MockAgent(AbstractAgent):
-    """Mock agent to capture flow without executing real tasks."""
+    """Mock agent to capture flow."""
     def process_task(self, task: Task) -> tuple[str, any]:
         use_remote = task.parameters.get("use_remote", False)
         status = "completed"
-        if "Generator" in self.name:
-            result = CodeOutput(code="mock_code", tests="mock_tests")
-        elif "Tester" in self.name:
-            result = TestResult(test_code="mock_test", passed=True)
-        elif "Architect" in self.name:
-            result = "mock_plan"  # Architect returns a plan (str)
-        else:
-            result = CodeResult(test_code="mock_test", passed=True)
+        result = CodeOutput(code="mock_code", tests="mock_tests") if "Generator" in self.name else CodeResult(test_code="mock_test", passed=True)
 
-        # Log agent visit
+        # Log visit
         agent_flow.append({
             "agent_name": self.name,
             "task_id": task.task_id,
             "session_id": self.session_id,
             "remote": use_remote,
-            "passed": isinstance(result, (TestResult, CodeResult)) and result.passed or bool(result),
+            "passed": isinstance(result, CodeResult) and result.passed or bool(result.code.strip()),
             "status": status
         })
-        logger.debug(f"MockAgent visited: {self.name}, task={task.task_id}, remote={use_remote}, result={result}")
+        logger.debug(f"Visited {self.name}: task={task.task_id}, remote={use_remote}, passed={isinstance(result, CodeResult) and result.passed or bool(result.code.strip())}")
 
         return status, result
 
@@ -50,10 +43,10 @@ def test_agent_flow():
     session_id = "test_drone_game_session"
     model_manager = create_model_manager(provider="ollama", model_name="llama3.2:latest")
 
-    # Create Developer with mocked logging
+    # Create Developer
     developer = Developer(session_id, model_manager)
 
-    # Mock task similar to drone_game.py
+    # Mock task
     task = TaskFactory.create_code_task(
         description=(
             "Create a Three.js JavaScript game with a virtual flying drone controlled by arrow keys in a 3D scene. "
@@ -67,24 +60,28 @@ def test_agent_flow():
         use_remote=True
     )
 
-    # Patch log_update and agent classes at their import paths
-    with patch.object(AbstractAgent, 'log_update', lambda self, msg: logger.debug(msg)):
-        with patch('seclorum.agents.architect.Architect', MockAgent), \
-             patch('seclorum.agents.generator.Generator', MockAgent), \
-             patch('seclorum.agents.tester.Tester', MockAgent), \
-             patch('seclorum.agents.executor.Executor', MockAgent), \
-             patch('seclorum.agents.debugger.Debugger', MockAgent):
-            # Run the pipeline
-            status, result = developer.process_task(task)
+    # Patch log_update, infer, and agents
+    with patch.object(AbstractAgent, 'log_update', lambda self, msg: logger.debug(msg)), \
+         patch.object(AbstractAgent, 'infer', lambda self, prompt, task, use_remote, **kwargs: (
+             '{"pipelines": [{"language": "javascript", "output_file": "drone_game.js"}, {"language": "html", "output_file": "drone_game.html"}]}'
+             if "pipelines" in prompt else "mock_plan"
+         )), \
+         patch('seclorum.agents.architect.Architect', MockAgent), \
+         patch('seclorum.agents.developer.Generator', MockAgent), \
+         patch('seclorum.agents.developer.Tester', MockAgent), \
+         patch('seclorum.agents.developer.Executor', MockAgent), \
+         patch('seclorum.agents.developer.Debugger', MockAgent):
+        # Run pipeline
+        status, result = developer.process_task(task)
 
-    # Verify agent flow
+    # Verify flow
     assert len(agent_flow) > 0, "No agents were visited"
     assert any(agent["agent_name"].startswith("Architect") for agent in agent_flow), "Architect agent missing"
     assert any(agent["agent_name"].startswith("Generator") for agent in agent_flow), "Generator agent missing"
     assert any(agent["agent_name"].startswith("Tester") for agent in agent_flow), "Tester agent missing"
     assert any(agent["agent_name"].startswith("Executor") for agent in agent_flow), "Executor agent missing"
 
-    # Log flow summary
+    # Log summary
     logger.info("Agent Flow Summary:")
     for entry in agent_flow:
         logger.info(
@@ -93,5 +90,5 @@ def test_agent_flow():
             f"Passed: {entry['passed']}, Status: {entry['status']}"
         )
 
-    # Check final status
+    # Check status
     assert status == "generated", f"Expected status 'generated', got {status}"
