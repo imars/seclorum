@@ -86,7 +86,7 @@ class Developer(Aggregate):
         architect_key = f"Architect_{task.task_id}"
         architect = Architect(task.task_id, self.session_id, self.model_manager)
         self.add_agent(architect)
-        logger.debug(f"Instantiated Architect: {architect_key}")
+        logger.debug(f"Instantiated Architect: {architect_key} (type: {type(architect).__name__})")
         self.agent_flow.append({"agent_name": architect.name, "task_id": task.task_id, "language": task.parameters.get("language", "")})
 
         try:
@@ -114,7 +114,7 @@ class Developer(Aggregate):
         for config in pipeline_configs:
             language = config["language"].lower()
             output_file = config["output_file"]
-            pipeline = self.setup_pipeline(task.task_id, language, output_file)
+            pipeline = self.setup_pipeline(task.id, language, output_file)
             self.pipelines[task.task_id].extend(pipeline)
 
         final_outputs = []
@@ -124,7 +124,7 @@ class Developer(Aggregate):
             output_file = pipeline["output_file"]
             language = pipeline["language"]
 
-            logger.debug(f"Processing agent: {agent_name} for output_file={output_file}, language={language}")
+            logger.debug(f"Processing agent: {agent_name} (type: {type(agent).__name__}) for output_file={output_file}, language={language}")
             self.agent_flow.append({"agent_name": agent_name, "task_id": task.task_id, "language": language})
 
             try:

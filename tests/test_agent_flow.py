@@ -98,22 +98,25 @@ def test_agent_flow():
         if "pipelines" in prompt else "mock_plan"
     ))
 
-    # Patch agents in correct namespaces
-    with patch('seclorum.agents.base.AbstractAgent.log_update', lambda self, msg: logger.debug(f"Patched log: {msg}")), \
-         patch('seclorum.agents.base.AbstractAgent.infer', mock_infer), \
-         patch('seclorum.agents.architect.Architect', MockAgent), \
-         patch('seclorum.agents.generator.Generator', MockAgent), \
-         patch('seclorum.agents.tester.Tester', MockAgent), \
-         patch('seclorum.agents.executor.Executor', MockAgent), \
-         patch('seclorum.agents.debugger.Debugger', MockAgent):
-        logger.debug("Applying patches for agent classes")
-        # Run pipeline for both tasks
-        logger.debug("Starting Developer.process_task for js_task")
-        status_js, result_js = developer.process_task(js_task)
-        logger.debug(f"js_task complete: status={status_js}")
-        logger.debug("Starting Developer.process_task for html_task")
-        status_html, result_html = developer.process_task(html_task)
-        logger.debug(f"html_task complete: status={status_html}")
+    # Patch agents in correct module namespaces
+    try:
+        with patch('seclorum.agents.architect.Architect', MockAgent), \
+             patch('seclorum.agents.generator.Generator', MockAgent), \
+             patch('seclorum.agents.tester.Tester', MockAgent), \
+             patch('seclorum.agents.executor.Executor', MockAgent), \
+             patch('seclorum.agents.debugger.Debugger', MockAgent), \
+             patch('seclorum.agents.base.AbstractAgent.log_update', lambda self, msg: logger.debug(f"Patched log: {msg}")), \
+             patch('seclorum.agents.base.AbstractAgent.infer', mock_infer):
+            logger.debug("Applying patches for agent classes: Architect, Generator, Tester, Executor, Debugger")
+            # Run pipeline for both tasks
+            logger.debug("Starting Developer.process_task for js_task")
+            status_js, result_js = developer.process_task(js_task)
+            logger.debug(f"js_task complete: status={status_js}")
+            logger.debug("Starting Developer.process_task for html_task")
+            status_html, result_html = developer.process_task(html_task)
+            logger.debug(f"html_task complete: status={status_html}")
+    finally:
+        patch.stopall()  # Clean up mocks
 
     # Verify flow
     logger.debug(f"Agent flow: {agent_flow}")
