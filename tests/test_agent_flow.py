@@ -98,3 +98,6 @@ def test_agent_flow():
 
     # Check status
     assert status == "generated", f"Expected status 'generated', got {status}"
+
+if __name__ == "__main__":
+    pytest.main(["-v", __file__])
