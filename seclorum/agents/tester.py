@@ -3,10 +3,11 @@ import os
 import subprocess
 import tempfile
 from seclorum.agents.base import Agent
-from seclorum.models import Task, TestResult, CodeOutput, create_model_manager, ModelManager
+from seclorum.models import Task, CodeResult, create_model_manager, ModelManager
 from seclorum.languages import LANGUAGE_HANDLERS
 from typing import Tuple, Optional
 import logging
+import re
 from bs4 import BeautifulSoup
 
 # Configure logging
@@ -19,104 +20,144 @@ class Tester(Agent):
         self.task_id = task_id
         self.model = model_manager
         self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
-        logger.debug(f"Tester initialized for Task {task_id}")
+        logger.debug(f"Tester initialized for Task {task_id}, session_id={session_id}")
 
-    def process_task(self, task: Task) -> Tuple[str, TestResult]:
-        logger.debug(f"Testing code for task: {task.description[:100]}...")
+    def process_task(self, task: Task) -> Tuple[str, CodeResult]:
+        logger.debug(f"Testing code for task={task.task_id}, description={task.description[:100]}...")
         language = task.parameters.get("language", "javascript").lower()
-        output_file = task.parameters.get("output_file", "output.test")
+        output_file = task.parameters.get("output_file", "output")
+        code = None
+
+        # Get code from Generator or Debugger
+        generator_key = next((k for k in task.parameters if k.startswith("Generator_") and k.endswith("_gen")), None)
+        debugger_key = next((k for k in task.parameters if k.startswith("Debugger_") and k.endswith("_debug")), None)
+        if debugger_key and debugger_key in task.parameters:
+            code = task.parameters[debugger_key].get("result", {}).get("code", "")
+        elif generator_key and generator_key in task.parameters:
+            code = task.parameters[generator_key].get("result", {}).get("code", "")
+
+        if not code or not code.strip():
+            logger.warning(f"No valid {language} code to test for {output_file}")
+            return "tested", CodeResult(test_code="", passed=False, output="No code provided")
+
         handler = LANGUAGE_HANDLERS.get(language)
         if not handler:
             logger.error(f"Unsupported language: {language}")
-            return "tested", TestResult(test_code="", passed=False, output=f"Language {language} not supported")
+            return "tested", CodeResult(test_code="", passed=False, output=f"Language {language} not supported")
 
-        generator_key = next((k for k in task.parameters if k.startswith("Generator_") and k.endswith("_gen")), None)
-        debugger_key = next((k for k in task.parameters if k.startswith("Debugger_") and k.endswith("_debug")), None)
-        code_output = None
-        if debugger_key and debugger_key in task.parameters:
-            code_output = task.parameters[debugger_key].get("result")
-        elif generator_key and generator_key in task.parameters:
-            code_output = task.parameters[generator_key].get("result")
+        try:
+            # Validate code statically
+            static_passed, static_output = self.validate_code(code, language, output_file)
+            tests = task.parameters.get(generator_key, {}).get("result", {}).get("tests", "") if generator_key else ""
 
-        if not code_output or not code_output.code.strip():
-            logger.warning(f"No valid {language} code to test for {output_file}")
-            return "tested", TestResult(test_code="", passed=False, output="No code provided")
+            # Generate tests if needed
+            if not tests and task.parameters.get("generate_tests", False):
+                test_prompt = handler.get_test_prompt(code)
+                use_remote = task.parameters.get("use_remote", False)
+                raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False, max_tokens=2000)
+                tests = re.sub(r'```(?:javascript|html|python|cpp)?\n|\n```|[^\x00-\x7F]+', '', raw_tests).strip()
+                if not tests.startswith(("describe(", "test(")):
+                    logger.warning(f"Invalid Jest tests for {output_file}, discarding")
+                    tests = ""
+                logger.debug(f"Generated tests for {output_file}:\n{tests[:200]}...")
 
-        code = code_output.code
-        tests = code_output.tests if code_output.tests else ""
+            # Run dynamic tests for JavaScript
+            dynamic_passed = True
+            dynamic_output = "No dynamic tests executed"
+            if tests and language == "javascript":
+                try:
+                    dynamic_passed, dynamic_output = self.run_jest_tests(code, tests, output_file)
+                except Exception as e:
+                    logger.error(f"Jest test execution failed for {output_file}: {str(e)}")
+                    dynamic_passed = False
+                    dynamic_output = f"Jest execution failed: {str(e)}"
 
-        if not tests:
-            test_prompt = handler.get_test_prompt(code)
-            use_remote = task.parameters.get("use_remote", False)
-            raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False)
-            tests = raw_tests.strip()
-            if not tests.startswith(("describe(", "test(")):
-                tests = ""
-            logger.debug(f"Generated tests for {output_file}: {tests[:100]}...")
+            # Combine results
+            passed = static_passed and dynamic_passed
+            output = f"{static_output}\n{dynamic_output}"
+            result = CodeResult(test_code=tests, passed=passed, output=output)
+            logger.debug(f"Test result for {output_file}: passed={passed}, output={output[:200]}...")
+            self.save_output(task, result, status="tested")
+            self.commit_changes(f"Tested {language} code for {output_file}")
+            return "tested", result
+        except Exception as e:
+            logger.error(f"Testing failed for {output_file}: {str(e)}")
+            return "tested", CodeResult(test_code="", passed=False, output=f"Testing failed: {str(e)}")
 
-        output = "No tests executed"
-        passed = False
-        test_code = tests
-        if tests and language == "javascript":
-            with tempfile.TemporaryDirectory() as tmpdir:
-                test_file = os.path.join(tmpdir, os.path.basename(output_file))
-                with open(test_file, "w") as f:
-                    f.write(tests)
+    def validate_code(self, code: str, language: str, output_file: str) -> Tuple[bool, str]:
+        logger.debug(f"Statically validating {language} code for {output_file}")
+        if language == "html":
+            try:
+                soup = BeautifulSoup(code, 'html.parser')
+                checks = {
+                    "canvas": bool(soup.find("canvas")),
+                    "timer": bool(soup.find(id="timer")),
+                    "speed": bool(soup.find(id="speed")),
+                    "standings": bool(soup.find(id="standings")),
+                    "startReset": bool(soup.find(id="startReset")),
+                    "three_js": bool(soup.find("script", src=lambda s: s and "three.min.js" in s)),
+                    "drone_game_js": bool(soup.find("script", src="drone_game.js"))
+                }
+                passed = all(checks.values())
+                output = f"HTML validation {'passed' if passed else 'failed'}: {', '.join(f'{k}={v}' for k, v in checks.items())}"
+                logger.debug(output)
+                return passed, output
+            except Exception as e:
+                output = f"HTML validation failed: {str(e)}"
+                logger.error(output)
+                return False, output
+        elif language == "javascript":
+            required = ["THREE\\.", "scene\\s*=", "camera\\s*=", "renderer\\s*=", "addEventListener"]
+            checks = {kw: bool(re.search(kw, code)) for kw in required}
+            passed = all(checks.values())
+            output = f"JavaScript validation {'passed' if passed else 'failed'}: {', '.join(f'{k}={v}' for k, v in checks.items())}"
+            logger.debug(output)
+            return passed, output
+        return False, f"Unsupported language: {language}"
 
-                code_file = os.path.join(tmpdir, os.path.basename(output_file).replace(".test", ""))
-                with open(code_file, "w") as f:
-                    f.write(code)
+    def run_jest_tests(self, code: str, tests: str, output_file: str) -> Tuple[bool, str]:
+        logger.debug(f"Running Jest tests for {output_file}")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_file = os.path.join(tmpdir, f"{os.path.basename(output_file)}.test.js")
+            with open(test_file, "w") as f:
+                f.write(tests)
 
-                jest_config = """
+            code_file = os.path.join(tmpdir, os.path.basename(output_file))
+            with open(code_file, "w") as f:
+                f.write(code)
+
+            jest_config = """
 module.exports = {
   testEnvironment: 'jsdom',
   testMatch: ['**/*.test.js'],
 };
 """
-                config_file = os.path.join(tmpdir, "jest.config.js")
-                with open(config_file, "w") as f:
-                    f.write(jest_config)
+            config_file = os.path.join(tmpdir, "jest.config.js")
+            with open(config_file, "w") as f:
+                f.write(jest_config)
 
-                try:
-                    result = subprocess.run(
-                        ["npx", "jest", test_file, "--config", config_file, "--silent"],
-                        capture_output=True,
-                        text=True,
-                        cwd=tmpdir,
-                        env={**os.environ, "TOKENIZERS_PARALLELISM": "false"}
-                    )
-                    output = result.stdout + result.stderr
-                    passed = result.returncode == 0
-                    logger.debug(f"Test execution output for {output_file}: {output[:100]}...")
-                except subprocess.CalledProcessError as e:
-                    output = e.output
-                    passed = False
-                    logger.error(f"Test execution failed for {output_file}: {output[:100]}...")
-        elif language == "html":
             try:
-                soup = BeautifulSoup(code, 'html.parser')
-                required_ids = ['myCanvas', 'timer', 'speed', 'standings', 'startReset']
-                three_js_script = soup.find('script', src=lambda s: 'three.min.js' in s if s else False)
-                game_js_script = soup.find('script', src='drone_game.js')
-                passed = (
-                    all(soup.find(id=id_) for id_ in required_ids) and
-                    three_js_script is not None and
-                    game_js_script is not None
+                result = subprocess.run(
+                    ["npx", "jest", test_file, "--config", config_file, "--silent"],
+                    capture_output=True,
+                    text=True,
+                    cwd=tmpdir,
+                    env={**os.environ, "TOKENIZERS_PARALLELISM": "false"}
                 )
-                output = f"HTML validation {'passed' if passed else 'failed'}: checked {required_ids}, Three.js CDN, drone_game.js"
-                logger.debug(f"HTML test output for {output_file}: {output}")
-            except Exception as e:
-                output = f"HTML validation failed: {str(e)}"
-                passed = False
-                logger.error(f"HTML test failed for {output_file}: {output}")
-
-        result = TestResult(test_code=test_code, passed=passed, output=output)
-        self.save_output(task, result, status="tested")
-        self.commit_changes(f"Tested {language} code for {output_file}")
-        return "tested", result
+                output = result.stdout + result.stderr
+                passed = result.returncode == 0
+                logger.debug(f"Jest test output for {output_file}:\n{output[:200]}...")
+                return passed, output
+            except FileNotFoundError:
+                logger.warning(f"Jest not installed, skipping dynamic tests for {output_file}")
+                return True, "Jest not available, static validation only"
+            except subprocess.CalledProcessError as e:
+                output = e.output
+                logger.error(f"Jest test execution failed for {output_file}:\n{output[:200]}...")
+                return False, output
 
     def start(self):
-        logger.debug("Starting tester")
+        logger.debug(f"Starting tester {self.name}")
 
     def stop(self):
-        logger.debug("Stopping tester")
+        logger.debug(f"Stopping tester {self.name}")

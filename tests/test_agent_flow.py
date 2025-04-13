@@ -20,8 +20,13 @@ def setup_module():
 
 class MockAgent(AbstractAgent):
     """Mock agent to capture flow."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        logger.debug(f"Instantiating MockAgent: {self.name}")
+
     def process_task(self, task: Task) -> tuple[str, any]:
         use_remote = task.parameters.get("use_remote", False)
+        language = task.parameters.get("language", "")
         status = "completed"
         result = CodeOutput(code="mock_code", tests="mock_tests") if "Generator" in self.name else \
                  CodeResult(test_code="mock_test", passed=True)
@@ -33,9 +38,10 @@ class MockAgent(AbstractAgent):
             "session_id": self.session_id,
             "remote": use_remote,
             "passed": isinstance(result, CodeResult) and result.passed or bool(result.code.strip()),
-            "status": status
+            "status": status,
+            "language": language
         })
-        logger.debug(f"MockAgent Visited {self.name}: task={task.task_id}, remote={use_remote}, "
+        logger.debug(f"MockAgent Visited {self.name}: task={task.task_id}, language={language}, remote={use_remote}, "
                      f"passed={isinstance(result, CodeResult) and result.passed or bool(result.code.strip())}")
 
         return status, result
@@ -48,19 +54,32 @@ def test_agent_flow():
     # Create Developer
     developer = Developer(session_id, model_manager)
 
-    # Mock task
-    task = TaskFactory.create_code_task(
+    # Create tasks for JavaScript and HTML
+    js_task = TaskFactory.create_code_task(
         description=(
             "Create a Three.js JavaScript game with a virtual flying drone controlled by arrow keys in a 3D scene. "
             "Drones race across a 3D scrolling landscape of mountains, valleys, flatlands, and obstacles. "
             "Include a scene, camera, lighting, and a drone model. Use the global THREE object from a CDN. "
-            "Implement race mechanics with a timer, checkpoints, and win conditions. Include HTML UI for timer, speed, standings, and start/reset buttons."
+            "Implement race mechanics with a timer, checkpoints, and win conditions."
         ),
         language="javascript",
         generate_tests=True,
         execute=True,
         use_remote=True
     )
+    js_task.parameters["output_file"] = "drone_game.js"
+
+    html_task = TaskFactory.create_code_task(
+        description=(
+            "Create an HTML file for a Three.js drone racing game with a canvas, UI for timer, speed, standings, "
+            "and start/reset buttons. Include Three.js CDN and link to drone_game.js."
+        ),
+        language="html",
+        generate_tests=True,
+        execute=True,
+        use_remote=True
+    )
+    html_task.parameters["output_file"] = "drone_game.html"
 
     # Mock infer to return pipelines
     mock_infer = MagicMock(side_effect=lambda prompt, *args, **kwargs: (
@@ -76,28 +95,34 @@ def test_agent_flow():
          patch('seclorum.agents.tester.Tester', MockAgent), \
          patch('seclorum.agents.executor.Executor', MockAgent), \
          patch('seclorum.agents.debugger.Debugger', MockAgent):
-        # Run pipeline
-        status, result = developer.process_task(task)
+        # Run pipeline for both tasks
+        status_js, result_js = developer.process_task(js_task)
+        status_html, result_html = developer.process_task(html_task)
 
     # Verify flow
     logger.debug(f"Agent flow: {agent_flow}")
-    assert len(agent_flow) >= 5, f"Expected at least 5 agents, got {len(agent_flow)}: {agent_flow}"
-    assert any(agent["agent_name"].startswith("Architect") for agent in agent_flow), "Architect agent missing"
-    assert sum(agent["agent_name"].startswith("Generator") for agent in agent_flow) >= 2, "Generator agents missing"
-    assert any(agent["agent_name"].startswith("Tester") for agent in agent_flow), "Tester agent missing"
-    assert any(agent["agent_name"].startswith("Executor") for agent in agent_flow), "Executor agent missing"
+    assert len(agent_flow) >= 10, f"Expected at least 10 agent visits (5 per pipeline), got {len(agent_flow)}: {agent_flow}"
+    assert any(agent["agent_name"].startswith("Architect") and agent["language"] == "javascript" for agent in agent_flow), "Architect missing for JavaScript"
+    assert any(agent["agent_name"].startswith("Architect") and agent["language"] == "html" for agent in agent_flow), "Architect missing for HTML"
+    assert sum(agent["agent_name"].startswith("Generator") and agent["language"] == "javascript" for agent in agent_flow) >= 1, "Generator missing for JavaScript"
+    assert sum(agent["agent_name"].startswith("Generator") and agent["language"] == "html" for agent in agent_flow) >= 1, "Generator missing for HTML"
+    assert any(agent["agent_name"].startswith("Tester") and agent["language"] == "javascript" for agent in agent_flow), "Tester missing for JavaScript"
+    assert any(agent["agent_name"].startswith("Tester") and agent["language"] == "html" for agent in agent_flow), "Tester missing for HTML"
+    assert any(agent["agent_name"].startswith("Executor") for agent in agent_flow), "Executor missing"
+    assert any(agent["agent_name"].startswith("Debugger") for agent in agent_flow), "Debugger missing"
 
     # Log summary
     logger.info("Agent Flow Summary:")
     for entry in agent_flow:
         logger.info(
             f"Agent: {entry['agent_name']}, Task: {entry['task_id']}, "
-            f"Session: {entry['session_id']}, Remote: {entry['remote']}, "
-            f"Passed: {entry['passed']}, Status: {entry['status']}"
+            f"Session: {entry['session_id']}, Language: {entry['language']}, "
+            f"Remote: {entry['remote']}, Passed: {entry['passed']}, Status: {entry['status']}"
         )
 
     # Check status
-    assert status == "generated", f"Expected status 'generated', got {status}"
+    assert status_js == "generated", f"Expected JavaScript status 'generated', got {status_js}"
+    assert status_html == "generated", f"Expected HTML status 'generated', got {status_html}"
 
 if __name__ == "__main__":
     pytest.main(["-v", __file__])

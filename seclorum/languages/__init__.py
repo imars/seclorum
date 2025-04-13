@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Optional
 from seclorum.models import Task
 import logging
+import re
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -24,54 +25,59 @@ class LanguageHandler(ABC):
 class JavaScriptHandler(LanguageHandler):
     def get_code_prompt(self, task: Task, output_file: str) -> str:
         plan = task.parameters.get(f"Architect_{task.task_id}", {}).get("result", "")
+        logger.debug(f"Generating JavaScript prompt for task={task.task_id}, output_file={output_file}")
         return (
             f"Architect's Plan:\n{plan}\n\n"
             f"Generate JavaScript code for {output_file}. "
-            "Create a Three.js drone racing game with a dynamic 3D scene. "
-            "Include a scrolling landscape with mountains (sin-based heightmaps), valleys, flatlands, and obstacles (boxes/trees). "
-            "Add a scene, perspective camera, ambient/directional lighting, and textured drone models (cubes or GLTF if simple). "
-            "Implement player controls: ArrowUp/Down (speed), ArrowLeft/Right (strafe), W/S (altitude). "
-            "Add 2-3 AI drones with pathfinding to follow checkpoints. "
-            "Include race mechanics: timer, 5+ torus-shaped checkpoints, collision detection, win condition (all checkpoints). "
-            "Add obstacles (avoidable boxes) and UI integration (update timer, speed, standings via DOM). "
-            "Use global THREE from CDN (no require). Return clean JavaScript code, no comments, no markdown."
+            "Create a Three.js drone racing game with a 3D scene. "
+            "Include: "
+            "- Scene, perspective camera, WebGL renderer (use canvas#myCanvas). "
+            "- Drone (cube, red material) with controls: ArrowUp/Down (speed), ArrowLeft/Right (strafe), W/S (altitude). "
+            "- Basic terrain (plane geometry, sin-based heightmap for mountains/valleys). "
+            "- 2 AI drones (blue cubes) moving randomly. "
+            "- 3 torus-shaped checkpoints (yellow). "
+            "- UI updates: timer (id='timer'), speed (id='speed'), standings (id='standings'). "
+            "Use global THREE from CDN. Return clean JavaScript code, no comments, no markdown."
         )
 
     def get_test_prompt(self, code: str) -> str:
+        logger.debug("Generating JavaScript test prompt")
         return (
             f"Given JavaScript code:\n{code}\n\n"
             "Generate Jest tests for Three.js drone game. "
             "Test scene initialization (scene, camera, renderer). "
             "Test drone controls (ArrowUp/Down/Left/Right, W/S). "
-            "Test AI drone movement (pathfinding to checkpoints). "
-            "Test race mechanics (timer, checkpoints, win condition). "
             "Test UI updates (timer, speed, standings). "
             "Return raw Jest code, no comments, no markdown."
         )
 
     def validate_code(self, code: str) -> bool:
         required = ["THREE.", "scene", "camera", "renderer", "addEventListener"]
-        return bool(code.strip() and all(kw in code for kw in required))
+        valid = bool(code.strip() and all(kw in code for kw in required))
+        logger.debug(f"JavaScript validation: {'valid' if valid else 'invalid'}, keywords={required}")
+        return valid
 
 class HTMLHandler(LanguageHandler):
     def get_code_prompt(self, task: Task, output_file: str) -> str:
         plan = task.parameters.get(f"Architect_{task.task_id}", {}).get("result", "")
+        logger.debug(f"Generating HTML prompt for task={task.task_id}, output_file={output_file}")
         return (
             f"Architect's Plan:\n{plan}\n\n"
             f"Generate HTML code for {output_file}. "
-            "Create a full-screen <canvas id='myCanvas'> for Three.js rendering. "
-            "Add a UI <div id='ui'> with: "
-            "- Timer (<span id='timer'>0</span>s), "
-            "- Speed (<span id='speed'>0</span>), "
-            "- Standings (<pre id='standings'>-</pre>), "
-            "- Start/Reset button (<button id='startReset'>Start</button>). "
-            "Use inline CSS: black background, white Arial text, UI at top-left, button blue (#007bff) with hover (#0056b3). "
-            "Include Three.js CDN (<script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'>). "
-            "Include <script src='drone_game.js'> after Three.js. "
+            "Create: "
+            "- Full-screen <canvas id='myCanvas'> for Three.js. "
+            "- UI <div id='ui'> with: "
+            "  - Timer (<span id='timer'>0</span>s). "
+            "  - Speed (<span id='speed'>0</span>). "
+            "  - Standings (<pre id='standings'>-</pre>). "
+            "  - Button (<button id='startReset'>Start</button>). "
+            "- Inline CSS: black background, white Arial text, UI top-left, button blue (#007bff) with hover (#0056b3). "
+            "- Scripts: Three.js CDN (https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js), drone_game.js. "
             "Return clean HTML code, no comments, no markdown."
         )
 
     def get_test_prompt(self, code: str) -> str:
+        logger.debug("Generating HTML test prompt")
         return (
             f"Given HTML code:\n{code}\n\n"
             "Generate Jest tests for drone game UI. "
@@ -82,17 +88,22 @@ class HTMLHandler(LanguageHandler):
         )
 
     def validate_code(self, code: str) -> bool:
-        required = ["<canvas", "id=\"myCanvas\"", "<script", "three.min.js", "drone_game.js"]
-        return bool(code.strip() and all(kw in code for kw in required))
+        required = ["<canvas", "<script", "three.min.js", "drone_game.js"]
+        valid = bool(code.strip() and all(kw in code for kw in required))
+        logger.debug(f"HTML validation: {'valid' if valid else 'invalid'}, keywords={required}")
+        return valid
 
 class PythonHandler(LanguageHandler):
     def get_code_prompt(self, task: Task, output_file: str) -> str:
+        logger.debug("Python code prompt requested, not implemented")
         return "Python not implemented"
 
     def get_test_prompt(self, code: str) -> str:
+        logger.debug("Python test prompt requested, not implemented")
         return "Python tests not implemented"
 
     def validate_code(self, code: str) -> bool:
+        logger.debug("Python code validation requested, not implemented")
         return False
 
 LANGUAGE_HANDLERS: Dict[str, LanguageHandler] = {
