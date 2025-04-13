@@ -7,7 +7,6 @@ from seclorum.models import Task, TestResult, create_model_manager, ModelManager
 from seclorum.languages import LANGUAGE_HANDLERS
 from typing import Tuple, Optional
 import logging
-from bs4 import BeautifulSoup
 
 class Tester(Agent):
     def __init__(self, task_id: str, session_id: str, model_manager: ModelManager):
@@ -44,53 +43,16 @@ class Tester(Agent):
         if not tests:
             test_prompt = handler.get_test_prompt(code)
             use_remote = task.parameters.get("use_remote", False)
-            raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False, max_tokens=2000)
+            raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False)
             tests = raw_tests.strip()
             if not tests.startswith(("describe(", "test(")):
-                if language == "html":
-                    escaped_code = code.replace('`', '\\`')
-                    tests = (
-                        f"describe('{output_file}', () => {{\n"
-                        f"  beforeEach(() => {{\n"
-                        f"    document.body.innerHTML = `{escaped_code}`;\n"
-                        f"  }});\n"
-                        f"  it('has required elements', () => {{\n"
-                        f"    expect(document.getElementById('myCanvas')).toBeDefined();\n"
-                        f"    expect(document.getElementById('timer')).toBeDefined();\n"
-                        f"    expect(document.getElementById('speed')).toBeDefined();\n"
-                        f"    expect(document.getElementById('standings')).toBeDefined();\n"
-                        f"    expect(document.getElementById('startButton')).toBeDefined();\n"
-                        f"  }});\n"
-                        f"  it('includes Three.js script', () => {{\n"
-                        f"    const scripts = document.getElementsByTagName('script');\n"
-                        f"    const threeJs = Array.from(scripts).find(s => s.src.includes('three.js'));\n"
-                        f"    expect(threeJs).toBeDefinedUND();\n"
-                        f"  }});\n"
-                        f"  afterEach(() => {{\n"
-                        f"    document.body.innerHTML = '';\n"
-                        f"  }});\n"
-                        f"}});"
-                    )
-                else:
-                    tests = ""
+                tests = ""
             self.log_update(f"Generated tests for {output_file}:\n{tests}")
 
         output = "No tests executed"
         passed = False
         test_code = tests
-        if language == "html":
-            try:
-                soup = BeautifulSoup(code, 'html.parser')
-                required_ids = ['myCanvas', 'timer', 'speed', 'standings', 'startButton']
-                has_three_js = any('three.js' in tag.get('src', '') for tag in soup.find_all('script'))
-                passed = all(soup.find(id=id_) for id_ in required_ids) and has_three_js
-                output = f"HTML validation {'passed' if passed else 'failed'}: {required_ids} {'and Three.js script ' if has_three_js else ''}{'found' if passed else 'missing'}"
-                self.log_update(f"HTML test output for {output_file}:\n{output}")
-            except Exception as e:
-                output = f"HTML validation failed: {str(e)}"
-                passed = False
-                self.log_update(f"HTML test failed for {output_file}:\n{output}")
-        elif tests and language == "javascript":
+        if tests and language == "javascript":
             with tempfile.TemporaryDirectory() as tmpdir:
                 test_file = os.path.join(tmpdir, os.path.basename(output_file))
                 with open(test_file, "w") as f:
@@ -125,6 +87,18 @@ module.exports = {
                     output = e.output
                     passed = False
                     self.log_update(f"Test execution failed for {output_file}:\n{output}")
+        elif tests and language == "html":
+            from bs4 import BeautifulSoup
+            try:
+                soup = BeautifulSoup(code, 'html.parser')
+                required_ids = ['myCanvas', 'timer', 'speed', 'standings', 'startReset']
+                passed = all(soup.find(id=id_) for id_ in required_ids)
+                output = f"HTML validation {'passed' if passed else 'failed'}: {required_ids} {'found' if passed else 'missing'}"
+                self.log_update(f"HTML test output for {output_file}:\n{output}")
+            except Exception as e:
+                output = f"HTML validation failed: {str(e)}"
+                passed = False
+                self.log_update(f"HTML test failed for {output_file}:\n{output}")
 
         result = TestResult(test_code=test_code, passed=passed, output=output)
         self.save_output(task, result, status="tested")

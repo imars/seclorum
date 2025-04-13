@@ -58,6 +58,7 @@ class HTMLHandler(LanguageHandler):
             "- Race timer (id='timer'), drone speed (id='speed'), race standings (id='standings'), start/reset button (id='startButton'). "
             "Use inline CSS: dark background (#222), white text, semi-transparent UI panel (rgba(0,0,0,0.5)), green button (#4CAF50) with hover (#3e8e41). "
             "Include script tags for Three.js CDN (https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js) and drone_game.js. "
+            "Ensure canvas is full-screen and UI is positioned top-left. "
             "Return only the raw HTML content, without comments, explanations, or JavaScript code."
         )
 
@@ -68,11 +69,12 @@ class HTMLHandler(LanguageHandler):
             "1. Canvas (id='myCanvas'). "
             "2. UI elements (ids: timer, speed, standings, startButton). "
             "3. Three.js script tag. "
+            "4. drone_game.js script tag. "
             "Return only the raw Jest test code."
         )
 
     def validate_code(self, code: str) -> bool:
-        return bool(code.strip() and "myCanvas" in code and "uiPanel" in code and "three.js" in code)
+        return bool(code.strip() and all(kw in code for kw in ["myCanvas", "uiPanel", "three.js", "drone_game.js"]))
 
 class PythonHandler(LanguageHandler):
     def get_code_prompt(self, task: Task, output_file: str) -> str:

@@ -23,6 +23,7 @@ class AbstractAgent(ABC, LoggerMixin):
         self.fs_manager = FileSystemManager(require_git=quiet)
         self.memory = self.get_or_create_memory(session_id)
         self.logger.info(f"Using shared MemoryManager for session {session_id}")
+        self._flow_tracker = []  # Track agent visits for testing
 
     @classmethod
     def get_or_create_memory(cls, session_id: str) -> Memory:
@@ -58,9 +59,19 @@ class AbstractAgent(ABC, LoggerMixin):
         self.store_output(task, status, output)
         self.log_update(f"Saved output for task {task.task_id}: {status}")
 
+    def track_flow(self, task: Task, status: str, result: Any, use_remote: bool):
+        """Track agent visit for flow testing."""
+        self._flow_tracker.append({
+            "agent_name": self.name,
+            "task_id": task.task_id,
+            "session_id": self.session_id,
+            "remote": use_remote,
+            "passed": isinstance(result, TestResult) and result.passed or bool(getattr(result, 'code', '').strip()),
+            "status": status
+        })
+
     def infer(self, prompt: str, task: Task, use_remote: Optional[bool] = None, use_context: bool = False, endpoint: str = "google_ai_studio", **kwargs) -> str:
         """Run inference with optional history and similar tasks."""
-        # Use task.parameters.use_remote if use_remote is None
         use_remote = use_remote if use_remote is not None else task.parameters.get("use_remote", False)
         if use_context:
             history = self.memory.load_conversation_history(task_id=task.task_id, agent_name=self.name)
@@ -205,6 +216,7 @@ class Aggregate(Agent):
                 params = self.tasks[task_id]["outputs"].copy()
                 new_task = Task(task_id=task_id, description=task.description, parameters=params)
                 new_status, new_result = next_agent.process_task(new_task)
+                next_agent.track_flow(new_task, new_status, new_result, new_task.parameters.get("use_remote", False))
                 self.tasks[task_id]["processed"].add(next_agent_name)
                 final_status, final_result = self._propagate(next_agent_name, new_status, new_result, task, stop_at)
         return final_status, final_result
@@ -239,6 +251,7 @@ class Aggregate(Agent):
             agent = self.agents[next_agent_name]
             new_task = Task(task_id=task_id, description=task.description, parameters=agent_outputs)
             agent_status, agent_result = agent.process_task(new_task)
+            agent.track_flow(new_task, agent_status, agent_result, new_task.parameters.get("use_remote", False))
             final_status, final_result = self._propagate(next_agent_name, agent_status, agent_result, task, stop_at)
             self.tasks[task_id]["processed"].add(next_agent_name)
             if stop_at == next_agent_name:

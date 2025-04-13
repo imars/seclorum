@@ -19,7 +19,7 @@ class Executor(Agent):
     def process_task(self, task: Task) -> Tuple[str, TestResult]:
         self.log_update(f"Executing code for task: {task.description}")
         language = task.parameters.get("language", "javascript").lower()
-        output_file = task.parameters.get("output_file", "temp")
+        output_file = task.parameters.get("output_file", f"temp_{language}")
         handler = LANGUAGE_HANDLERS.get(language)
         if not handler:
             self.log_update(f"Unsupported language: {language}")
@@ -59,7 +59,7 @@ class Executor(Agent):
 
                 jest_config = """
 module.exports = {
-  testEnvironment: 'jsdom',
+  testEnvironment: 'jest-environment-jsdom',
   testMatch: ['**/*.test.js'],
 };
 """
@@ -82,10 +82,6 @@ module.exports = {
                     output = e.output
                     passed = False
                     self.log_update(f"Unexpected execution error for {output_file}:\n{output}")
-                finally:
-                    self.log_update(f"Cleaning up {test_file}")
-                    if os.path.exists(test_file):
-                        os.remove(test_file)
         elif language == "html":
             output = f"HTML execution skipped for {output_file}; validated by Tester"
             passed = True
