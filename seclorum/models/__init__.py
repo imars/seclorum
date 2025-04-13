@@ -10,7 +10,7 @@ from .task import (
     OutsourcedTaskInput,
     OutsourcedTaskOutput
 )
-from .code import CodeOutput, TestResult
+from .code import CodeOutput, TestResult, CodeResult
 from .manager import create_model_manager, ModelManager, OllamaModelManager, MockModelManager
 
 __all__ = [

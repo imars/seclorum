@@ -15,13 +15,14 @@ class Architect(Agent):
     def process_task(self, task: Task) -> Tuple[str, str]:
         self.log_update(f"Planning for task: {task.description}")
         prompt = (
-            f"Create a detailed plan for the following task: {task.description}\n"
-            "Return only the plan as a concise, structured text (e.g., numbered list or bullet points), "
-            "without generating code, comments, or explanations."
+            f"Create a development plan for the following task:\n{task.description}\n\n"
+            "The plan should outline the components needed for a Three.js drone racing game, including JavaScript logic (scene, camera, drones, terrain, controls, race mechanics) "
+            "and HTML UI (canvas, timer, speed, standings, start/reset button). Specify that JavaScript uses the global THREE object from a CDN. "
+            "Return a concise, structured plan as a string, focusing on key components and files (drone_game.js, drone_game.html)."
         )
-        plan = self.infer(prompt, task, use_remote=task.parameters.get("use_remote", False), use_context=False)
-        plan = plan.strip()
-        self.log_update(f"Generated plan:\n{plan}")
+        use_remote = task.parameters.get("use_remote", False)
+        plan = self.infer(prompt, task, use_remote=use_remote, use_context=False)
+        self.log_update(f"Generated plan:\n{plan[:100]}...")
         self.save_output(task, plan, status="planned")
         self.commit_changes(f"Planned task {task.task_id}")
         return "planned", plan

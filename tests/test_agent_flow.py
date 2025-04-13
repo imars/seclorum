@@ -3,7 +3,7 @@ import pytest
 import logging
 from unittest.mock import patch
 from seclorum.agents.developer import Developer
-from seclorum.models import Task, CodeOutput, TestResult, create_model_manager
+from seclorum.models import Task, CodeOutput, TestResult, CodeResult, create_model_manager
 from seclorum.models.task import TaskFactory
 from seclorum.agents.base import AbstractAgent
 
@@ -23,7 +23,14 @@ class MockAgent(AbstractAgent):
     def process_task(self, task: Task) -> tuple[str, any]:
         use_remote = task.parameters.get("use_remote", False)
         status = "completed"
-        result = CodeOutput(code="mock_code", tests="mock_tests") if "Generator" in self.name else TestResult(test_code="mock_test", passed=True)
+        if "Generator" in self.name:
+            result = CodeOutput(code="mock_code", tests="mock_tests")
+        elif "Tester" in self.name:
+            result = TestResult(test_code="mock_test", passed=True)
+        elif "Architect" in self.name:
+            result = "mock_plan"  # Architect returns a plan (str)
+        else:
+            result = CodeResult(test_code="mock_test", passed=True)
 
         # Log agent visit
         agent_flow.append({
@@ -31,10 +38,10 @@ class MockAgent(AbstractAgent):
             "task_id": task.task_id,
             "session_id": self.session_id,
             "remote": use_remote,
-            "passed": isinstance(result, TestResult) and result.passed or bool(result.code.strip()),
+            "passed": isinstance(result, (TestResult, CodeResult)) and result.passed or bool(result),
             "status": status
         })
-        logger.info(f"Visited {self.name}: task={task.task_id}, remote={use_remote}, passed={isinstance(result, TestResult) and result.passed or bool(result.code.strip())}")
+        logger.debug(f"Visited {self.name}: task={task.task_id}, remote={use_remote}, passed={isinstance(result, (TestResult, CodeResult)) and result.passed or bool(result)}")
 
         return status, result
 
@@ -60,10 +67,15 @@ def test_agent_flow():
         use_remote=True
     )
 
-    # Patch log_update to suppress verbose output
-    with patch.object(AbstractAgent, 'log_update', lambda self, msg: None):
-        # Run the pipeline
-        status, result = developer.process_task(task)
+    # Patch log_update and agent classes
+    with patch.object(AbstractAgent, 'log_update', lambda self, msg: logger.debug(msg)):
+        with patch('seclorum.agents.architect.Architect', MockAgent), \
+             patch('seclorum.agents.generator.Generator', MockAgent), \
+             patch('seclorum.agents.tester.Tester', MockAgent), \
+             patch('seclorum.agents.executor.Executor', MockAgent), \
+             patch('seclorum.agents.debugger.Debugger', MockAgent):
+            # Run the pipeline
+            status, result = developer.process_task(task)
 
     # Verify agent flow
     assert len(agent_flow) > 0, "No agents were visited"

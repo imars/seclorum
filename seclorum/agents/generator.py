@@ -11,7 +11,7 @@ class Generator(Agent):
         self.task_id = task_id
         self.model = model_manager
         self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
-        self.log_update(f"Generator initialized for Task {task_id} with model {self.model_manager.model_name}")
+        self.log_update(f"Generator initialized for Task {task_id}")
 
     def process_task(self, task: Task) -> Tuple[str, CodeOutput]:
         self.log_update(f"Generating code for task: {task.description}")
@@ -25,27 +25,27 @@ class Generator(Agent):
 
         code_prompt = handler.get_code_prompt(task, output_file)
         use_remote = task.parameters.get("use_remote", False)
-        raw_code = self.infer(code_prompt, task, use_remote=use_remote, use_context=False, max_tokens=4000)
-        code = re.sub(r'```(?:javascript|html|python|cpp|css)?\n|\n```|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid)[^\n]*?\n?', '', raw_code).strip()
+        raw_code = self.infer(code_prompt, task, use_remote=use_remote, use_context=False, max_tokens=2000)
+        code = re.sub(r'```(?:javascript|html)?\n|\n```|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid)[^\n]*?\n?', '', raw_code).strip()
 
         if not handler.validate_code(code):
-            self.log_update(f"Invalid {language} code generated for {output_file}, discarding")
+            self.log_update(f"Invalid {language} code generated for {output_file}")
             code = ""
-        else:
-            self.log_update(f"Raw generated code for {output_file}:\n{code}")
+
+        self.log_update(f"Raw generated code for {output_file}:\n{code[:100]}...")
 
         tests = None
         if task.parameters.get("generate_tests", False) and code:
             test_prompt = handler.get_test_prompt(code)
-            raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False, max_tokens=2000)
-            tests = re.sub(r'```(?:javascript|html|python|cpp)?\n|\n```|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid|mock|recommended)[^\n]*?\n?', '', raw_tests).strip()
+            raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False, max_tokens=1000)
+            tests = re.sub(r'```(?:javascript|html)?\n|\n```|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid)[^\n]*?\n?', '', raw_tests).strip()
             if not tests.startswith(("describe(", "test(")):
-                tests = None
-            self.log_update(f"Generated tests for {output_file}:\n{tests}")
+                tests = ""
+            self.log_update(f"Generated tests for {output_file}:\n{tests[:100]}...")
 
         result = CodeOutput(code=code, tests=tests)
         self.save_output(task, result, status="generated")
-        self.commit_changes(f"Generated {language} code for {output_file} for {task.task_id}")
+        self.commit_changes(f"Generated {language} code for {output_file}")
         return "generated", result
 
     def start(self):

@@ -5,7 +5,7 @@ import os
 import re
 from pathlib import Path
 from seclorum.agents.developer import Developer
-from seclorum.models import CodeOutput, TestResult
+from seclorum.models import CodeOutput, TestResult, CodeResult
 from seclorum.models import create_model_manager
 from seclorum.models.task import TaskFactory
 
@@ -82,7 +82,7 @@ def create_drone_game():
         outputs = [{
             "output_file": "drone_game.js",
             "code": """
-let scene, camera, renderer, droneModel, drones, terrain, timer = 0, checkpoints = [];
+let scene, camera, renderer, drones, terrain, timer = 0, checkpoints = [];
 const clock = new THREE.Clock();
 
 init();
@@ -94,10 +94,8 @@ function init() {
   renderer = new THREE.WebGLRenderer({canvas: document.getElementById('myCanvas')});
   renderer.setSize(window.innerWidth, window.innerHeight);
 
-  const ambientLight = new THREE.AmbientLight(0x404040);
-  scene.add(ambientLight);
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-  scene.add(directionalLight);
+  scene.add(new THREE.AmbientLight(0x404040));
+  scene.add(new THREE.DirectionalLight(0xffffff, 0.5));
 
   const geometry = new THREE.PlaneGeometry(1000, 1000, 50, 50);
   const vertices = geometry.attributes.position.array;
@@ -121,10 +119,10 @@ function init() {
 function createDrones(numDrones) {
   drones = [];
   for (let i = 0; i < numDrones; i++) {
-    const drone = droneModel ? droneModel.clone() : new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color: i === 0 ? 0x0000ff : 0x00ff00}));
+    const drone = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color: i === 0 ? 0x0000ff : 0x00ff00}));
     drone.position.set(i * 20, 10, 0);
     scene.add(drone);
-    drones.push({ model: drone, speed: 0, acceleration: 0.1, checkpoints: 0 });
+    drones.push({ model: drone, speed: 0, acceleration: 0.1, checkpoints: [] });
   }
 }
 
@@ -159,7 +157,11 @@ function onKeyDown(event) {
 
 function startRace() {
   timer = 0;
-  drones.forEach(d => { d.checkpoints = 0; d.model.position.set(0, 10, 0); d.speed = 0; });
+  drones.forEach((d, i) => {
+    d.checkpoints = [];
+    d.model.position.set(i * 20, 10, 0);
+    d.speed = 0;
+  });
   document.getElementById('standings').innerText = '-';
 }
 
@@ -168,18 +170,18 @@ function updateUI() {
   document.getElementById('speed').innerText = drones[0].speed.toFixed(1);
   let standings = '';
   drones.forEach((d, i) => {
-    standings += `Drone ${i + 1}: ${d.checkpoints} checkpoints\n`;
+    standings += `Drone ${i + 1}: ${d.checkpoints.length}/${checkpoints.length}\\n`;
   });
   document.getElementById('standings').innerText = standings;
 }
 
 function checkCollisions() {
-  drones.forEach((d, index) => {
-    checkpoints.forEach((c, i) => {
-      if (!d.checkpoints.includes(i) && d.model.position.distanceTo(c.position) < 5) {
-        d.checkpoints.push(i);
+  drones.forEach((d, i) => {
+    checkpoints.forEach((c, j) => {
+      if (!d.checkpoints.includes(j) && d.model.position.distanceTo(c.position) < 5) {
+        d.checkpoints.push(j);
         if (d.checkpoints.length === checkpoints.length) {
-          document.getElementById('standings').innerText = `Drone ${index + 1} Wins!`;
+          document.getElementById('standings').innerText = `Drone ${i + 1} Wins!`;
         }
       }
     });
@@ -192,7 +194,7 @@ function animate() {
   timer += delta;
   drones.forEach((d, i) => {
     d.model.position.z -= d.speed;
-    if (i > 0) { // Simple AI for opponent drones
+    if (i > 0) {
       d.speed = Math.min(d.speed + delta * 0.1, 2);
       d.model.position.x += Math.sin(timer + i) * 0.5;
     }
@@ -209,7 +211,7 @@ describe('Drone Racing Game', () => {
   beforeEach(() => {
     window.innerWidth = 500;
     window.innerHeight = 500;
-    document.body.innerHTML = '<canvas id="myCanvas"></canvas><div id="ui"><span id="timer"></span><span id="speed"></span><span id="standings"></span><button id="startReset"></button></div>';
+    document.body.innerHTML = '<canvas id="myCanvas"></canvas><div id="ui"><span id="timer"></span><span id="speed"></span><pre id="standings"></pre><button id="startReset"></button></div>';
     init();
   });
 
@@ -258,6 +260,7 @@ describe('Drone Racing Game', () => {
         #ui div { margin-bottom: 5px; }
         #startReset { padding: 5px 10px; background: #007bff; border: none; color: white; cursor: pointer; }
         #startReset:hover { background: #0056b3; }
+        pre { margin: 0; }
     </style>
 </head>
 <body>

@@ -23,7 +23,7 @@ class Tester(Agent):
         handler = LANGUAGE_HANDLERS.get(language)
         if not handler:
             self.log_update(f"Unsupported language: {language}")
-            return "tested", TestResult(test_code="", passed=False, output=f"Language {language} not supported")
+            return "tested", CodeResult(test_code="", passed=False, output=f"Language {language} not supported")
 
         generator_key = next((k for k in task.parameters if k.startswith("Generator_") and k.endswith("_gen")), None)
         debugger_key = next((k for k in task.parameters if k.startswith("Debugger_") and k.endswith("_debug")), None)
@@ -35,7 +35,7 @@ class Tester(Agent):
 
         if not code_output or not code_output.code.strip():
             self.log_update(f"No valid {language} code to test for {output_file}")
-            return "tested", TestResult(test_code="", passed=False, output="No code provided")
+            return "tested", CodeResult(test_code="", passed=False, output="No code provided")
 
         code = code_output.code
         tests = code_output.tests if code_output.tests else ""
@@ -87,22 +87,22 @@ module.exports = {
                     output = e.output
                     passed = False
                     self.log_update(f"Test execution failed for {output_file}:\n{output}")
-        elif tests and language == "html":
+        elif language == "html":
             from bs4 import BeautifulSoup
             try:
                 soup = BeautifulSoup(code, 'html.parser')
                 required_ids = ['myCanvas', 'timer', 'speed', 'standings', 'startReset']
                 passed = all(soup.find(id=id_) for id_ in required_ids)
-                output = f"HTML validation {'passed' if passed else 'failed'}: {required_ids} {'found' if passed else 'missing'}"
+                output = f"HTML validation {'passed' if passed else 'failed'}: {required_ids}"
                 self.log_update(f"HTML test output for {output_file}:\n{output}")
             except Exception as e:
                 output = f"HTML validation failed: {str(e)}"
                 passed = False
                 self.log_update(f"HTML test failed for {output_file}:\n{output}")
 
-        result = TestResult(test_code=test_code, passed=passed, output=output)
+        result = CodeOutput(test_code=test_code, passed=passed, output=output)
         self.save_output(task, result, status="tested")
-        self.commit_changes(f"Tested {language} code for {output_file} for {task.task_id}")
+        self.commit_changes(f"Tested {language} code for {output_file}")
         return "tested", result
 
     def start(self):
