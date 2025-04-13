@@ -38,7 +38,8 @@ class MockAgent(AbstractAgent):
         language = task.parameters.get("language", "")
         status = "completed"
         result = CodeOutput(code="mock_code", tests="mock_tests") if "Generator" in self.name else \
-                 CodeResult(test_code="mock_test", passed=True)
+                 CodeResult(test_code="mock_test", passed=True, code="mock_code") if "Tester" in self.name else \
+                 CodeOutput(code="mock_code", tests=None)
 
         # Log visit
         agent_flow.append({
@@ -97,14 +98,15 @@ def test_agent_flow():
         if "pipelines" in prompt else "mock_plan"
     ))
 
-    # Patch log_update, infer, and agents
-    with patch('seclorum.agents.base.AbstractAgent.log_update', lambda self, msg: logger.debug(f"Patched log: {msg}")), \
-         patch('seclorum.agents.base.AbstractAgent.infer', mock_infer), \
-         patch('seclorum.agents.architect.Architect', MockAgent), \
-         patch('seclorum.agents.generator.Generator', MockAgent), \
-         patch('seclorum.agents.tester.Tester', MockAgent), \
-         patch('seclorum.agents.executor.Executor', MockAgent), \
-         patch('seclorum.agents.debugger.Debugger', MockAgent):
+    # Patch agents in developer's namespace
+    with patch('seclorum.agents.developer.AbstractAgent.log_update', lambda self, msg: logger.debug(f"Patched log: {msg}")), \
+         patch('seclorum.agents.developer.AbstractAgent.infer', mock_infer), \
+         patch('seclorum.agents.developer.Architect', MockAgent), \
+         patch('seclorum.agents.developer.Generator', MockAgent), \
+         patch('seclorum.agents.developer.Tester', MockAgent), \
+         patch('seclorum.agents.developer.Executor', MockAgent), \
+         patch('seclorum.agents.developer.Debugger', MockAgent):
+        logger.debug("Applying patches for agent classes")
         # Run pipeline for both tasks
         logger.debug("Starting Developer.process_task for js_task")
         status_js, result_js = developer.process_task(js_task)
