@@ -13,7 +13,7 @@ class Architect(Agent):
         self.log_update(f"Architect initialized for Task {task_id}")
 
     def process_task(self, task: Task) -> Tuple[str, str]:
-        self.log_update(f"Planning for task: {task.description}")
+        self.log_update(f"Planning for task: {task.description[:100]}...")
         prompt = (
             f"Create a development plan for the following task:\n{task.description}\n\n"
             "The plan should outline the components needed for a Three.js drone racing game, including JavaScript logic (scene, camera, drones, terrain, controls, race mechanics) "
@@ -22,7 +22,7 @@ class Architect(Agent):
         )
         use_remote = task.parameters.get("use_remote", False)
         plan = self.infer(prompt, task, use_remote=use_remote, use_context=False)
-        self.log_update(f"Generated plan:\n{plan[:100]}...")
+        self.log_update(f"Generated plan: {plan[:100]}...")
         self.save_output(task, plan, status="planned")
         self.commit_changes(f"Planned task {task.task_id}")
         return "planned", plan

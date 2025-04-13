@@ -3,7 +3,7 @@ import os
 import subprocess
 import tempfile
 from seclorum.agents.base import Agent
-from seclorum.models import Task, TestResult, create_model_manager, ModelManager
+from seclorum.models import Task, TestResult, CodeOutput, create_model_manager, ModelManager
 from seclorum.languages import LANGUAGE_HANDLERS
 from typing import Tuple, Optional
 import logging
@@ -17,13 +17,13 @@ class Tester(Agent):
         self.log_update(f"Tester initialized for Task {task_id}")
 
     def process_task(self, task: Task) -> Tuple[str, TestResult]:
-        self.log_update(f"Testing code for task: {task.description}")
+        self.log_update(f"Testing code for task: {task.description[:100]}...")
         language = task.parameters.get("language", "javascript").lower()
         output_file = task.parameters.get("output_file", "output.test")
         handler = LANGUAGE_HANDLERS.get(language)
         if not handler:
             self.log_update(f"Unsupported language: {language}")
-            return "tested", CodeResult(test_code="", passed=False, output=f"Language {language} not supported")
+            return "tested", TestResult(test_code="", passed=False, output=f"Language {language} not supported")
 
         generator_key = next((k for k in task.parameters if k.startswith("Generator_") and k.endswith("_gen")), None)
         debugger_key = next((k for k in task.parameters if k.startswith("Debugger_") and k.endswith("_debug")), None)
@@ -35,7 +35,7 @@ class Tester(Agent):
 
         if not code_output or not code_output.code.strip():
             self.log_update(f"No valid {language} code to test for {output_file}")
-            return "tested", CodeResult(test_code="", passed=False, output="No code provided")
+            return "tested", TestResult(test_code="", passed=False, output="No code provided")
 
         code = code_output.code
         tests = code_output.tests if code_output.tests else ""
@@ -47,7 +47,7 @@ class Tester(Agent):
             tests = raw_tests.strip()
             if not tests.startswith(("describe(", "test(")):
                 tests = ""
-            self.log_update(f"Generated tests for {output_file}:\n{tests}")
+            self.log_update(f"Generated tests for {output_file}: {tests[:100]}...")
 
         output = "No tests executed"
         passed = False
@@ -82,11 +82,11 @@ module.exports = {
                     )
                     output = result.stdout + result.stderr
                     passed = result.returncode == 0
-                    self.log_update(f"Test execution output for {output_file}:\n{output}")
+                    self.log_update(f"Test execution output for {output_file}: {output[:100]}...")
                 except subprocess.CalledProcessError as e:
                     output = e.output
                     passed = False
-                    self.log_update(f"Test execution failed for {output_file}:\n{output}")
+                    self.log_update(f"Test execution failed for {output_file}: {output[:100]}...")
         elif language == "html":
             from bs4 import BeautifulSoup
             try:
@@ -94,13 +94,13 @@ module.exports = {
                 required_ids = ['myCanvas', 'timer', 'speed', 'standings', 'startReset']
                 passed = all(soup.find(id=id_) for id_ in required_ids)
                 output = f"HTML validation {'passed' if passed else 'failed'}: {required_ids}"
-                self.log_update(f"HTML test output for {output_file}:\n{output}")
+                self.log_update(f"HTML test output for {output_file}: {output}")
             except Exception as e:
                 output = f"HTML validation failed: {str(e)}"
                 passed = False
-                self.log_update(f"HTML test failed for {output_file}:\n{output}")
+                self.log_update(f"HTML test failed for {output_file}: {output}")
 
-        result = CodeOutput(test_code=test_code, passed=passed, output=output)
+        result = TestResult(test_code=test_code, passed=passed, output=output)
         self.save_output(task, result, status="tested")
         self.commit_changes(f"Tested {language} code for {output_file}")
         return "tested", result

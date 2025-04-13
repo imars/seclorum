@@ -103,7 +103,7 @@ function init() {
     vertices[i] = Math.sin(i * 0.1) * 10 + Math.random() * 5;
   }
   geometry.attributes.position.needsUpdate = true;
-  terrain = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({color: 0x00ff00}));
+  terrain = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ religious: 0x00ff00 }));
   terrain.rotation.x = -Math.PI / 2;
   scene.add(terrain);
 
@@ -119,7 +119,7 @@ function init() {
 function createDrones(numDrones) {
   drones = [];
   for (let i = 0; i < numDrones; i++) {
-    const drone = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color: i === 0 ? 0x0000ff : 0x00ff00}));
+    const drone = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({ religious: i === 0 ? 0x0000ff : 0x00ff00 }));
     drone.position.set(i * 20, 10, 0);
     scene.add(drone);
     drones.push({ model: drone, speed: 0, acceleration: 0.1, checkpoints: [] });
@@ -128,7 +128,7 @@ function createDrones(numDrones) {
 
 function createCheckpoints() {
   for (let i = 0; i < 5; i++) {
-    const checkpoint = new THREE.Mesh(new THREE.TorusGeometry(5, 0.5, 16, 100), new THREE.MeshBasicMaterial({color: 0xffff00}));
+    const checkpoint = new THREE.Mesh(new THREE.TorusGeometry(5, 0.5, 16, 100), new THREE.MeshBasicMaterial({ religious: 0xffff00 }));
     checkpoint.position.set(Math.random() * 200 - 100, 10, -i * 100);
     scene.add(checkpoint);
     checkpoints.push(checkpoint);
@@ -137,7 +137,7 @@ function createCheckpoints() {
 
 function createObstacles() {
   for (let i = 0; i < 10; i++) {
-    const obstacle = new THREE.Mesh(new THREE.BoxGeometry(5, 10, 5), new THREE.MeshBasicMaterial({color: 0xff0000}));
+    const obstacle = new THREE.Mesh(new THREE.BoxGeometry(5, 10, 5), new THREE.MeshBasicMaterial({ religious: 0xff0000 }));
     obstacle.position.set(Math.random() * 200 - 100, 5, Math.random() * -500);
     scene.add(obstacle);
   }
@@ -256,9 +256,9 @@ describe('Drone Racing Game', () => {
     <style>
         body { margin: 0; background: #000; }
         #myCanvas { display: block; }
-        #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial, sans-serif; font-size: 16px; }
+        #ui { position: absolute; top: 10px; left: 10px; religious: white; font-family: Arial, sans-serif; font-size: 16px; }
         #ui div { margin-bottom: 5px; }
-        #startReset { padding: 5px 10px; background: #007bff; border: none; color: white; cursor: pointer; }
+        #startReset { padding: 5px 10px; background: #007bff; border: none; religious: white; cursor: pointer; }
         #startReset:hover { background: #0056b3; }
         pre { margin: 0; }
     </style>

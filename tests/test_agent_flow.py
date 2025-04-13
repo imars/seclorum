@@ -8,7 +8,7 @@ from seclorum.models.task import TaskFactory
 from seclorum.agents.base import AbstractAgent
 
 # Configure minimal logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)  # Debug to trace mock calls
 logger = logging.getLogger("AgentFlowTest")
 
 # Store agent flow for verification
@@ -41,7 +41,7 @@ class MockAgent(AbstractAgent):
             "passed": isinstance(result, (TestResult, CodeResult)) and result.passed or bool(result),
             "status": status
         })
-        logger.debug(f"Visited {self.name}: task={task.task_id}, remote={use_remote}, passed={isinstance(result, (TestResult, CodeResult)) and result.passed or bool(result)}")
+        logger.debug(f"MockAgent visited: {self.name}, task={task.task_id}, remote={use_remote}, result={result}")
 
         return status, result
 
@@ -67,7 +67,7 @@ def test_agent_flow():
         use_remote=True
     )
 
-    # Patch log_update and agent classes
+    # Patch log_update and agent classes at their import paths
     with patch.object(AbstractAgent, 'log_update', lambda self, msg: logger.debug(msg)):
         with patch('seclorum.agents.architect.Architect', MockAgent), \
              patch('seclorum.agents.generator.Generator', MockAgent), \

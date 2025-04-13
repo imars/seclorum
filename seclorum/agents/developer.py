@@ -17,8 +17,10 @@ class Developer(Aggregate):
         self.name = "Developer"
         self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
         self.pipelines: Dict[str, List[dict]] = {}
+        self.logger = logging.getLogger(f"{self.__class__.__name__}:{self.name}")
 
     def setup_pipeline(self, task_id: str, language: str, output_file: str) -> List[dict]:
+        self.log_update(f"Setting up pipeline for task {task_id}, language {language}, output_file {output_file}")
         generator = Generator(f"{task_id}_{language}_gen", self.session_id, self.model_manager)
         tester = Tester(f"{task_id}_{language}_test", self.session_id, self.model_manager)
         executor = Executor(f"{task_id}_{language}_exec", self.session_id)
@@ -33,9 +35,11 @@ class Developer(Aggregate):
 
         for step in pipeline:
             self.add_agent(step["agent"], step["deps"])
+            self.log_update(f"Added agent {step['name']} to pipeline")
         return pipeline
 
     def infer_pipelines(self, task: Task, plan: str) -> List[Dict[str, Any]]:
+        self.log_update(f"Inferring pipelines for task {task.task_id}, plan: {plan[:100]}...")
         prompt = (
             f"Given the following development plan:\n{plan}\n\n"
             "Analyze the plan and determine the necessary development pipelines. Each pipeline should handle a specific output file and language (javascript, html). "
@@ -70,10 +74,11 @@ class Developer(Aggregate):
         architect_key = f"Architect_{task.task_id}"
         architect = Architect(task.task_id, self.session_id, self.model_manager)
         self.add_agent(architect)
+        self.log_update(f"Added Architect: {architect_key}")
 
         try:
             status, plan = architect.process_task(task)
-            self.log_update(f"{architect_key} executed, status: {status}, plan: {plan}")
+            self.log_update(f"{architect_key} executed, status: {status}, plan: {plan[:100]}...")
             task.parameters[architect_key] = {"status": status, "result": plan}
         except Exception as e:
             self.log_update(f"{architect_key} failed: {str(e)}")
@@ -89,6 +94,7 @@ class Developer(Aggregate):
             output_file = config["output_file"]
             pipeline = self.setup_pipeline(task.task_id, language, output_file)
             self.pipelines[task.task_id].extend(pipeline)
+            self.log_update(f"Setup pipeline for {language}: {output_file}")
 
         final_outputs = []
         for pipeline in self.pipelines[task.task_id]:
@@ -101,6 +107,7 @@ class Developer(Aggregate):
                 self.log_update(f"Stopping at {agent_name}")
                 break
 
+            self.log_update(f"Executing agent {agent_name} for {output_file or 'task'}")
             try:
                 subtask = Task(
                     task_id=f"{task.task_id}_{agent_name}",
@@ -108,7 +115,7 @@ class Developer(Aggregate):
                     parameters={**task.parameters, "language": language, "output_file": output_file}
                 )
                 status, result = agent.process_task(subtask)
-                self.log_update(f"{agent_name} executed, status: {status}")
+                self.log_update(f"{agent_name} executed, status: {status}, result_type: {type(result).__name__}")
                 task.parameters[agent_name] = {
                     "status": status,
                     "result": result,
@@ -136,5 +143,5 @@ class Developer(Aggregate):
             elif output["output_file"] and output["output_file"].endswith(".html"):
                 final_result.code += f"\n<!-- HTML -->\n{output['code']}"
 
-        self.log_update(f"Final result type: {type(final_result).__name__}, outputs: {[o['output_file'] for o in final_outputs if o['output_file']]}")
+        self.log_update(f"Orchestration complete, final_status: {final_status}, outputs: {[o['output_file'] for o in final_outputs if o['output_file']]}")
         return final_status, final_result

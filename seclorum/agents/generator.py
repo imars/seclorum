@@ -14,7 +14,7 @@ class Generator(Agent):
         self.log_update(f"Generator initialized for Task {task_id}")
 
     def process_task(self, task: Task) -> Tuple[str, CodeOutput]:
-        self.log_update(f"Generating code for task: {task.description}")
+        self.log_update(f"Generating code for task: {task.description[:100]}...")
         language = task.parameters.get("language", "javascript").lower()
         output_file = task.parameters.get("output_file", "output")
 
@@ -32,7 +32,7 @@ class Generator(Agent):
             self.log_update(f"Invalid {language} code generated for {output_file}")
             code = ""
 
-        self.log_update(f"Raw generated code for {output_file}:\n{code[:100]}...")
+        self.log_update(f"Generated code for {output_file}: {code[:100]}...")
 
         tests = None
         if task.parameters.get("generate_tests", False) and code:
@@ -41,7 +41,7 @@ class Generator(Agent):
             tests = re.sub(r'```(?:javascript|html)?\n|\n```|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid)[^\n]*?\n?', '', raw_tests).strip()
             if not tests.startswith(("describe(", "test(")):
                 tests = ""
-            self.log_update(f"Generated tests for {output_file}:\n{tests[:100]}...")
+            self.log_update(f"Generated tests for {output_file}: {tests[:100]}...")
 
         result = CodeOutput(code=code, tests=tests)
         self.save_output(task, result, status="generated")
