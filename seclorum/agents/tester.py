@@ -43,12 +43,12 @@ class Tester(Agent):
 
         if not code:
             logger.warning(f"No valid {language} code to test for {output_file}")
-            return "tested", CodeResult(test_code="", passed=False, output="No code provided")
+            return "tested", CodeResult(test_code="", passed=False, output="No code provided", code="")
 
         handler = LANGUAGE_HANDLERS.get(language)
         if not handler:
             logger.error(f"Unsupported language: {language}")
-            return "tested", CodeResult(test_code="", passed=False, output=f"Language {language} not supported")
+            return "tested", CodeResult(test_code="", passed=False, output=f"Language {language} not supported", code=code)
 
         try:
             # Validate code statically
@@ -80,14 +80,14 @@ class Tester(Agent):
             # Combine results
             passed = static_passed and dynamic_passed
             output = f"{static_output}\n{dynamic_output}"
-            result = CodeResult(test_code=tests, passed=passed, output=output)
+            result = CodeResult(test_code=tests, passed=passed, output=output, code=code)
             logger.debug(f"Test result for {output_file}: passed={passed}, output={output[:200]}...")
             self.save_output(task, result, status="tested")
             self.commit_changes(f"Tested {language} code for {output_file}")
             return "tested", result
         except Exception as e:
             logger.error(f"Testing failed for {output_file}: {str(e)}")
-            return "tested", CodeResult(test_code="", passed=False, output=f"Testing failed: {str(e)}")
+            return "tested", CodeResult(test_code="", passed=False, output=f"Testing failed: {str(e)}", code=code)
 
     def validate_code(self, code: str, language: str, output_file: str) -> Tuple[bool, str]:
         logger.debug(f"Statically validating {language} code for {output_file}")
