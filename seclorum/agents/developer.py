@@ -136,6 +136,10 @@ class Developer(Aggregate):
                     use_remote=task.parameters.get("use_remote", False)
                 )
                 subtask.parameters["output_file"] = output_file
+                # Pass previous results to subtask
+                for prev_name, prev_data in task.parameters.items():
+                    if prev_name.startswith(("Generator_", "Debugger_")) and "result" in prev_data:
+                        subtask.parameters[prev_name] = prev_data
                 status, result = agent.process_task(subtask)
                 logger.debug(f"{agent_name} executed, status={status}, result_type={type(result).__name__}")
 

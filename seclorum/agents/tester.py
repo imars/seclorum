@@ -26,17 +26,22 @@ class Tester(Agent):
         logger.debug(f"Testing code for task={task.task_id}, description={task.description[:100]}...")
         language = task.parameters.get("language", "javascript").lower()
         output_file = task.parameters.get("output_file", "output")
-        code = None
+
+        # Log task.parameters for debugging
+        logger.debug(f"Task parameters: {task.parameters}")
 
         # Get code from Generator or Debugger
-        generator_key = next((k for k in task.parameters if k.startswith("Generator_") and k.endswith("_gen")), None)
-        debugger_key = next((k for k in task.parameters if k.startswith("Debugger_") and k.endswith("_debug")), None)
-        if debugger_key and debugger_key in task.parameters:
-            code = task.parameters[debugger_key].get("result", {}).get("code", "")
-        elif generator_key and generator_key in task.parameters:
-            code = task.parameters[generator_key].get("result", {}).get("code", "")
+        code = None
+        result_key = None
+        for key in task.parameters:
+            if key.startswith("Generator_") or key.startswith("Debugger_"):
+                result = task.parameters.get(key, {}).get("result", {})
+                if isinstance(result, CodeOutput) and result.code.strip():
+                    code = result.code
+                    result_key = key
+                    break
 
-        if not code or not code.strip():
+        if not code:
             logger.warning(f"No valid {language} code to test for {output_file}")
             return "tested", CodeResult(test_code="", passed=False, output="No code provided")
 
@@ -48,7 +53,7 @@ class Tester(Agent):
         try:
             # Validate code statically
             static_passed, static_output = self.validate_code(code, language, output_file)
-            tests = task.parameters.get(generator_key, {}).get("result", {}).get("tests", "") if generator_key else ""
+            tests = task.parameters.get(result_key, {}).get("result", {}).get("tests", "") if result_key else ""
 
             # Generate tests if needed
             if not tests and task.parameters.get("generate_tests", False):

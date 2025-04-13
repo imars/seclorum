@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Drone Racing Game</title>
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; background: #000; }
+        canvas#myCanvas { display: block; }
+        #ui { position: absolute; top: 10px; left: 10px; color: #fff; font-family: Arial; background: rgba(0, 0, 0, 0.5); padding: 10px; }
+        #startReset { margin: 5px; padding: 10px; background: #007bff; color: #fff; border: none; cursor: pointer; }
+        #startReset:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <span id="timer">0</span>s
+        <br>
+        <span id="speed">0</span>
+        <br>
+        <pre id="standings">-</pre>
+        <button id="startReset">Start</button>
+    </div>
+    <canvas id="myCanvas"></canvas>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="drone_game.js"></script>
+</body>
+</html>

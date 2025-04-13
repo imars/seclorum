@@ -50,6 +50,7 @@ class Generator(Agent):
             tests = None
             if task.parameters.get("generate_tests", False) and code and language == "javascript":
                 test_prompt = handler.get_test_prompt(code)
+                use_remote = task.parameters.get("use_remote", False)
                 raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False, max_tokens=2000)
                 logger.debug(f"Raw inferred tests for {output_file}:\n{raw_tests[:200]}...")
                 tests = re.sub(r'```(?:javascript|html|python|cpp)?\n|\n```|[^\x00-\x7F]+', '', raw_tests).strip()
@@ -100,27 +101,20 @@ class Generator(Agent):
     def generate_fallback(self, language: str, output_file: str) -> str:
         logger.debug(f"Generating fallback code for language={language}, output_file={output_file}")
         if language == "javascript":
-            return """let scene, camera, renderer, drone;
+            return """let scene = new THREE.Scene();
+let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+let renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('myCanvas') });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-function init() {
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('myCanvas') });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+let drone = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+drone.position.set(0, 0, 10);
+scene.add(drone);
 
-    drone = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
-    drone.position.set(0, 0, 10);
-    scene.add(drone);
+camera.position.set(0, -20, 15);
+camera.lookAt(drone.position);
 
-    camera.position.set(0, -20, 15);
-    camera.lookAt(drone.position);
-
-    document.addEventListener('keydown', onKeyDown);
-    animate();
-}
-
-function onKeyDown(event) {
+document.addEventListener('keydown', function(event) {
     switch (event.key) {
         case 'ArrowUp': drone.position.z += 0.5; break;
         case 'ArrowDown': drone.position.z -= 0.5; break;
@@ -129,14 +123,13 @@ function onKeyDown(event) {
         case 'w': drone.position.y += 0.5; break;
         case 's': drone.position.y -= 0.5; break;
     }
-}
+});
 
 function animate() {
     requestAnimationFrame(animate);
     renderer.render(scene, camera);
 }
-
-init();
+animate();
 """
         elif language == "html":
             return self.generate_html(Task(task_id=self.task_id, description="Fallback HTML", parameters={"language": "html", "output_file": output_file}))

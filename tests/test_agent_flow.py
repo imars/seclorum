@@ -23,6 +23,15 @@ class MockAgent(AbstractAgent):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         logger.debug(f"Instantiating MockAgent: {self.name}")
+        agent_flow.append({
+            "agent_name": self.name,
+            "task_id": args[0] if args else "unknown",
+            "session_id": self.session_id,
+            "remote": False,
+            "passed": True,
+            "status": "instantiated",
+            "language": kwargs.get("language", "")
+        })
 
     def process_task(self, task: Task) -> tuple[str, any]:
         use_remote = task.parameters.get("use_remote", False)
@@ -53,6 +62,7 @@ def test_agent_flow():
 
     # Create Developer
     developer = Developer(session_id, model_manager)
+    logger.debug("Developer instantiated")
 
     # Create tasks for JavaScript and HTML
     js_task = TaskFactory.create_code_task(
@@ -96,8 +106,12 @@ def test_agent_flow():
          patch('seclorum.agents.executor.Executor', MockAgent), \
          patch('seclorum.agents.debugger.Debugger', MockAgent):
         # Run pipeline for both tasks
+        logger.debug("Starting Developer.process_task for js_task")
         status_js, result_js = developer.process_task(js_task)
+        logger.debug(f"js_task complete: status={status_js}")
+        logger.debug("Starting Developer.process_task for html_task")
         status_html, result_html = developer.process_task(html_task)
+        logger.debug(f"html_task complete: status={status_html}")
 
     # Verify flow
     logger.debug(f"Agent flow: {agent_flow}")
