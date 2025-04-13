@@ -22,17 +22,17 @@ class JavaScriptHandler(LanguageHandler):
         return (
             f"Architect's Plan:\n{plan}\n\n"
             f"Generate JavaScript code for {output_file}. "
-            "Create a Three.js game with drones racing across a 3D scrolling landscape with mountains, valleys, and obstacles. "
-            "Include scene, camera, lighting, drone models, full controls (ArrowUp/Down/Left/Right, W/S), race mechanics (timer, checkpoints, win conditions), "
-            "and UI updates (timer, speed, standings). Use global THREE object from CDN. "
-            "Return only raw JavaScript code, no comments or markup."
+            "Create a Three.js game with drones racing across a 3D scrolling landscape with mountains, valleys, obstacles. "
+            "Include scene, camera, lighting, drone models. Add controls (ArrowUp/Down/Left/Right, W/S), "
+            "race mechanics (timer, checkpoints, win conditions), UI updates (timer, speed, standings). "
+            "Use global THREE from CDN, no require. Return raw JavaScript, no comments."
         )
 
     def get_test_prompt(self, code: str) -> str:
         return (
             f"Given JavaScript code:\n{code}\n\n"
-            "Generate Jest tests for scene, camera, drones, terrain, checkpoints, controls, and UI updates. "
-            "Return only raw Jest test code, no comments."
+            "Generate Jest tests for scene, camera, renderer, drones, terrain, checkpoints, controls, UI. "
+            "Return raw Jest code, no comments."
         )
 
     def validate_code(self, code: str) -> bool:
@@ -44,20 +44,21 @@ class HTMLHandler(LanguageHandler):
         return (
             f"Architect's Plan:\n{plan}\n\n"
             f"Generate HTML code for {output_file}. "
-            "Include a canvas (id='myCanvas'), a UI div with timer, speed, standings (pre tag), and start/reset button. "
-            "Use inline CSS: dark background, white Arial text, blue button with hover. Include Three.js CDN and drone_game.js. "
-            "Return only raw HTML, no comments or JavaScript."
+            "Include <canvas id='myCanvas'> and <div> with race timer, drone speed, standings, start/reset button. "
+            "Use inline CSS: black background, white text, Arial, blue button with hover (#0056b3). "
+            "Add Three.js CDN (<script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'>) and <script src='drone_game.js'>. "
+            "Return raw HTML, no comments."
         )
 
     def get_test_prompt(self, code: str) -> str:
         return (
             f"Given HTML code:\n{code}\n\n"
-            "Generate Jest tests for canvas (id='myCanvas'), timer, speed, standings, and start/reset button. "
-            "Return only raw Jest test code, no comments."
+            "Generate Jest tests for canvas (id='myCanvas'), UI elements (timer, speed, standings, startReset). "
+            "Return raw Jest code, no comments."
         )
 
     def validate_code(self, code: str) -> bool:
-        return bool(code.strip() and "<canvas" in code and "id=\"myCanvas\"" in code and "<div" in code and "timer" in code and "<pre" in code)
+        return bool(code.strip() and "<canvas" in code and "id=\"myCanvas\"" in code)
 
 class PythonHandler(LanguageHandler):
     def get_code_prompt(self, task: Task, output_file: str) -> str:

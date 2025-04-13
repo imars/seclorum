@@ -17,7 +17,7 @@ class Developer(Aggregate):
         self.name = "Developer"
         self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
         self.pipelines: Dict[str, List[dict]] = {}
-        self.log_update(f"Developer initialized with session_id: {session_id}")
+        self.log_update("Developer initialized")
 
     def setup_pipeline(self, task_id: str, language: str, output_file: str) -> List[dict]:
         self.log_update(f"Setting up pipeline for task {task_id}, language={language}, output_file={output_file}")
@@ -35,7 +35,7 @@ class Developer(Aggregate):
 
         for step in pipeline:
             self.add_agent(step["agent"], step["deps"])
-            self.log_update(f"Added agent {step['name']} to pipeline")
+            self.log_update(f"Added agent {step['name']}")
         return pipeline
 
     def infer_pipelines(self, task: Task, plan: str) -> List[Dict[str, Any]]:
