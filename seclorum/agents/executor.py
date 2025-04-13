@@ -8,21 +8,25 @@ from seclorum.models import Task, TestResult, create_model_manager, ModelManager
 from seclorum.languages import LANGUAGE_HANDLERS
 import logging
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 class Executor(Agent):
     def __init__(self, task_id: str, session_id: str, model_manager: Optional[ModelManager] = None):
         super().__init__(f"Executor_{task_id}", session_id)
         self.task_id = task_id
         self.model = model_manager
         self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
-        self.log_update(f"Executor initialized for Task {task_id}")
+        logger.debug(f"Executor initialized for Task {task_id}")
 
     def process_task(self, task: Task) -> Tuple[str, TestResult]:
-        self.log_update(f"Executing code for task: {task.description}")
+        logger.debug(f"Executing code for task: {task.description[:100]}...")
         language = task.parameters.get("language", "javascript").lower()
         output_file = task.parameters.get("output_file", f"temp_{language}")
         handler = LANGUAGE_HANDLERS.get(language)
         if not handler:
-            self.log_update(f"Unsupported language: {language}")
+            logger.error(f"Unsupported language: {language}")
             return "tested", TestResult(test_code="", passed=False, output=f"Language {language} not supported")
 
         tester_key = next((k for k in task.parameters if k.startswith("Tester_") and k.endswith("_test")), None)
@@ -39,11 +43,11 @@ class Executor(Agent):
             code_output = task.parameters[generator_key].get("result")
 
         if not code_output or not code_output.code.strip():
-            self.log_update(f"No valid code to execute for {output_file}")
+            logger.warning(f"No valid code to execute for {output_file}")
             return "tested", TestResult(test_code=test_code, passed=False, output="No code provided")
 
         code = code_output.code
-        self.log_update(f"Executing code for {output_file}:\n{code}")
+        logger.debug(f"Executing code for {output_file}:\n{code[:200]}...")
 
         output = "No execution performed"
         passed = False
@@ -59,7 +63,7 @@ class Executor(Agent):
 
                 jest_config = """
 module.exports = {
-  testEnvironment: 'jest-environment-jsdom',
+  testEnvironment: 'jsdom',
   testMatch: ['**/*.test.js'],
 };
 """
@@ -77,15 +81,15 @@ module.exports = {
                     )
                     output = result.stdout + result.stderr
                     passed = result.returncode == 0
-                    self.log_update(f"Execution output for {output_file}:\n{output}")
+                    logger.debug(f"Execution output for {output_file}:\n{output[:200]}...")
                 except subprocess.CalledProcessError as e:
                     output = e.output
                     passed = False
-                    self.log_update(f"Unexpected execution error for {output_file}:\n{output}")
+                    logger.error(f"Execution error for {output_file}:\n{output[:200]}...")
         elif language == "html":
             output = f"HTML execution skipped for {output_file}; validated by Tester"
             passed = True
-            self.log_update(output)
+            logger.debug(output)
 
         result = TestResult(test_code=test_code, passed=passed, output=output)
         self.save_output(task, result, status="tested")
@@ -93,7 +97,7 @@ module.exports = {
         return "tested", result
 
     def start(self):
-        self.log_update("Starting executor")
+        logger.debug("Starting executor")
 
     def stop(self):
-        self.log_update("Stopping executor")
+        logger.debug("Stopping executor")

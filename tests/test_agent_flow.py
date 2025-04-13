@@ -1,7 +1,7 @@
 # tests/test_agent_flow.py
 import pytest
 import logging
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from seclorum.agents.developer import Developer
 from seclorum.models import Task, CodeOutput, CodeResult, create_model_manager
 from seclorum.models.task import TaskFactory
@@ -23,7 +23,8 @@ class MockAgent(AbstractAgent):
     def process_task(self, task: Task) -> tuple[str, any]:
         use_remote = task.parameters.get("use_remote", False)
         status = "completed"
-        result = CodeOutput(code="mock_code", tests="mock_tests") if "Generator" in self.name else CodeResult(test_code="mock_test", passed=True)
+        result = CodeOutput(code="mock_code", tests="mock_tests") if "Generator" in self.name else \
+                 CodeResult(test_code="mock_test", passed=True)
 
         # Log visit
         agent_flow.append({
@@ -34,7 +35,8 @@ class MockAgent(AbstractAgent):
             "passed": isinstance(result, CodeResult) and result.passed or bool(result.code.strip()),
             "status": status
         })
-        logger.debug(f"MockAgent Visited {self.name}: task={task.task_id}, remote={use_remote}, passed={isinstance(result, CodeResult) and result.passed or bool(result.code.strip())}")
+        logger.debug(f"MockAgent Visited {self.name}: task={task.task_id}, remote={use_remote}, "
+                     f"passed={isinstance(result, CodeResult) and result.passed or bool(result.code.strip())}")
 
         return status, result
 
@@ -60,12 +62,15 @@ def test_agent_flow():
         use_remote=True
     )
 
+    # Mock infer to return pipelines
+    mock_infer = MagicMock(side_effect=lambda prompt, *args, **kwargs: (
+        '{"pipelines": [{"language": "javascript", "output_file": "drone_game.js"}, {"language": "html", "output_file": "drone_game.html"}]}'
+        if "pipelines" in prompt else "mock_plan"
+    ))
+
     # Patch log_update, infer, and agents
     with patch('seclorum.agents.base.AbstractAgent.log_update', lambda self, msg: logger.debug(f"Patched log: {msg}")), \
-         patch('seclorum.agents.base.AbstractAgent.infer', lambda self, prompt, task, use_remote, **kwargs: (
-             '{"pipelines": [{"language": "javascript", "output_file": "drone_game.js"}, {"language": "html", "output_file": "drone_game.html"}]}'
-             if "pipelines" in prompt else "mock_plan"
-         )), \
+         patch('seclorum.agents.base.AbstractAgent.infer', mock_infer), \
          patch('seclorum.agents.architect.Architect', MockAgent), \
          patch('seclorum.agents.generator.Generator', MockAgent), \
          patch('seclorum.agents.tester.Tester', MockAgent), \
@@ -75,9 +80,10 @@ def test_agent_flow():
         status, result = developer.process_task(task)
 
     # Verify flow
-    assert len(agent_flow) > 0, "No agents were visited"
+    logger.debug(f"Agent flow: {agent_flow}")
+    assert len(agent_flow) >= 5, f"Expected at least 5 agents, got {len(agent_flow)}: {agent_flow}"
     assert any(agent["agent_name"].startswith("Architect") for agent in agent_flow), "Architect agent missing"
-    assert any(agent["agent_name"].startswith("Generator") for agent in agent_flow), "Generator agent missing"
+    assert sum(agent["agent_name"].startswith("Generator") for agent in agent_flow) >= 2, "Generator agents missing"
     assert any(agent["agent_name"].startswith("Tester") for agent in agent_flow), "Tester agent missing"
     assert any(agent["agent_name"].startswith("Executor") for agent in agent_flow), "Executor agent missing"
 

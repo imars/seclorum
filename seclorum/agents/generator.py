@@ -4,6 +4,11 @@ from seclorum.models import Task, CodeOutput, create_model_manager, ModelManager
 from seclorum.languages import LANGUAGE_HANDLERS
 from typing import Tuple
 import re
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 class Generator(Agent):
     def __init__(self, task_id: str, session_id: str, model_manager: ModelManager):
@@ -11,36 +16,36 @@ class Generator(Agent):
         self.task_id = task_id
         self.model = model_manager
         self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
-        self.log_update(f"Generator initialized for Task {task_id}")
+        logger.debug(f"Generator initialized for Task {task_id}")
 
     def process_task(self, task: Task) -> Tuple[str, CodeOutput]:
-        self.log_update(f"Generating code for task: {task.description}")
+        logger.debug(f"Generating code for task: {task.description[:100]}...")
         language = task.parameters.get("language", "javascript").lower()
         output_file = task.parameters.get("output_file", "output")
 
         handler = LANGUAGE_HANDLERS.get(language)
         if not handler:
-            self.log_update(f"Unsupported language: {language}")
+            logger.error(f"Unsupported language: {language}")
             return "failed", CodeOutput(code="", tests=None)
 
         code_prompt = handler.get_code_prompt(task, output_file)
         use_remote = task.parameters.get("use_remote", False)
-        raw_code = self.infer(code_prompt, task, use_remote=use_remote, use_context=False, max_tokens=2000)
+        raw_code = self.infer(code_prompt, task, use_remote=use_remote, use_context=False, max_tokens=4000)
         code = re.sub(r'```(?:javascript|html|python|cpp|css)?\n|\n```|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid)[^\n]*?\n?', '', raw_code).strip()
 
         if not handler.validate_code(code):
-            self.log_update(f"Invalid {language} code generated for {output_file}")
+            logger.warning(f"Invalid {language} code generated for {output_file}")
             code = ""
-        self.log_update(f"Generated code for {output_file}:\n{code}")
+        logger.debug(f"Generated code for {output_file}:\n{code[:200]}...")
 
         tests = None
         if task.parameters.get("generate_tests", False) and code:
             test_prompt = handler.get_test_prompt(code)
-            raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False, max_tokens=1000)
+            raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False, max_tokens=2000)
             tests = re.sub(r'```(?:javascript|html|python|cpp)?\n|\n```|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid|mock|recommended)[^\n]*?\n?', '', raw_tests).strip()
             if not tests.startswith(("describe(", "test(")):
                 tests = None
-            self.log_update(f"Generated tests for {output_file}:\n{tests}")
+            logger.debug(f"Generated tests for {output_file}:\n{tests[:200]}...")
 
         result = CodeOutput(code=code, tests=tests)
         self.save_output(task, result, status="generated")
@@ -48,7 +53,7 @@ class Generator(Agent):
         return "generated", result
 
     def start(self):
-        self.log_update("Starting generator")
+        logger.debug("Starting generator")
 
     def stop(self):
-        self.log_update("Stopping generator")
+        logger.debug("Stopping generator")

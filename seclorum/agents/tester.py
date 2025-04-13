@@ -7,6 +7,11 @@ from seclorum.models import Task, TestResult, CodeOutput, create_model_manager, 
 from seclorum.languages import LANGUAGE_HANDLERS
 from typing import Tuple, Optional
 import logging
+from bs4 import BeautifulSoup
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 class Tester(Agent):
     def __init__(self, task_id: str, session_id: str, model_manager: ModelManager):
@@ -14,15 +19,15 @@ class Tester(Agent):
         self.task_id = task_id
         self.model = model_manager
         self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
-        self.log_update(f"Tester initialized for Task {task_id}")
+        logger.debug(f"Tester initialized for Task {task_id}")
 
     def process_task(self, task: Task) -> Tuple[str, TestResult]:
-        self.log_update(f"Testing code for task: {task.description[:100]}...")
+        logger.debug(f"Testing code for task: {task.description[:100]}...")
         language = task.parameters.get("language", "javascript").lower()
         output_file = task.parameters.get("output_file", "output.test")
         handler = LANGUAGE_HANDLERS.get(language)
         if not handler:
-            self.log_update(f"Unsupported language: {language}")
+            logger.error(f"Unsupported language: {language}")
             return "tested", TestResult(test_code="", passed=False, output=f"Language {language} not supported")
 
         generator_key = next((k for k in task.parameters if k.startswith("Generator_") and k.endswith("_gen")), None)
@@ -34,7 +39,7 @@ class Tester(Agent):
             code_output = task.parameters[generator_key].get("result")
 
         if not code_output or not code_output.code.strip():
-            self.log_update(f"No valid {language} code to test for {output_file}")
+            logger.warning(f"No valid {language} code to test for {output_file}")
             return "tested", TestResult(test_code="", passed=False, output="No code provided")
 
         code = code_output.code
@@ -47,7 +52,7 @@ class Tester(Agent):
             tests = raw_tests.strip()
             if not tests.startswith(("describe(", "test(")):
                 tests = ""
-            self.log_update(f"Generated tests for {output_file}: {tests[:100]}...")
+            logger.debug(f"Generated tests for {output_file}: {tests[:100]}...")
 
         output = "No tests executed"
         passed = False
@@ -82,23 +87,28 @@ module.exports = {
                     )
                     output = result.stdout + result.stderr
                     passed = result.returncode == 0
-                    self.log_update(f"Test execution output for {output_file}: {output[:100]}...")
+                    logger.debug(f"Test execution output for {output_file}: {output[:100]}...")
                 except subprocess.CalledProcessError as e:
                     output = e.output
                     passed = False
-                    self.log_update(f"Test execution failed for {output_file}: {output[:100]}...")
+                    logger.error(f"Test execution failed for {output_file}: {output[:100]}...")
         elif language == "html":
-            from bs4 import BeautifulSoup
             try:
                 soup = BeautifulSoup(code, 'html.parser')
                 required_ids = ['myCanvas', 'timer', 'speed', 'standings', 'startReset']
-                passed = all(soup.find(id=id_) for id_ in required_ids)
-                output = f"HTML validation {'passed' if passed else 'failed'}: {required_ids}"
-                self.log_update(f"HTML test output for {output_file}: {output}")
+                three_js_script = soup.find('script', src=lambda s: 'three.min.js' in s if s else False)
+                game_js_script = soup.find('script', src='drone_game.js')
+                passed = (
+                    all(soup.find(id=id_) for id_ in required_ids) and
+                    three_js_script is not None and
+                    game_js_script is not None
+                )
+                output = f"HTML validation {'passed' if passed else 'failed'}: checked {required_ids}, Three.js CDN, drone_game.js"
+                logger.debug(f"HTML test output for {output_file}: {output}")
             except Exception as e:
                 output = f"HTML validation failed: {str(e)}"
                 passed = False
-                self.log_update(f"HTML test failed for {output_file}: {output}")
+                logger.error(f"HTML test failed for {output_file}: {output}")
 
         result = TestResult(test_code=test_code, passed=passed, output=output)
         self.save_output(task, result, status="tested")
@@ -106,7 +116,7 @@ module.exports = {
         return "tested", result
 
     def start(self):
-        self.log_update("Starting tester")
+        logger.debug("Starting tester")
 
     def stop(self):
-        self.log_update("Stopping tester")
+        logger.debug("Stopping tester")
