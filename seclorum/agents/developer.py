@@ -140,8 +140,13 @@ class Developer(Aggregate):
                 for prev_name, prev_data in task.parameters.items():
                     if prev_name.startswith(("Generator_", "Debugger_")) and "result" in prev_data:
                         subtask.parameters[prev_name] = prev_data
+                logger.debug(f"Subtask parameters for {agent_name}: {subtask.parameters}")
                 status, result = agent.process_task(subtask)
                 logger.debug(f"{agent_name} executed, status={status}, result_type={type(result).__name__}")
+
+                # Convert CodeResult to CodeOutput for Executor
+                if isinstance(result, CodeResult) and result.code.strip():
+                    result = CodeOutput(code=result.code, tests=result.test_code)
 
                 task.parameters[agent_name] = {
                     "status": status,
