@@ -8,7 +8,7 @@ from seclorum.models.task import TaskFactory
 from seclorum.agents.base import AbstractAgent
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG, format="%(levelname)s:%(name)s: %(message)s")
 logger = logging.getLogger("AgentFlowTest")
 
 # Store agent flow
@@ -16,6 +16,7 @@ agent_flow = []
 
 def setup_module():
     """Clear agent flow before tests."""
+    logger.debug("Clearing agent_flow")
     agent_flow.clear()
 
 class MockAgent(AbstractAgent):
@@ -40,10 +41,12 @@ class MockAgent(AbstractAgent):
 
 def test_agent_flow():
     """Test the flow of agents in the Developer pipeline."""
+    logger.debug("Starting test_agent_flow")
     session_id = "test_drone_game_session"
     model_manager = create_model_manager(provider="ollama", model_name="llama3.2:latest")
 
     # Create Developer
+    logger.debug("Creating Developer")
     developer = Developer(session_id, model_manager)
 
     # Mock task
@@ -59,6 +62,7 @@ def test_agent_flow():
         execute=True,
         use_remote=True
     )
+    logger.debug(f"Created task: {task.task_id}")
 
     # Patch log_update, infer, and agents
     with patch.object(AbstractAgent, 'log_update', lambda self, msg: logger.debug(msg)), \
@@ -71,8 +75,9 @@ def test_agent_flow():
          patch('seclorum.agents.developer.Tester', MockAgent), \
          patch('seclorum.agents.developer.Executor', MockAgent), \
          patch('seclorum.agents.developer.Debugger', MockAgent):
-        # Run pipeline
+        logger.debug("Running developer.process_task")
         status, result = developer.process_task(task)
+        logger.debug(f"Pipeline completed with status: {status}")
 
     # Verify flow
     assert len(agent_flow) > 0, "No agents were visited"
@@ -92,3 +97,7 @@ def test_agent_flow():
 
     # Check status
     assert status == "generated", f"Expected status 'generated', got {status}"
+
+if __name__ == "__main__":
+    logger.debug("Running pytest programmatically")
+    pytest.main(["-v", __file__])
