@@ -98,14 +98,14 @@ def test_agent_flow():
         if "pipelines" in prompt else "mock_plan"
     ))
 
-    # Patch agents in developer's namespace
-    with patch('seclorum.agents.developer.AbstractAgent.log_update', lambda self, msg: logger.debug(f"Patched log: {msg}")), \
-         patch('seclorum.agents.developer.AbstractAgent.infer', mock_infer), \
-         patch('seclorum.agents.developer.Architect', MockAgent), \
-         patch('seclorum.agents.developer.Generator', MockAgent), \
-         patch('seclorum.agents.developer.Tester', MockAgent), \
-         patch('seclorum.agents.developer.Executor', MockAgent), \
-         patch('seclorum.agents.developer.Debugger', MockAgent):
+    # Patch agents in correct namespaces
+    with patch('seclorum.agents.base.AbstractAgent.log_update', lambda self, msg: logger.debug(f"Patched log: {msg}")), \
+         patch('seclorum.agents.base.AbstractAgent.infer', mock_infer), \
+         patch('seclorum.agents.architect.Architect', MockAgent), \
+         patch('seclorum.agents.generator.Generator', MockAgent), \
+         patch('seclorum.agents.tester.Tester', MockAgent), \
+         patch('seclorum.agents.executor.Executor', MockAgent), \
+         patch('seclorum.agents.debugger.Debugger', MockAgent):
         logger.debug("Applying patches for agent classes")
         # Run pipeline for both tasks
         logger.debug("Starting Developer.process_task for js_task")

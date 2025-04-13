@@ -37,9 +37,9 @@ class Developer(Aggregate):
 
         pipeline = [
             {"agent": generator, "name": generator.name, "deps": [(f"Architect_{task_id}", {"status": "planned"})], "output_file": output_file, "language": language},
-            {"agent": tester, "name": tester.name, "deps": [(generator.name, {"status": "generated"})], "output_file": f"{output_file}.test", "language": language},
-            {"agent": executor, "name": executor.name, "deps": [(tester.name, {"status": "tested"})], "output_file": None, "language": language},
-            {"agent": debugger, "name": debugger.name, "deps": [(executor.name, {"status": "tested", "passed": False})], "output_file": output_file, "language": language},
+            {"agent": tester, "name": tester.name, "deps": [(generator.name, {"status": "generated"})], "output_file": output_file, "language": language},
+            {"agent": executor, "name": executor.name, "deps": [(tester.name, {"status": "tested"})], "output_file": output_file, "language": language},
+            {"agent": debugger, "name": debugger.name, "deps": [(executor.name, {"status": "executed", "passed": False})], "output_file": output_file, "language": language},
         ]
 
         for step in pipeline:
