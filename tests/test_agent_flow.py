@@ -1,6 +1,7 @@
 # tests/test_agent_flow.py
 import pytest
 import logging
+import sys
 from unittest.mock import patch, MagicMock
 from seclorum.agents.developer import Developer
 from seclorum.models import Task, CodeOutput, CodeResult, create_model_manager
@@ -98,7 +99,12 @@ def test_agent_flow():
         if "pipelines" in prompt else "mock_plan"
     ))
 
-    # Patch agents in correct module namespaces
+    # Log module state before patching
+    logger.debug(f"Before patching: "
+                 f"Architect={getattr(sys.modules.get('seclorum.agents.architect', {}), 'Architect', None)}, "
+                 f"Generator={getattr(sys.modules.get('seclorum.agents.generator', {}), 'Generator', None)}")
+
+    # Patch agents in sys.modules
     try:
         with patch('seclorum.agents.architect.Architect', MockAgent), \
              patch('seclorum.agents.generator.Generator', MockAgent), \
@@ -108,6 +114,10 @@ def test_agent_flow():
              patch('seclorum.agents.base.AbstractAgent.log_update', lambda self, msg: logger.debug(f"Patched log: {msg}")), \
              patch('seclorum.agents.base.AbstractAgent.infer', mock_infer):
             logger.debug("Applying patches for agent classes: Architect, Generator, Tester, Executor, Debugger")
+            # Log module state after patching
+            logger.debug(f"After patching: "
+                         f"Architect={getattr(sys.modules.get('seclorum.agents.architect', {}), 'Architect', None)}, "
+                         f"Generator={getattr(sys.modules.get('seclorum.agents.generator', {}), 'Generator', None)}")
             # Run pipeline for both tasks
             logger.debug("Starting Developer.process_task for js_task")
             status_js, result_js = developer.process_task(js_task)

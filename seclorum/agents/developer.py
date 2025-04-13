@@ -25,6 +25,9 @@ class Developer(Aggregate):
         self.pipelines: Dict[str, List[dict]] = {}
         self.agent_flow = []  # Track agents for test compatibility
         logger.debug(f"Developer initialized: session_id={session_id}")
+        # Log agent classes for patch verification
+        logger.debug(f"Agent classes: Architect={Architect.__name__}, Generator={Generator.__name__}, "
+                     f"Tester={Tester.__name__}, Executor={Executor.__name__}, Debugger={Debugger.__name__}")
 
     def setup_pipeline(self, task_id: str, language: str, output_file: str) -> List[dict]:
         logger.debug(f"Setting up pipeline for task={task_id}, language={language}, output_file={output_file}")
@@ -105,7 +108,7 @@ class Developer(Aggregate):
         task_output_file = task.parameters.get("output_file", None)
         if task_output_file:
             pipeline_configs = [cfg for cfg in pipeline_configs if cfg["output_file"] == task_output_file]
-            logger.debug(f"Filtered pipelines to match task output_file={task_output_file}")
+            logger.debug(f"Filtered pipelines to match task_output_file={task_output_file}")
         elif not pipeline_configs:
             logger.warning(f"No pipeline configs for task={task.task_id}, using default")
             pipeline_configs = self.infer_pipelines(task, "")
