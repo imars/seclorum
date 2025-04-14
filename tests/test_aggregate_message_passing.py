@@ -30,44 +30,52 @@ def clear_modules():
 class MockAgent(AbstractAgent):
     """Mock agent to capture message passing."""
     def __init__(self, *args, **kwargs):
-        agent_type = kwargs.pop("agent_type", "MockAgent")
-        task_id = args[0] if args else "unknown"
-        self.name = f"{agent_type}_{task_id}"
-        self.session_id = args[1] if len(args) > 1 else "mock_session"
-        self.logger = logging.getLogger(f"MockAgent_{self.name}")
-        self.active = False
-        self._flow_tracker = []
-        logger.debug(f"Instantiating MockAgent: {self.name} (args={args}, kwargs={kwargs})")
-        agent_flow.append({
-            "agent_name": self.name,
-            "task_id": task_id,
-            "session_id": self.session_id,
-            "remote": False,
-            "status": "instantiated",
-            "input": None,
-            "output": None
-        })
+        try:
+            agent_type = kwargs.pop("agent_type", "MockAgent")
+            task_id = args[0] if args else "unknown"
+            self.name = f"{agent_type}_{task_id}"
+            self.session_id = args[1] if len(args) > 1 else "mock_session"
+            self.logger = logging.getLogger(f"MockAgent_{self.name}")
+            self.active = False
+            self._flow_tracker = []
+            logger.debug(f"Instantiating MockAgent: {self.name} (args={args}, kwargs={kwargs})")
+            agent_flow.append({
+                "agent_name": self.name,
+                "task_id": task_id,
+                "session_id": self.session_id,
+                "remote": False,
+                "status": "instantiated",
+                "input": None,
+                "output": None
+            })
+        except Exception as e:
+            logger.error(f"Error instantiating MockAgent: {str(e)}")
+            raise
 
     def process_task(self, task: Task) -> tuple[str, any]:
-        use_remote = task.parameters.get("use_remote", False)
-        status = "completed"
-        input_data = task.parameters.get("previous_result", "initial")
-        result_code = f"processed_by_{self.name}"
-        if use_remote:
-            result_code = f"remote_processed_by_{self.name}"
-        result = CodeOutput(code=result_code, tests=None)
+        try:
+            use_remote = task.parameters.get("use_remote", False)
+            status = "completed"
+            input_data = task.parameters.get("previous_result", "initial")
+            result_code = f"processed_by_{self.name}"
+            if use_remote:
+                result_code = f"remote_processed_by_{self.name}"
+            result = CodeOutput(code=result_code, tests=None)
 
-        logger.debug(f"MockAgent Visited {self.name}: task={task.task_id}, input={input_data}, output={result.code}")
-        agent_flow.append({
-            "agent_name": self.name,
-            "task_id": task.task_id,
-            "session_id": self.session_id,
-            "remote": use_remote,
-            "status": status,
-            "input": input_data,
-            "output": result.code
-        })
-        return status, result
+            logger.debug(f"MockAgent Visited {self.name}: task={task.task_id}, input={input_data}, output={result.code}")
+            agent_flow.append({
+                "agent_name": self.name,
+                "task_id": task.task_id,
+                "session_id": self.session_id,
+                "remote": use_remote,
+                "status": status,
+                "input": input_data,
+                "output": result.code
+            })
+            return status, result
+        except Exception as e:
+            logger.error(f"Error in MockAgent.process_task: {str(e)}")
+            raise
 
 class AggregateForTest(Aggregate):
     """Aggregate for testing message passing."""
@@ -86,9 +94,10 @@ class AggregateForTest(Aggregate):
 
         processed = set()
         pending = list(self.agents.keys())
+        logger.debug(f"Initial pending agents: {pending}")
         while pending:
-            logger.debug(f"Pending agents: {pending}")
             agent_name = pending[0]
+            logger.debug(f"Checking agent: {agent_name}")
             if agent_name in processed:
                 pending.pop(0)
                 continue
@@ -149,14 +158,16 @@ def test_aggregate_two_agents():
     )
 
     # Patch and instantiate agents
-    with patch('seclorum.agents.architect.Architect', lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)), \
-         patch('seclorum.agents.generator.Generator', lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)):
-        logger.debug("Applying patches for Architect, Generator")
+    logger.debug("Starting test_aggregate_two_agents")
+    with patch('seclorum.agents.architect.Architect', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)) as architect_patch, \
+         patch('seclorum.agents.generator.Generator', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)) as generator_patch:
+        logger.debug(f"Patched Architect: {architect_patch}, Generator: {generator_patch}")
         for mod in ['seclorum.agents.architect', 'seclorum.agents.generator']:
             if mod in sys.modules:
                 importlib.reload(sys.modules[mod])
-            logger.debug(f"Reloaded module: {mod}")
+                logger.debug(f"Reloaded module: {mod}")
 
+        # Import after patching
         from seclorum.agents.architect import Architect
         from seclorum.agents.generator import Generator
         architect = Architect(task.task_id, session_id, model_manager)
@@ -198,15 +209,17 @@ def test_aggregate_three_agents():
     )
 
     # Patch and instantiate agents
-    with patch('seclorum.agents.architect.Architect', lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)), \
-         patch('seclorum.agents.generator.Generator', lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)), \
-         patch('seclorum.agents.tester.Tester', lambda *args, **kwargs: MockAgent(*args, agent_type="Tester", **kwargs)):
-        logger.debug("Applying patches for Architect, Generator, Tester")
+    logger.debug("Starting test_aggregate_three_agents")
+    with patch('seclorum.agents.architect.Architect', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)) as architect_patch, \
+         patch('seclorum.agents.generator.Generator', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)) as generator_patch, \
+         patch('seclorum.agents.tester.Tester', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Tester", **kwargs)) as tester_patch:
+        logger.debug(f"Patched Architect: {architect_patch}, Generator: {generator_patch}, Tester: {tester_patch}")
         for mod in ['seclorum.agents.architect', 'seclorum.agents.generator', 'seclorum.agents.tester']:
             if mod in sys.modules:
                 importlib.reload(sys.modules[mod])
-            logger.debug(f"Reloaded module: {mod}")
+                logger.debug(f"Reloaded module: {mod}")
 
+        # Import after patching
         from seclorum.agents.architect import Architect
         from seclorum.agents.generator import Generator
         from seclorum.agents.tester import Tester
@@ -253,14 +266,16 @@ def test_aggregate_two_agents_remote():
     )
 
     # Patch and instantiate agents
-    with patch('seclorum.agents.architect.Architect', lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)), \
-         patch('seclorum.agents.generator.Generator', lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)):
-        logger.debug("Applying patches for Architect, Generator")
+    logger.debug("Starting test_aggregate_two_agents_remote")
+    with patch('seclorum.agents.architect.Architect', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)) as architect_patch, \
+         patch('seclorum.agents.generator.Generator', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)) as generator_patch:
+        logger.debug(f"Patched Architect: {architect_patch}, Generator: {generator_patch}")
         for mod in ['seclorum.agents.architect', 'seclorum.agents.generator']:
             if mod in sys.modules:
                 importlib.reload(sys.modules[mod])
-            logger.debug(f"Reloaded module: {mod}")
+                logger.debug(f"Reloaded module: {mod}")
 
+        # Import after patching
         from seclorum.agents.architect import Architect
         from seclorum.agents.generator import Generator
         architect = Architect(task.task_id, session_id, model_manager)
