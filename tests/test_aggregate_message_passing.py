@@ -61,10 +61,10 @@ class MockAgent:
             if isinstance(input_data, CodeOutput):
                 input_data = input_data.code
             input_value = input_data
+            logger.debug(f"Processing {self.name} with input: {input_value}")
 
             # Handle complex outputs
             if self.name.startswith("Architect_"):
-                # Serialize complex output to string
                 complex_output = {
                     "design": f"design_by_{self.name}",
                     "spec": f"spec_by_{self.name}",
@@ -72,23 +72,20 @@ class MockAgent:
                 }
                 result_code = json.dumps(complex_output)
             elif self.name.startswith("Generator_"):
-                # Parse input if JSON, else use as-is
                 try:
                     parsed_input = json.loads(input_data) if isinstance(input_data, str) else input_data
                     input_value = parsed_input.get("design", "unknown") if isinstance(parsed_input, dict) else input_data
                 except json.JSONDecodeError:
                     input_value = input_data
-                result_code = f"generated_from_{input_value}"
+                result_code = f"generated_from_design_by_{self.name}"
             elif self.name.startswith("Debugger_"):
-                # Parse input for spec
                 try:
                     parsed_input = json.loads(input_data) if isinstance(input_data, str) else input_data
                     input_value = parsed_input.get("spec", "unknown") if isinstance(parsed_input, dict) else input_data
                 except json.JSONDecodeError:
                     input_value = input_data
-                result_code = f"debugged_from_{input_value}"
+                result_code = f"debugged_from_spec_by_{self.name}"
             elif self.name.startswith("Tester_") or self.name.startswith("Executor_"):
-                # Use input as-is or join if complex
                 result_code = f"processed_{input_value}"
             else:
                 result_code = f"processed_by_{self.name}"
@@ -130,7 +127,7 @@ class AggregateForTest(Aggregate):
         processed = set()
         pending = list(self.agents.keys())
         logger.debug(f"Initial pending agents: {pending}")
-        max_iterations = len(self.agents) * 2  # Prevent infinite loops
+        max_iterations = len(self.agents) * 2
         iteration = 0
 
         while pending and iteration < max_iterations:
@@ -165,15 +162,17 @@ class AggregateForTest(Aggregate):
                 logger.error(f"Agent {agent_name} not found in self.agents")
                 break
             logger.debug(f"Processing agent: {agent_name}")
-            # Pass previous result or initial input
-            last_processed = list(processed)[-1] if processed else None
-            task.parameters["previous_result"] = task.parameters.get(
-                f"result_{last_processed}.code" if last_processed else "previous_result",
-                "initial"
-            )
+            # Set previous_result to the output of the agent's dependency
+            deps = self.graph.get(agent_name, [])
+            if deps:
+                dep_name = deps[0][0]  # Use first dependency
+                dep_result = task.parameters.get(f"result_{dep_name}")
+                task.parameters["previous_result"] = dep_result.code if dep_result else "initial"
+            else:
+                task.parameters["previous_result"] = "initial"
+
             try:
                 agent_status, agent_result = agent.process_task(task)
-                # Store agent result and status
                 task.parameters[f"result_{agent_name}"] = agent_result
                 task.parameters[f"status_{agent_name}"] = agent_status
             except Exception as e:
@@ -182,6 +181,7 @@ class AggregateForTest(Aggregate):
                 break
             processed.add(agent_name)
             pending.pop(0)
+            logger.debug(f"Processed agents: {processed}")
 
             if agent_status == "completed" and isinstance(agent_result, CodeOutput):
                 result = agent_result
@@ -219,7 +219,6 @@ def test_aggregate_two_agents():
     with patch('seclorum.agents.architect.Architect', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)) as architect_patch, \
          patch('seclorum.agents.generator.Generator', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)) as generator_patch:
         logger.debug(f"Patched Architect: {architect_patch}, Generator: {generator_patch}")
-        # Import after patching
         from seclorum.agents.architect import Architect
         from seclorum.agents.generator import Generator
         architect = Architect(task.task_id, session_id, model_manager)
@@ -268,7 +267,6 @@ def test_aggregate_three_agents():
          patch('seclorum.agents.generator.Generator', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)) as generator_patch, \
          patch('seclorum.agents.tester.Tester', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Tester", **kwargs)) as tester_patch:
         logger.debug(f"Patched Architect: {architect_patch}, Generator: {generator_patch}, Tester: {tester_patch}")
-        # Import after patching
         from seclorum.agents.architect import Architect
         from seclorum.agents.generator import Generator
         from seclorum.agents.tester import Tester
@@ -321,7 +319,6 @@ def test_aggregate_two_agents_remote():
     with patch('seclorum.agents.architect.Architect', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)) as architect_patch, \
          patch('seclorum.agents.generator.Generator', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)) as generator_patch:
         logger.debug(f"Patched Architect: {architect_patch}, Generator: {generator_patch}")
-        # Import after patching
         from seclorum.agents.architect import Architect
         from seclorum.agents.generator import Generator
         architect = Architect(task.task_id, session_id, model_manager)
@@ -334,7 +331,7 @@ def test_aggregate_two_agents_remote():
 
         logger.debug("Starting AggregateForTest.process_task")
         status, result = aggregate.process_task(task)
-        logger.debug(f"Task complete: status={status}")
+        logger.debug(f"Task complete: {status}")
 
     logger.debug(f"Agent flow before assertions: {agent_flow}")
     assert len(agent_flow) >= 4, f"Expected at least 4 entries (2 agents × init+process), got {len(agent_flow)}: {agent_flow}"
@@ -371,7 +368,6 @@ def test_aggregate_four_agents():
          patch('seclorum.agents.tester.Tester', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Tester", **kwargs)) as tester_patch, \
          patch('seclorum.agents.executor.Executor', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Executor", **kwargs)) as executor_patch:
         logger.debug(f"Patched Architect: {architect_patch}, Generator: {generator_patch}, Tester: {tester_patch}, Executor: {executor_patch}")
-        # Import after patching
         from seclorum.agents.architect import Architect
         from seclorum.agents.generator import Generator
         from seclorum.agents.tester import Tester
@@ -432,7 +428,6 @@ def test_aggregate_complex_pipelines():
          patch('seclorum.agents.debugger.Debugger', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Debugger", **kwargs)) as debugger_patch, \
          patch('seclorum.agents.executor.Executor', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Executor", **kwargs)) as executor_patch:
         logger.debug(f"Patched Architect: {architect_patch}, Generator: {generator_patch}, Tester: {tester_patch}, Debugger: {debugger_patch}, Executor: {executor_patch}")
-        # Import after patching
         from seclorum.agents.architect import Architect
         from seclorum.agents.generator import Generator
         from seclorum.agents.tester import Tester
@@ -445,7 +440,6 @@ def test_aggregate_complex_pipelines():
         executor = Executor(f"{task.task_id}_exec", session_id, model_manager)
         logger.debug(f"Created agents: Architect={architect.name}, Generator={generator.name}, Tester={tester.name}, Debugger={debugger.name}, Executor={executor.name}")
 
-        # Define two pipelines: Generator->Tester, Debugger->Executor
         aggregate.add_agent(architect, [])
         aggregate.add_agent(generator, [(architect.name, {"status": "completed"})])
         aggregate.add_agent(tester, [(generator.name, {"status": "completed"})])
