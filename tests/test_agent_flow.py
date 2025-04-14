@@ -2,6 +2,7 @@
 import pytest
 import logging
 import sys
+import importlib
 from unittest.mock import patch, MagicMock
 from seclorum.agents.developer import Developer
 from seclorum.models import Task, CodeOutput, CodeResult, create_model_manager
@@ -15,9 +16,17 @@ logger = logging.getLogger("AgentFlowTest")
 # Store agent flow
 agent_flow = []
 
-def setup_module():
-    """Clear agent flow before tests."""
-    agent_flow.clear()
+@pytest.fixture(autouse=True)
+def clear_modules():
+    """Clear seclorum.agents modules to avoid caching."""
+    modules_to_clear = [k for k in sys.modules if k.startswith('seclorum.agents')]
+    for mod in modules_to_clear:
+        sys.modules.pop(mod, None)
+    logger.debug(f"Cleared modules: {modules_to_clear}")
+    yield
+    # Cleanup after test
+    for mod in modules_to_clear:
+        sys.modules.pop(mod, None)
 
 class MockAgent(AbstractAgent):
     """Mock agent to capture flow."""
@@ -104,7 +113,7 @@ def test_agent_flow():
                  f"Architect={getattr(sys.modules.get('seclorum.agents.architect', {}), 'Architect', None)}, "
                  f"Generator={getattr(sys.modules.get('seclorum.agents.generator', {}), 'Generator', None)}")
 
-    # Patch agents in sys.modules
+    # Patch agents
     try:
         with patch('seclorum.agents.architect.Architect', MockAgent), \
              patch('seclorum.agents.generator.Generator', MockAgent), \
@@ -114,6 +123,13 @@ def test_agent_flow():
              patch('seclorum.agents.base.AbstractAgent.log_update', lambda self, msg: logger.debug(f"Patched log: {msg}")), \
              patch('seclorum.agents.base.AbstractAgent.infer', mock_infer):
             logger.debug("Applying patches for agent classes: Architect, Generator, Tester, Executor, Debugger")
+            # Reload modules to ensure patches apply
+            for mod in ['seclorum.agents.architect', 'seclorum.agents.generator',
+                        'seclorum.agents.tester', 'seclorum.agents.executor',
+                        'seclorum.agents.debugger']:
+                if mod in sys.modules:
+                    importlib.reload(sys.modules[mod])
+            logger.debug(f"Reloaded modules: {['seclorum.agents.architect', 'seclorum.agents.generator', ...]}")
             # Log module state after patching
             logger.debug(f"After patching: "
                          f"Architect={getattr(sys.modules.get('seclorum.agents.architect', {}), 'Architect', None)}, "
@@ -152,6 +168,3 @@ def test_agent_flow():
     # Check status
     assert status_js == "generated", f"Expected JavaScript status 'generated', got {status_js}"
     assert status_html == "generated", f"Expected HTML status 'generated', got {status_html}"
-
-if __name__ == "__main__":
-    pytest.main(["-v", __file__])

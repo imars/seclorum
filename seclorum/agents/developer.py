@@ -12,6 +12,7 @@ import logging
 import re
 import json
 import os
+import sys
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -36,7 +37,10 @@ class Developer(Aggregate):
         executor = Executor(f"{task_id}_{language}_exec", self.session_id)
         debugger = Debugger(f"{task_id}_{language}_debug", self.session_id, self.model_manager)
 
-        logger.debug(f"Instantiated agents: Generator={generator.name}, Tester={tester.name}, Executor={executor.name}, Debugger={debugger.name}")
+        logger.debug(f"Instantiated agents: Generator={generator.name} (type: {type(generator).__name__}), "
+                     f"Tester={tester.name} (type: {type(tester).__name__}), "
+                     f"Executor={executor.name} (type: {type(executor).__name__}), "
+                     f"Debugger={debugger.name} (type: {type(debugger).__name__})")
 
         pipeline = [
             {"agent": generator, "name": generator.name, "deps": [(f"Architect_{task_id}", {"status": "planned"})], "output_file": output_file, "language": language},
@@ -179,7 +183,7 @@ class Developer(Aggregate):
 
         # Combine outputs
         final_status = "generated" if final_outputs else "failed"
-        final_result = CodeOutput(code="", tests=None)
+        final_result = CodeOutput(code="", Wtests=None)
         output_dir = "examples/3d_game"
         os.makedirs(output_dir, exist_ok=True)
         for output in final_outputs:
