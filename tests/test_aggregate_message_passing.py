@@ -30,7 +30,12 @@ def clear_modules():
 class MockAgent(AbstractAgent):
     """Mock agent to capture message passing."""
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        # Avoid real model setup
+        self.name = args[0] if args else "mock_agent"
+        self.session_id = args[1] if len(args) > 1 else "mock_session"
+        self.logger = logging.getLogger(f"MockAgent_{self.name}")
+        self.active = False
+        self._flow_tracker = []
         logger.debug(f"Instantiating MockAgent: {self.name}")
         agent_flow.append({
             "agent_name": self.name,
@@ -72,7 +77,7 @@ class AggregateForTest(Aggregate):
     def __init__(self, session_id: str, model_manager=None):
         super().__init__(session_id, model_manager)
         self.name = "AggregateForTest"
-        logger.debug(f"AggregateForTest initialized: session_id={session_id}")
+        logger.debug(f"AggregateForTest initialized: {session_id}")
 
     def process_task(self, task: Task) -> Tuple[str, Any]:
         logger.debug(f"AggregateForTest processing task: {task.task_id}")
@@ -142,7 +147,7 @@ def test_aggregate_two_agents():
         language="javascript",
         generate_tests=False,
         execute=False,
-        use_remote=False  # Test local first
+        use_remote=False
     )
 
     # Patch agents
@@ -198,7 +203,7 @@ def test_aggregate_three_agents():
         language="javascript",
         generate_tests=False,
         execute=False,
-        use_remote=False  # Test local first
+        use_remote=False
     )
 
     # Patch agents
@@ -260,7 +265,7 @@ def test_aggregate_two_agents_remote():
         language="javascript",
         generate_tests=False,
         execute=False,
-        use_remote=True  # Test remote inference
+        use_remote=True
     )
 
     # Patch agents

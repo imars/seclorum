@@ -97,7 +97,7 @@ class AbstractAgent(ABC, LoggerMixin):
         if use_remote:
             self.log_update(f"Running remote inference to {endpoint}")
             return self.remote_infer(prompt, endpoint=endpoint, **kwargs)
-        return self.model.infer(prompt, **kwargs)
+        return self.model.generate(prompt, **kwargs)
 
 class Agent(AbstractAgent, Remote):
     def __init__(self, name: str, session_id: str, model_manager: Optional[ModelManager] = None, model_name: str = "llama3.2:latest"):
