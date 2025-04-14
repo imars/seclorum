@@ -27,8 +27,8 @@ def clear_modules():
     for mod in modules_to_clear:
         sys.modules.pop(mod, None)
 
-class MockAgent(AbstractAgent):
-    """Mock agent to capture message passing."""
+class MockAgent:
+    """Mock agent to capture message passing, avoiding AbstractAgent."""
     def __init__(self, *args, **kwargs):
         try:
             agent_type = kwargs.pop("agent_type", "MockAgent")
@@ -36,8 +36,6 @@ class MockAgent(AbstractAgent):
             self.name = f"{agent_type}_{task_id}"
             self.session_id = args[1] if len(args) > 1 else "mock_session"
             self.logger = logging.getLogger(f"MockAgent_{self.name}")
-            self.active = False
-            self._flow_tracker = []
             logger.debug(f"Instantiating MockAgent: {self.name} (args={args}, kwargs={kwargs})")
             agent_flow.append({
                 "agent_name": self.name,
@@ -52,7 +50,7 @@ class MockAgent(AbstractAgent):
             logger.error(f"Error instantiating MockAgent: {str(e)}")
             raise
 
-    def process_task(self, task: Task) -> tuple[str, any]:
+    def process_task(self, task: Task) -> Tuple[str, Any]:
         try:
             use_remote = task.parameters.get("use_remote", False)
             status = "completed"
@@ -125,7 +123,11 @@ class AggregateForTest(Aggregate):
                 break
             logger.debug(f"Processing agent: {agent_name}")
             task.parameters["previous_result"] = result.code if result else "initial"
-            agent_status, agent_result = agent.process_task(task)
+            try:
+                agent_status, agent_result = agent.process_task(task)
+            except Exception as e:
+                logger.error(f"Error processing agent {agent_name}: {str(e)}")
+                break
             processed.add(agent_name)
             pending.pop(0)
 
@@ -162,11 +164,6 @@ def test_aggregate_two_agents():
     with patch('seclorum.agents.architect.Architect', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)) as architect_patch, \
          patch('seclorum.agents.generator.Generator', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)) as generator_patch:
         logger.debug(f"Patched Architect: {architect_patch}, Generator: {generator_patch}")
-        for mod in ['seclorum.agents.architect', 'seclorum.agents.generator']:
-            if mod in sys.modules:
-                importlib.reload(sys.modules[mod])
-                logger.debug(f"Reloaded module: {mod}")
-
         # Import after patching
         from seclorum.agents.architect import Architect
         from seclorum.agents.generator import Generator
@@ -175,6 +172,8 @@ def test_aggregate_two_agents():
         logger.debug(f"Created agents: Architect={architect.name}, Generator={generator.name}")
         aggregate.add_agent(architect, [])
         aggregate.add_agent(generator, [(architect.name, {"status": "completed"})])
+        logger.debug(f"Agent flow after agent creation: {agent_flow}")
+        assert len(agent_flow) >= 2, f"Expected at least 2 init entries, got {len(agent_flow)}: {agent_flow}"
 
         logger.debug("Starting AggregateForTest.process_task")
         status, result = aggregate.process_task(task)
@@ -214,11 +213,6 @@ def test_aggregate_three_agents():
          patch('seclorum.agents.generator.Generator', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)) as generator_patch, \
          patch('seclorum.agents.tester.Tester', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Tester", **kwargs)) as tester_patch:
         logger.debug(f"Patched Architect: {architect_patch}, Generator: {generator_patch}, Tester: {tester_patch}")
-        for mod in ['seclorum.agents.architect', 'seclorum.agents.generator', 'seclorum.agents.tester']:
-            if mod in sys.modules:
-                importlib.reload(sys.modules[mod])
-                logger.debug(f"Reloaded module: {mod}")
-
         # Import after patching
         from seclorum.agents.architect import Architect
         from seclorum.agents.generator import Generator
@@ -230,6 +224,8 @@ def test_aggregate_three_agents():
         aggregate.add_agent(architect, [])
         aggregate.add_agent(generator, [(architect.name, {"status": "completed"})])
         aggregate.add_agent(tester, [(generator.name, {"status": "completed"})])
+        logger.debug(f"Agent flow after agent creation: {agent_flow}")
+        assert len(agent_flow) >= 3, f"Expected at least 3 init entries, got {len(agent_flow)}: {agent_flow}"
 
         logger.debug("Starting AggregateForTest.process_task")
         status, result = aggregate.process_task(task)
@@ -270,11 +266,6 @@ def test_aggregate_two_agents_remote():
     with patch('seclorum.agents.architect.Architect', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)) as architect_patch, \
          patch('seclorum.agents.generator.Generator', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)) as generator_patch:
         logger.debug(f"Patched Architect: {architect_patch}, Generator: {generator_patch}")
-        for mod in ['seclorum.agents.architect', 'seclorum.agents.generator']:
-            if mod in sys.modules:
-                importlib.reload(sys.modules[mod])
-                logger.debug(f"Reloaded module: {mod}")
-
         # Import after patching
         from seclorum.agents.architect import Architect
         from seclorum.agents.generator import Generator
@@ -283,6 +274,8 @@ def test_aggregate_two_agents_remote():
         logger.debug(f"Created agents: Architect={architect.name}, Generator={generator.name}")
         aggregate.add_agent(architect, [])
         aggregate.add_agent(generator, [(architect.name, {"status": "completed"})])
+        logger.debug(f"Agent flow after agent creation: {agent_flow}")
+        assert len(agent_flow) >= 2, f"Expected at least 2 init entries, got {len(agent_flow)}: {agent_flow}"
 
         logger.debug("Starting AggregateForTest.process_task")
         status, result = aggregate.process_task(task)
@@ -297,6 +290,40 @@ def test_aggregate_two_agents_remote():
     assert status == "completed", f"Expected status 'completed', got {status}"
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert result.code == f"remote_processed_by_{generator.name}", f"Expected final output from Generator, got {result.code}"
+
+def test_aggregate_four_agents():
+    agent_flow.clear()
+    session_id = "test_aggregate_session"
+    model_manager = create_model_manager(provider="ollama", model_name="llama3.2:latest")
+    aggregate = AggregateForTest(session_id, model_manager)
+    task = TaskFactory.create_code_task(
+        description="Test message passing with 4 agents.",
+        language="javascript",
+        generate_tests=False,
+        execute=False,
+        use_remote=False
+    )
+    with patch('seclorum.agents.architect.Architect', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)), \
+         patch('seclorum.agents.generator.Generator', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)), \
+         patch('seclorum.agents.tester.Tester', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Tester", **kwargs)), \
+         patch('seclorum.agents.executor.Executor', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Executor", **kwargs)):
+        from seclorum.agents.architect import Architect
+        from seclorum.agents.generator import Generator
+        from seclorum.agents.tester import Tester
+        from seclorum.agents.executor import Executor
+        architect = Architect(task.task_id, session_id, model_manager)
+        generator = Generator(f"{task.task_id}_gen", session_id, model_manager)
+        tester = Tester(f"{task.task_id}_test", session_id, model_manager)
+        executor = Executor(f"{task.task_id}_exec", session_id, model_manager)
+        aggregate.add_agent(architect, [])
+        aggregate.add_agent(generator, [(architect.name, {"status": "completed"})])
+        aggregate.add_agent(tester, [(generator.name, {"status": "completed"})])
+        aggregate.add_agent(executor, [(tester.name, {"status": "completed"})])
+        status, result = aggregate.process_task(task)
+        logger.debug(f"Agent flow: {agent_flow}")
+        assert len(agent_flow) >= 8, f"Expected at least 8 entries, got {len(agent_flow)}: {agent_flow}"
+        assert any(a["agent_name"].startswith("Executor_") and a["input"] == f"processed_by_{tester.name}" for a in agent_flow)
+        assert result.code == f"processed_by_{executor.name}"
 
 if __name__ == "__main__":
     pytest.main(["-v", __file__])
