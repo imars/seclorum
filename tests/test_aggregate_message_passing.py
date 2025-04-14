@@ -3,9 +3,9 @@ import pytest
 import logging
 import sys
 import importlib
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from seclorum.agents.base import Aggregate, AbstractAgent
-from seclorum.models import Task, CodeOutput, CodeResult, create_model_manager
+from seclorum.models import Task, CodeOutput, create_model_manager
 from seclorum.models.task import TaskFactory
 from typing import Tuple, Any, Optional
 
@@ -30,8 +30,10 @@ def clear_modules():
 class MockAgent(AbstractAgent):
     """Mock agent to capture message passing."""
     def __init__(self, *args, **kwargs):
-        # Avoid real model setup
-        self.name = args[0] if args else "mock_agent"
+        # Use agent_type to set name
+        agent_type = kwargs.pop("agent_type", "MockAgent")
+        task_id = args[0] if args else "unknown"
+        self.name = f"{agent_type}_{task_id}"
         self.session_id = args[1] if len(args) > 1 else "mock_session"
         self.logger = logging.getLogger(f"MockAgent_{self.name}")
         self.active = False
@@ -39,7 +41,7 @@ class MockAgent(AbstractAgent):
         logger.debug(f"Instantiating MockAgent: {self.name}")
         agent_flow.append({
             "agent_name": self.name,
-            "task_id": args[0] if args else "unknown",
+            "task_id": task_id,
             "session_id": self.session_id,
             "remote": False,
             "status": "instantiated",
@@ -88,11 +90,12 @@ class AggregateForTest(Aggregate):
         logger.debug(f"Agents: {list(self.agents.keys())}")
         logger.debug(f"Graph: {dict(self.graph)}")
 
-        # Process agents in order, respecting dependencies
+        # Copy keys to avoid iteration issues
         processed = set()
-        pending = list(self.agents.keys())
+        pending = list(self.agents.keys())  # Snapshot of agent names
         while pending:
-            agent_name = pending[0]  # Simple sequential processing for test
+            logger.debug(f"Pending agents: {pending}")
+            agent_name = pending[0]
             if agent_name in processed:
                 pending.pop(0)
                 continue
@@ -102,10 +105,11 @@ class AggregateForTest(Aggregate):
             deps_satisfied = True
             for dep_name, condition in deps:
                 if dep_name not in processed:
+                    logger.debug(f"Dependency {dep_name} not processed for {agent_name}")
                     deps_satisfied = False
                     break
-                # Simple condition check (status == completed)
                 if condition and condition.get("status") != "completed":
+                    logger.debug(f"Condition not met for {dep_name}: {condition}")
                     deps_satisfied = False
                     break
 
@@ -114,7 +118,10 @@ class AggregateForTest(Aggregate):
                 pending.append(agent_name)  # Retry later
                 continue
 
-            agent = self.agents[agent_name]
+            agent = self.agents.get(agent_name)
+            if not agent:
+                logger.error(f"Agent {agent_name} not found in self.agents")
+                break
             logger.debug(f"Processing agent: {agent_name}")
             # Pass previous result as input
             task.parameters["previous_result"] = result.code if result else "initial"
@@ -152,8 +159,8 @@ def test_aggregate_two_agents():
 
     # Patch agents
     try:
-        with patch('seclorum.agents.architect.Architect', MockAgent), \
-             patch('seclorum.agents.generator.Generator', MockAgent):
+        with patch('seclorum.agents.architect.Architect', lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)), \
+             patch('seclorum.agents.generator.Generator', lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)):
             logger.debug("Applying patches for Architect, Generator")
             # Reload modules
             for mod in ['seclorum.agents.architect', 'seclorum.agents.generator']:
@@ -180,10 +187,10 @@ def test_aggregate_two_agents():
     # Verify flow
     logger.debug(f"Agent flow: {agent_flow}")
     assert len(agent_flow) >= 4, f"Expected at least 4 entries (2 agents × init+process), got {len(agent_flow)}: {agent_flow}"
-    assert any(a["agent_name"].startswith("Architect") and a["status"] == "instantiated" for a in agent_flow), "Architect init missing"
-    assert any(a["agent_name"].startswith("Generator") and a["status"] == "instantiated" for a in agent_flow), "Generator init missing"
-    assert any(a["agent_name"].startswith("Architect") and a["status"] == "completed" and a["output"] == f"processed_by_{architect.name}" for a in agent_flow), "Architect process missing"
-    assert any(a["agent_name"].startswith("Generator") and a["status"] == "completed" and a["input"] == f"processed_by_{architect.name}" for a in agent_flow), "Generator process missing input from Architect"
+    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), "Architect init missing"
+    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "instantiated" for a in agent_flow), "Generator init missing"
+    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "completed" and a["output"] == f"processed_by_{architect.name}" for a in agent_flow), "Architect process missing"
+    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "completed" and a["input"] == f"processed_by_{architect.name}" for a in agent_flow), "Generator process missing input from Architect"
     assert status == "completed", f"Expected status 'completed', got {status}"
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert result.code == f"processed_by_{generator.name}", f"Expected final output from Generator, got {result.code}"
@@ -208,9 +215,9 @@ def test_aggregate_three_agents():
 
     # Patch agents
     try:
-        with patch('seclorum.agents.architect.Architect', MockAgent), \
-             patch('seclorum.agents.generator.Generator', MockAgent), \
-             patch('seclorum.agents.tester.Tester', MockAgent):
+        with patch('seclorum.agents.architect.Architect', lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)), \
+             patch('seclorum.agents.generator.Generator', lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)), \
+             patch('seclorum.agents.tester.Tester', lambda *args, **kwargs: MockAgent(*args, agent_type="Tester", **kwargs)):
             logger.debug("Applying patches for Architect, Generator, Tester")
             # Reload modules
             for mod in ['seclorum.agents.architect', 'seclorum.agents.generator', 'seclorum.agents.tester']:
@@ -240,12 +247,12 @@ def test_aggregate_three_agents():
     # Verify flow
     logger.debug(f"Agent flow: {agent_flow}")
     assert len(agent_flow) >= 6, f"Expected at least 6 entries (3 agents × init+process), got {len(agent_flow)}: {agent_flow}"
-    assert any(a["agent_name"].startswith("Architect") and a["status"] == "instantiated" for a in agent_flow), "Architect init missing"
-    assert any(a["agent_name"].startswith("Generator") and a["status"] == "instantiated" for a in agent_flow), "Generator init missing"
-    assert any(a["agent_name"].startswith("Tester") and a["status"] == "instantiated" for a in agent_flow), "Tester init missing"
-    assert any(a["agent_name"].startswith("Architect") and a["status"] == "completed" for a in agent_flow), "Architect process missing"
-    assert any(a["agent_name"].startswith("Generator") and a["status"] == "completed" and a["input"] == f"processed_by_{architect.name}" for a in agent_flow), "Generator process missing input from Architect"
-    assert any(a["agent_name"].startswith("Tester") and a["status"] == "completed" and a["input"] == f"processed_by_{generator.name}" for a in agent_flow), "Tester process missing input from Generator"
+    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), "Architect init missing"
+    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "instantiated" for a in agent_flow), "Generator init missing"
+    assert any(a["agent_name"].startswith("Tester_") and a["status"] == "instantiated" for a in agent_flow), "Tester init missing"
+    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "completed" for a in agent_flow), "Architect process missing"
+    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "completed" and a["input"] == f"processed_by_{architect.name}" for a in agent_flow), "Generator process missing input from Architect"
+    assert any(a["agent_name"].startswith("Tester_") and a["status"] == "completed" and a["input"] == f"processed_by_{generator.name}" for a in agent_flow), "Tester process missing input from Generator"
     assert status == "completed", f"Expected status 'completed', got {status}"
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert result.code == f"processed_by_{tester.name}", f"Expected final output from Tester, got {result.code}"
@@ -270,8 +277,8 @@ def test_aggregate_two_agents_remote():
 
     # Patch agents
     try:
-        with patch('seclorum.agents.architect.Architect', MockAgent), \
-             patch('seclorum.agents.generator.Generator', MockAgent):
+        with patch('seclorum.agents.architect.Architect', lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)), \
+             patch('seclorum.agents.generator.Generator', lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)):
             logger.debug("Applying patches for Architect, Generator")
             # Reload modules
             for mod in ['seclorum.agents.architect', 'seclorum.agents.generator']:
@@ -298,10 +305,10 @@ def test_aggregate_two_agents_remote():
     # Verify flow
     logger.debug(f"Agent flow: {agent_flow}")
     assert len(agent_flow) >= 4, f"Expected at least 4 entries (2 agents × init+process), got {len(agent_flow)}: {agent_flow}"
-    assert any(a["agent_name"].startswith("Architect") and a["status"] == "instantiated" for a in agent_flow), "Architect init missing"
-    assert any(a["agent_name"].startswith("Generator") and a["status"] == "instantiated" for a in agent_flow), "Generator init missing"
-    assert any(a["agent_name"].startswith("Architect") and a["status"] == "completed" and a["output"] == f"remote_processed_by_{architect.name}" for a in agent_flow), "Architect process missing"
-    assert any(a["agent_name"].startswith("Generator") and a["status"] == "completed" and a["input"] == f"remote_processed_by_{architect.name}" for a in agent_flow), "Generator process missing input from Architect"
+    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), "Architect init missing"
+    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "instantiated" for a in agent_flow), "Generator init missing"
+    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "completed" and a["output"] == f"remote_processed_by_{architect.name}" for a in agent_flow), "Architect process missing"
+    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "completed" and a["input"] == f"remote_processed_by_{architect.name}" for a in agent_flow), "Generator process missing input from Architect"
     assert status == "completed", f"Expected status 'completed', got {status}"
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert result.code == f"remote_processed_by_{generator.name}", f"Expected final output from Generator, got {result.code}"
