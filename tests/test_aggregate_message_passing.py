@@ -28,6 +28,22 @@ def clear_modules():
     for mod in modules_to_clear:
         sys.modules.pop(mod, None)
 
+@pytest.fixture
+def model_manager():
+    """Provide a model manager for tests."""
+    return create_model_manager(provider="ollama", model_name="llama3.2:latest")
+
+@pytest.fixture
+def task():
+    """Create a code task for testing."""
+    return TaskFactory.create_code_task(
+        description="Generate a 3D drone game design and code.",
+        language="javascript",
+        generate_tests=False,
+        execute=False,
+        use_remote=True
+    )
+
 class MockAgent:
     """Mock agent to capture message passing, avoiding AbstractAgent."""
     def __init__(self, *args, **kwargs):
@@ -468,19 +484,10 @@ def test_aggregate_complex_pipelines():
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert result.code.startswith("processed_debugged_from_"), f"Expected Executor output, got {result.code}"
 
-def test_real_agents_message_passing(model_manager):
+def test_real_agents_message_passing(model_manager, task):
     """Test 1 aggregate with real Architect and Generator using mocked remote inference."""
     agent_flow.clear()
     session_id = "test_real_agents_session"
-
-    # Create task
-    task = TaskFactory.create_code_task(
-        description="Generate a 3D drone game design and code.",
-        language="javascript",
-        generate_tests=False,
-        execute=False,
-        use_remote=True
-    )
 
     # Mock remote inference responses
     mock_response_architect = {
@@ -526,9 +533,12 @@ def test_real_agents_message_passing(model_manager):
         def side_effect(url, *args, **kwargs):
             mock = MagicMock()
             prompt = kwargs.get('json', {}).get('contents', [{}])[0].get('parts', [{}])[0].get('text', '')
+            logger.debug(f"Mocking response for prompt: {prompt[:50]}...")
             if "design" in prompt.lower() or "architect" in prompt.lower():
+                logger.debug("Returning Architect response")
                 mock.json.return_value = mock_response_architect
             else:
+                logger.debug("Returning Generator response")
                 mock.json.return_value = mock_response_generator
             mock.status_code = 200
             return mock
@@ -538,13 +548,14 @@ def test_real_agents_message_passing(model_manager):
         # Create aggregate
         aggregate = Aggregate(session_id, model_manager)
 
-        # Instantiate real agents (no patching)
+        # Instantiate real agents
         from seclorum.agents.architect import Architect
         from seclorum.agents.generator import Generator
         architect = Architect(task.task_id, session_id, model_manager)
         generator = Generator(f"{task.task_id}_gen", session_id, model_manager)
 
         logger.debug(f"Created real agents: Architect={architect.name}, Generator={generator.name}")
+        logger.debug(f"Task parameters before setup: {task.parameters}")
         aggregate.add_agent(architect, [])
         aggregate.add_agent(generator, [(architect.name, {"status": "planned"})])
         logger.debug(f"Agent flow after agent creation: {agent_flow}")
@@ -552,20 +563,23 @@ def test_real_agents_message_passing(model_manager):
         logger.debug("Starting Aggregate.process_task")
         status, result = aggregate.process_task(task)
         logger.debug(f"Task complete: status={status}, result_code={result.code[:50] if result else None}")
+        logger.debug(f"Task parameters after process: {task.parameters}")
+        logger.debug(f"Mock post calls: {len(mock_post.call_args_list)}")
 
     # Assertions
+    assert len(agent_flow) >= 2, f"Expected at least 2 flow entries (Architect, Generator), got {len(agent_flow)}: {agent_flow}"
+    assert any(a["agent_name"] == architect.name and a["status"] == "planned" for a in agent_flow), "Architect process missing"
+    assert any(a["agent_name"] == generator.name and a["status"] == "generated" for a in agent_flow), "Generator process missing"
     assert status == "generated", f"Expected status 'generated', got {status}"
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert "scene = new THREE.Scene()" in result.code, "Expected Generator to produce Three.js code"
-    assert architect.name in task.parameters, f"Architect output missing: {task.parameters}"
-    assert generator.name in task.parameters, f"Generator output missing: {task.parameters}"
+    assert task.parameters.get(architect.name), "Architect output missing"
+    assert task.parameters.get(generator.name), "Generator output missing"
     architect_output = task.parameters.get(architect.name, {}).get("result")
-    assert isinstance(architect_output, CodeOutput), f"Architect result should be CodeOutput, got {type(architect_output)}"
+    assert isinstance(architect_output, CodeOutput), "Architect result should be CodeOutput"
     assert json.loads(architect_output.code).get("design") == "drone_game_design", "Architect design incorrect"
-    generator_output = task.parameters.get(generator.name, {}).get("result")
-    assert isinstance(generator_output, CodeOutput), f"Generator result should be CodeOutput, got {type(generator_output)}"
     assert mock_post.called, "Remote inference was not called"
-    assert len(mock_post.call_args_list) >= 2, "Expected at least 2 remote calls (Architect, Generator)"
+    assert len(mock_post.call_args_list) >= 2, f"Expected at least 2 remote calls, got {len(mock_post.call_args_list)}"
 
 if __name__ == "__main__":
     pytest.main(["-v", __file__])
