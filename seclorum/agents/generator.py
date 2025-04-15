@@ -1,4 +1,3 @@
-# seclorum/agents/generator.py
 from seclorum.agents.base import Agent
 from seclorum.models import Task, CodeOutput, create_model_manager, ModelManager
 from seclorum.languages import LANGUAGE_HANDLERS
@@ -32,7 +31,11 @@ class Generator(Agent):
             if language == "html":
                 code = self.generate_html(task)
             else:
-                code_prompt = handler.get_code_prompt(task, output_file)
+                code_prompt = (
+                    f"Generate {language} code for the following task:\n{task.description}\n\n"
+                    f"Output code for {output_file} that implements the described functionality. "
+                    "Return only the code, without markdown or explanations."
+                )
                 use_remote = task.parameters.get("use_remote", False)
                 raw_code = self.infer(code_prompt, task, use_remote=use_remote, use_context=False, max_tokens=4000)
                 logger.debug(f"Raw inferred code for {output_file}:\n{raw_code[:200]}...")
@@ -40,7 +43,7 @@ class Generator(Agent):
 
             if not handler.validate_code(code):
                 logger.warning(f"Invalid {language} code generated for {output_file}, falling back to default")
-                code = self.generate_fallback(language, output_file)
+                code = self.generate_fallback(language, task)
                 if not handler.validate_code(code):
                     logger.error(f"Fallback {language} code still invalid for {output_file}")
                     code = ""
@@ -49,7 +52,10 @@ class Generator(Agent):
 
             tests = None
             if task.parameters.get("generate_tests", False) and code and language == "javascript":
-                test_prompt = handler.get_test_prompt(code)
+                test_prompt = (
+                    f"Generate Jest tests for the following {language} code:\n{code}\n\n"
+                    "Return only the test code, without markdown or explanations."
+                )
                 use_remote = task.parameters.get("use_remote", False)
                 raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False, max_tokens=2000)
                 logger.debug(f"Raw inferred tests for {output_file}:\n{raw_tests[:200]}...")
@@ -69,70 +75,58 @@ class Generator(Agent):
 
     def generate_html(self, task: Task) -> str:
         logger.debug(f"Generating HTML for task={task.task_id}, output_file={task.parameters.get('output_file', 'unknown')}")
-        html_code = """<!DOCTYPE html>
+        title = task.parameters.get("title", "Application")
+        script = task.parameters.get("script", "app.js")
+        html_code = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Drone Racing Game</title>
+    <title>{title}</title>
     <style>
-        body { margin: 0; font-family: Arial, sans-serif; background: #000; }
-        canvas#myCanvas { display: block; }
-        #ui { position: absolute; top: 10px; left: 10px; color: #fff; font-family: Arial; background: rgba(0, 0, 0, 0.5); padding: 10px; }
-        #startReset { margin: 5px; padding: 10px; background: #007bff; color: #fff; border: none; cursor: pointer; }
-        #startReset:hover { background: #0056b3; }
+        body {{ margin: 0; font-family: Arial, sans-serif; background: #f0f0f0; }}
+        canvas#myCanvas {{ display: block; }}
+        #ui {{ position: absolute; top: 10px; left: 10px; color: #000; font-family: Arial; background: rgba(255, 255, 255, 0.7); padding: 10px; }}
+        #startReset {{ margin: 5px; padding: 10px; background: #007bff; color: #fff; border: none; cursor: pointer; }}
+        #startReset:hover {{ background: #0056b3; }}
     </style>
 </head>
 <body>
     <div id="ui">
         <span id="timer">0</span>s
         <br>
-        <span id="speed">0</span>
+        <span id="status">-</span>
         <br>
-        <pre id="standings">-</pre>
         <button id="startReset">Start</button>
     </div>
     <canvas id="myCanvas"></canvas>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-    <script src="drone_game.js"></script>
+    <script src="{script}"></script>
 </body>
 </html>"""
         return html_code
 
-    def generate_fallback(self, language: str, output_file: str) -> str:
-        logger.debug(f"Generating fallback code for language={language}, output_file={output_file}")
+    def generate_fallback(self, language: str, task: Task) -> str:
+        logger.debug(f"Generating fallback code for language={language}, task={task.task_id}")
+        output_file = task.parameters.get("output_file", "app.js")
         if language == "javascript":
-            return """let scene = new THREE.Scene();
+            return f"""let scene = new THREE.Scene();
 let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-let renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('myCanvas') });
+let renderer = new THREE.WebGLRenderer({{ canvas: document.getElementById('myCanvas') }});
 renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
 
-let drone = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
-drone.position.set(0, 0, 10);
-scene.add(drone);
+let object = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({{ color: 0x00ff00 }}));
+scene.add(object);
+camera.position.z = 5;
 
-camera.position.set(0, -20, 15);
-camera.lookAt(drone.position);
-
-document.addEventListener('keydown', function(event) {
-    switch (event.key) {
-        case 'ArrowUp': drone.position.z += 0.5; break;
-        case 'ArrowDown': drone.position.z -= 0.5; break;
-        case 'ArrowLeft': drone.position.x -= 0.5; break;
-        case 'ArrowRight': drone.position.x += 0.5; break;
-        case 'w': drone.position.y += 0.5; break;
-        case 's': drone.position.y -= 0.5; break;
-    }
-});
-
-function animate() {
+function animate() {{
     requestAnimationFrame(animate);
+    object.rotation.x += 0.01;
     renderer.render(scene, camera);
-}
+}}
 animate();
 """
         elif language == "html":
-            return self.generate_html(Task(task_id=self.task_id, description="Fallback HTML", parameters={"language": "html", "output_file": output_file}))
+            return self.generate_html(task)
         return ""
 
     def start(self):

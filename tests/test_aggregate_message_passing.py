@@ -449,9 +449,19 @@ def test_real_agents_message_passing(model_manager, task):
             "content": {
                 "parts": [{
                     "text": json.dumps({
-                        "design": "drone_game_design",
-                        "spec": "3d_movement",
-                        "metadata": {"version": 1}
+                        "subtasks": [
+                            {
+                                "description": "Generate JavaScript logic for core functionality",
+                                "language": "javascript",
+                                "output_file": "drone_game.js"
+                            },
+                            {
+                                "description": "Generate HTML UI with canvas and controls",
+                                "language": "html",
+                                "output_file": "drone_game.html"
+                            }
+                        ],
+                        "metadata": {"version": 1, "project": "application"}
                     })
                 }]
             }
@@ -464,9 +474,8 @@ def test_real_agents_message_passing(model_manager, task):
                     "text": """
                     let scene = new THREE.Scene();
                     let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-                    let renderer = new THREE.WebGLRenderer();
+                    let renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('myCanvas') });
                     renderer.setSize(window.innerWidth, window.innerHeight);
-                    document.body.appendChild(renderer.domElement);
                     let drone = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
                     scene.add(drone);
                     camera.position.z = 5;
@@ -483,12 +492,11 @@ def test_real_agents_message_passing(model_manager, task):
     }
 
     with patch('requests.post') as mock_post:
-        # Configure mock to return different responses based on agent
         def side_effect(url, *args, **kwargs):
             mock = MagicMock()
             prompt = kwargs.get('json', {}).get('contents', [{}])[0].get('parts', [{}])[0].get('text', '')
             logger.debug(f"Mocking response for prompt: {prompt[:50]}...")
-            if "design" in prompt.lower() or "architect" in prompt.lower():
+            if "plan" in prompt.lower() or "architect" in prompt.lower():
                 logger.debug("Returning Architect response")
                 mock.json.return_value = mock_response_architect
             else:
@@ -499,10 +507,7 @@ def test_real_agents_message_passing(model_manager, task):
 
         mock_post.side_effect = side_effect
 
-        # Create aggregate
         aggregate = Aggregate(session_id, model_manager)
-
-        # Instantiate real agents
         from seclorum.agents.architect import Architect
         from seclorum.agents.generator import Generator
         architect = Architect(task.task_id, session_id, model_manager)
@@ -516,27 +521,25 @@ def test_real_agents_message_passing(model_manager, task):
 
         logger.debug("Starting Aggregate.process_task")
         status, result = aggregate.process_task(task)
-        logger.debug(f"Task complete: status={status}, result_code={result.code[:50] if result else None}")
-        logger.debug(f"Task parameters after process: {task.parameters}")
-        logger.debug(f"Mock post calls: {len(mock_post.call_args_list)}")
+        logger.debug(f"Task complete: status={status}, result_type={type(result).__name__}, "
+                     f"result_code={result.code[:50] if hasattr(result, 'code') else str(result)[:50]}")
 
-        # Collect flow from agents
         test_agent_flow.extend(architect._flow_tracker)
         test_agent_flow.extend(generator._flow_tracker)
         logger.debug(f"Agent flow after process: {test_agent_flow}")
 
-    # Assertions
-    assert len(test_agent_flow) >= 2, f"Expected at least 2 flow entries (Architect, Generator), got {len(test_agent_flow)}: {test_agent_flow}"
+    assert len(test_agent_flow) >= 2, f"Expected at least 2 flow entries, got {len(test_agent_flow)}: {test_agent_flow}"
     assert any(a["agent_name"] == architect.name and a["status"] == "planned" for a in test_agent_flow), f"Architect process missing: {test_agent_flow}"
     assert any(a["agent_name"] == generator.name and a["status"] == "generated" for a in test_agent_flow), f"Generator process missing: {test_agent_flow}"
     assert status == "generated", f"Expected status 'generated', got {status}"
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
-    assert "scene = new THREE.Scene()" in result.code, "Expected Generator to produce Three.js code"
+    assert "scene = new THREE.Scene()" in result.code, "Expected Generator to produce JavaScript code"
     assert architect.name in task.parameters, f"Architect output missing: {task.parameters}"
     assert generator.name in task.parameters, f"Generator output missing: {task.parameters}"
     architect_output = task.parameters.get(architect.name, {}).get("result")
-    assert isinstance(architect_output, str), f"Architect result should be str, got {type(architect_output)}"
-    assert json.loads(architect_output).get("design") == "drone_game_design", "Architect design incorrect"
+    assert isinstance(architect_output, Plan), f"Architect result should be Plan, got {type(architect_output)}"
+    assert len(architect_output.subtasks) >= 1, "Expected at least one subtask"
+    assert any(t.parameters.get("output_file") == "drone_game.js" for t in architect_output.subtasks), "Expected JavaScript subtask with output_file"
     assert mock_post.called, "Remote inference was not called"
     assert len(mock_post.call_args_list) >= 2, f"Expected at least 2 remote calls, got {len(mock_post.call_args_list)}"
 

@@ -1,8 +1,7 @@
-# seclorum/agents/base.py
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple, Set
 from collections import defaultdict
-from seclorum.models import Task, TestResult, CodeOutput
+from seclorum.models import Task, TestResult, CodeOutput, Plan
 from seclorum.utils.logger import LoggerMixin
 from seclorum.models.manager import ModelManager, create_model_manager
 from seclorum.core.filesystem import FileSystemManager
@@ -13,7 +12,7 @@ import requests
 import os
 
 class AbstractAgent(ABC, LoggerMixin):
-    _memory_cache = {}  # Class-level cache for MemoryManager
+    _memory_cache = {}
 
     def __init__(self, name: str, session_id: str, quiet: bool = False):
         self.name: str = name
@@ -23,7 +22,7 @@ class AbstractAgent(ABC, LoggerMixin):
         self.fs_manager = FileSystemManager(require_git=quiet)
         self.memory = self.get_or_create_memory(session_id)
         self.logger.info(f"Using shared MemoryManager for session {session_id}")
-        self._flow_tracker = []  # Track agent visits for testing
+        self._flow_tracker = []
 
     @classmethod
     def get_or_create_memory(cls, session_id: str) -> Memory:
@@ -45,11 +44,11 @@ class AbstractAgent(ABC, LoggerMixin):
         self.log_update(f"Stopping {self.name}")
 
     def commit_changes(self, message: str) -> bool:
-        """Commit changes to the Git repository with agent prefix."""
+        self.log_update(f"Committing changes: {message}")
         return self.fs_manager.commit_changes(f"{self.name}: {message}")
 
     def save_output(self, task: Task, output: Any, status: str = "completed") -> None:
-        """Save output to memory and task parameters."""
+        self.log_update(f"Saving output for task {task.task_id}: status={status}, output_type={type(output).__name__}")
         self.memory.save(
             prompt=task.description,
             response=output,
@@ -57,10 +56,8 @@ class AbstractAgent(ABC, LoggerMixin):
             agent_name=self.name
         )
         self.store_output(task, status, output)
-        self.log_update(f"Saved output for task {task.task_id}: status={status}, output_type={type(output).__name__}")
 
     def track_flow(self, task: Task, status: str, result: Any, use_remote: bool):
-        """Track agent visit for flow testing."""
         flow_entry = {
             "agent_name": self.name,
             "task_id": task.task_id,
@@ -73,14 +70,12 @@ class AbstractAgent(ABC, LoggerMixin):
         self.log_update(f"Tracked flow: {flow_entry}")
 
     def infer(self, prompt: str, task: Task, use_remote: Optional[bool] = None, use_context: bool = False, endpoint: str = "google_ai_studio", **kwargs) -> str:
-        """Run inference with optional history and similar tasks."""
         use_remote = use_remote if use_remote is not None else task.parameters.get("use_remote", False)
         if use_context:
             history = self.memory.load_conversation_history(task_id=task.task_id, agent_name=self.name)
             formatted_history = self.memory.format_history(history) if history else ""
             similar_tasks = self.memory.find_similar(task.description, task_id=None, n_results=3)
             formatted_similar = "\n".join(f"- {task}" for task in similar_tasks) if similar_tasks else ""
-
             context = []
             if formatted_similar:
                 context.append(f"Relevant Past Tasks:\n{formatted_similar}")
@@ -95,9 +90,8 @@ class AbstractAgent(ABC, LoggerMixin):
         return self._run_inference(full_prompt, use_remote, endpoint, **kwargs)
 
     def _run_inference(self, prompt: str, use_remote: bool, endpoint: str, **kwargs) -> str:
-        """Helper method to handle inference with logging."""
+        self.log_update(f"Running inference: remote={use_remote}, endpoint={endpoint}")
         if use_remote:
-            self.log_update(f"Running remote inference to {endpoint}")
             return self.remote_infer(prompt, endpoint=endpoint, **kwargs)
         return self.model.generate(prompt, **kwargs)
 
@@ -112,7 +106,6 @@ class Agent(AbstractAgent, Remote):
         self.log_update(f"Agent {name} initialized with model {self.model.model_name}")
 
     def remote_infer(self, prompt: str, endpoint: str = "google_ai_studio", **kwargs) -> str:
-        """Run inference remotely with logging for rate limits."""
         self.log_update(f"Running remote inference to {endpoint}")
         if endpoint == "google_ai_studio":
             api_key = os.getenv("GOOGLE_AI_STUDIO_API_KEY")
@@ -123,11 +116,14 @@ class Agent(AbstractAgent, Remote):
                 "contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": {"maxOutputTokens": 512, "temperature": 0.7}
             }
+            self.log_update(f"Sending request to {url}")
             try:
                 response = requests.post(url, json=payload, timeout=30)
                 response.raise_for_status()
                 result = response.json()
-                return result["candidates"][0]["content"]["parts"][0]["text"]
+                text = result["candidates"][0]["content"]["parts"][0]["text"]
+                self.log_update(f"Remote inference successful: {text[:50]}...")
+                return text
             except requests.RequestException as e:
                 self.log_update(f"Remote inference failed: {str(e)}")
                 raise
@@ -135,12 +131,10 @@ class Agent(AbstractAgent, Remote):
             raise ValueError(f"Unsupported endpoint: {endpoint}")
 
     def add_model(self, model_key: str, model_manager: ModelManager) -> None:
-        """Add a new model to the agent's model pool."""
         self.available_models[model_key] = model_manager
         self.log_update(f"Added model '{model_key}' to {self.name}: {model_manager.model_name}")
 
     def switch_model(self, model_key: str) -> None:
-        """Switch the active model for inference."""
         if model_key not in self.available_models:
             raise ValueError(f"Model '{model_key}' not found in available models: {list(self.available_models.keys())}")
         self.current_model_key = model_key
@@ -148,7 +142,6 @@ class Agent(AbstractAgent, Remote):
         self.log_update(f"Switched {self.name} to model '{model_key}': {self.model.model_name}")
 
     def select_model(self, task: Task) -> None:
-        """Intelligently select a model based on task requirements."""
         prompt = (
             f"Given the task '{task.description}', available models: {list(self.available_models.keys())}, "
             "which model should be used? Return only the model key."
@@ -160,16 +153,13 @@ class Agent(AbstractAgent, Remote):
             self.log_update(f"Model '{model_key}' not found, sticking with '{self.current_model_key}'")
 
     def infer(self, prompt: str, task: Task, use_remote: Optional[bool] = None, use_context: bool = False, endpoint: str = "google_ai_studio", **kwargs) -> str:
-        """Run inference with the current active model, supporting task and context."""
         self.log_update(f"Inferring with model '{self.current_model_key}' on prompt: {prompt[:50]}...")
         return super().infer(prompt, task, use_remote=use_remote, use_context=use_context, endpoint=endpoint, **kwargs)
 
     def process_task(self, task: Task) -> Tuple[str, Any]:
-        """Base implementation; override in subclasses."""
         raise NotImplementedError("Subclasses must implement process_task")
 
     def store_output(self, task: Task, status: str, result: Any):
-        """Store agent output in task parameters with a consistent key."""
         agent_key = f"{self.name}"
         task.parameters[agent_key] = {"status": status, "result": result}
         self.log_update(f"Stored output for {self.name}: status={status}, result_type={type(result).__name__}")
@@ -187,46 +177,79 @@ class Aggregate(Agent):
         self.log_update(f"Added agent {agent.name} with dependencies {dependencies}")
 
     def _check_condition(self, status: str, result: Any, condition: Optional[Dict[str, Any]]) -> bool:
-        self.log_update(f"Evaluating condition: status={status}, result_type={type(result).__name__}, condition={condition}")
+        self.log_update(f"Checking condition: status={status}, result_type={type(result).__name__}, condition={condition}")
         if not condition:
             return True
         if "status" in condition and condition["status"] != status:
+            self.log_update(f"Condition failed: expected status {condition['status']}, got {status}")
             return False
         if "passed" in condition and isinstance(result, TestResult):
-            return condition["passed"] == result.passed
+            passed = condition["passed"] == result.passed
+            self.log_update(f"Passed condition: expected {condition['passed']}, got {result.passed}")
+            return passed
         return True
 
     def _propagate(self, current_agent: str, status: str, result: Any, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
         task_id: str = task.task_id
         if task_id not in self.tasks:
             self.tasks[task_id] = {"status": None, "result": None, "outputs": {}, "processed": set()}
-        self.tasks[task_id]["status"] = status
-        self.tasks[task_id]["result"] = result
-        self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result}
-        self.log_update(f"Task state after {current_agent}: {self.tasks[task_id]}")
-
-        # Update original task.parameters
-        task.parameters[current_agent] = {"status": status, "result": result}
-
-        if stop_at == current_agent:
-            return status, result
 
         final_status, final_result = status, result
-        dependents = self.graph.get(current_agent, [])
-        for next_agent_name, condition in dependents:
-            if next_agent_name in self.tasks[task_id]["processed"]:
-                continue
-            if self._check_condition(status, result, condition):
-                next_agent = self.agents[next_agent_name]
-                params = self.tasks[task_id]["outputs"].copy()
-                new_task = Task(task_id=task.task_id, description=task.description, parameters=params)
-                new_status, new_result = next_agent.process_task(new_task)
-                next_agent.track_flow(new_task, new_status, new_result, new_task.parameters.get("use_remote", False))
-                self.tasks[task_id]["processed"].add(next_agent_name)
-                final_status, final_result = self._propagate(next_agent_name, new_status, new_result, task, stop_at)
+        if isinstance(result, Plan):
+            self.log_update(f"Handling Plan from {current_agent} with {len(result.subtasks)} subtasks")
+            self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result}
+            task.parameters[current_agent] = {"status": status, "result": result}
+            for subtask in result.subtasks:
+                subtask_id = subtask.task_id
+                self.tasks[subtask_id] = {"status": None, "result": None, "outputs": {}, "processed": set()}
+                self.log_update(f"Processing subtask {subtask_id}: {subtask.description[:50]}...")
+                dependents = self.graph.get(current_agent, [])
+                for next_agent_name, condition in dependents:
+                    if next_agent_name in self.tasks[subtask_id]["processed"]:
+                        self.log_update(f"Skipping processed agent {next_agent_name} for subtask {subtask_id}")
+                        continue
+                    if self._check_condition(status, result, condition):
+                        next_agent = self.agents[next_agent_name]
+                        params = self.tasks[task_id]["outputs"].copy()
+                        new_task = Task(
+                            task_id=subtask_id,
+                            description=subtask.description,
+                            parameters={**subtask.parameters, **params}
+                        )
+                        self.log_update(f"Executing {next_agent_name} for subtask {subtask_id}")
+                        new_status, new_result = next_agent.process_task(new_task)
+                        next_agent.track_flow(new_task, new_status, new_result, new_task.parameters.get("use_remote", False))
+                        self.tasks[subtask_id]["processed"].add(next_agent_name)
+                        self.tasks[subtask_id]["outputs"][next_agent_name] = {"status": new_status, "result": new_result}
+                        task.parameters[next_agent_name] = {"status": new_status, "result": new_result}
+                        final_status, final_result = new_status, new_result
+                    else:
+                        self.log_update(f"Condition not met for {next_agent_name} in subtask {subtask_id}")
+        else:
+            self.tasks[task_id]["status"] = status
+            self.tasks[task_id]["result"] = result
+            self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result}
+            task.parameters[current_agent] = {"status": status, "result": result}
+            dependents = self.graph.get(current_agent, [])
+            for next_agent_name, condition in dependents:
+                if next_agent_name in self.tasks[task_id]["processed"]:
+                    continue
+                if self._check_condition(status, result, condition):
+                    next_agent = self.agents[next_agent_name]
+                    params = self.tasks[task_id]["outputs"].copy()
+                    new_task = Task(task_id=task_id, description=task.description, parameters=params)
+                    new_status, new_result = next_agent.process_task(new_task)
+                    next_agent.track_flow(new_task, new_status, new_result, new_task.parameters.get("use_remote", False))
+                    self.tasks[task_id]["processed"].add(next_agent_name)
+                    final_status, final_result = self._propagate(next_agent_name, new_status, new_result, task, stop_at)
+
+        self.log_update(f"Propagation from {current_agent}: status={final_status}, result_type={type(final_result).__name__}")
+        if stop_at == current_agent:
+            return status, result
         return final_status, final_result
 
     def process_task(self, task: Task) -> Tuple[str, Any]:
+        self.log_update(f"Starting process_task for task={task.task_id}")
         return self.orchestrate(task)
 
     def orchestrate(self, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
@@ -238,56 +261,47 @@ class Aggregate(Agent):
         final_status: Optional[str] = None
         final_result: Any = None
         pending_agents: Set[str] = set(self.agents.keys())
+        self.log_update(f"Pending agents: {pending_agents}")
 
         while pending_agents:
             next_agent_name = self.decide_next_step(task, pending_agents)
-            self.log_update(f"Selected next agent: {next_agent_name}")
+            self.log_update(f"Decided next agent: {next_agent_name}")
             if not next_agent_name:
-                self.log_update(f"No valid next agent for task {task_id}, pending={pending_agents}")
+                self.log_update("No next agent available, breaking")
                 break
             if next_agent_name in self.tasks[task_id]["processed"]:
-                self.log_update(f"Agent {next_agent_name} already processed, skipping")
+                self.log_update(f"Agent {next_agent_name} already processed, removing")
                 pending_agents.remove(next_agent_name)
                 continue
             deps = self.graph[next_agent_name]
             agent_outputs = self.tasks[task_id]["outputs"].copy()
-            deps_satisfied = True
-            for dep_name, condition in deps:
-                if dep_name not in agent_outputs:
-                    self.log_update(f"Dependency {dep_name} not in outputs for {next_agent_name}: outputs={agent_outputs}")
-                    deps_satisfied = False
-                    break
-                dep_status = agent_outputs[dep_name]["status"]
-                dep_result = agent_outputs[dep_name]["result"]
-                if not self._check_condition(dep_status, dep_result, condition):
-                    self.log_update(f"Condition failed for {next_agent_name}: dep={dep_name}, status={dep_status}, condition={condition}")
-                    deps_satisfied = False
-                    break
+            deps_satisfied = all(
+                dep_name in agent_outputs and
+                self._check_condition(agent_outputs[dep_name]["status"], agent_outputs[dep_name]["result"], condition)
+                for dep_name, condition in deps
+            )
+            self.log_update(f"Dependencies for {next_agent_name}: {deps}, satisfied={deps_satisfied}")
             if not deps_satisfied:
-                self.log_update(f"Dependencies not satisfied for {next_agent_name}, deferring")
+                self.log_update(f"Dependencies not satisfied for {next_agent_name}, removing")
                 pending_agents.remove(next_agent_name)
                 continue
             agent = self.agents[next_agent_name]
             new_task = Task(task_id=task_id, description=task.description, parameters=agent_outputs)
-            self.log_update(f"Executing agent {next_agent_name} with params={new_task.parameters}")
-            try:
-                agent_status, agent_result = agent.process_task(new_task)
-                self.log_update(f"Agent {next_agent_name} completed: status={agent_status}, result_type={type(agent_result).__name__}")
-                agent.track_flow(new_task, agent_status, agent_result, new_task.parameters.get("use_remote", False))
-                final_status, final_result = self._propagate(next_agent_name, agent_status, agent_result, task, stop_at)
-                self.tasks[task_id]["processed"].add(next_agent_name)
-            except Exception as e:
-                self.log_update(f"Error processing agent {next_agent_name}: {str(e)}")
-                raise
+            self.log_update(f"Executing agent {next_agent_name} with params: {new_task.parameters.keys()}")
+            agent_status, agent_result = agent.process_task(new_task)
+            self.log_update(f"Agent {next_agent_name} returned status={agent_status}, result_type={type(agent_result).__name__}")
+            agent.track_flow(new_task, agent_status, agent_result, new_task.parameters.get("use_remote", False))
+            final_status, final_result = self._propagate(next_agent_name, agent_status, agent_result, task, stop_at)
+            self.tasks[task_id]["processed"].add(next_agent_name)
             if stop_at == next_agent_name:
-                self.log_update(f"Stopping at {next_agent_name} as requested")
+                self.log_update(f"Stopping at {next_agent_name}")
                 return final_status, final_result
             pending_agents.remove(next_agent_name)
 
         if final_status is None or final_result is None:
-            self.log_update(f"No agents processed task {task_id}, outputs={self.tasks.get(task_id, {}).get('outputs', {})}")
+            self.log_update(f"No agent processed task {task_id}, raising error")
             raise ValueError(f"No agent processed task {task_id}")
-        self.log_update(f"Orchestration complete, final status={final_status}, task_parameters={task.parameters}")
+        self.log_update(f"Orchestration complete, final status: {final_status}")
         return final_status, final_result
 
     def decide_next_step(self, task: Task, pending_agents: Set[str]) -> Optional[str]:

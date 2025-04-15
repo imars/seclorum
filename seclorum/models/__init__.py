@@ -11,10 +11,12 @@ from .task import (
     OutsourcedTaskOutput
 )
 from .code import CodeOutput, TestResult, CodeResult
+from .plan import Plan
 from .manager import create_model_manager, ModelManager, OllamaModelManager, MockModelManager
 
 __all__ = [
     "Task",
+    "Plan",
     "AgentMessage",
     "FileListToolInput",
     "FileListToolOutput",

@@ -1,4 +1,3 @@
-# seclorum/agents/memory/core.py
 import os
 import json
 import logging
@@ -9,6 +8,7 @@ from datetime import datetime
 from typing import Optional, List, Dict
 import threading
 import queue
+from seclorum.models import Plan, Task
 
 logger = logging.getLogger("Seclorum")
 logging.basicConfig(level=logging.INFO)
@@ -30,7 +30,6 @@ class Memory:
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
         self.embedding_queue = queue.Queue()
 
-        # Start background thread for embedding processing
         self._stop_event = threading.Event()
         self._embedding_thread = threading.Thread(target=self._process_embedding_queue, daemon=True)
         self._embedding_thread.start()
@@ -38,9 +37,7 @@ class Memory:
         logger.info(f"Memory initialized for session {session_id} with {'JSON' if use_json else 'SQLite'} storage")
 
     def _init_sqlite(self):
-        """Initialize SQLite database and migrate schema if needed."""
         with sqlite3.connect(self.db_file) as conn:
-            # Create conversations table if it doesn't exist
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS conversations (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,19 +45,13 @@ class Memory:
                     prompt TEXT,
                     response TEXT,
                     session_id TEXT NOT NULL,
-                    task_id TEXT
+                    task_id TEXT,
+                    agent_name TEXT
                 )
             """)
-            # Check if agent_name column exists
-            cursor = conn.execute("PRAGMA table_info(conversations)")
-            columns = [info[1] for info in cursor.fetchall()]
-            if "agent_name" not in columns:
-                logger.info("Migrating conversations table to add agent_name column")
-                conn.execute("ALTER TABLE conversations ADD COLUMN agent_name TEXT")
             conn.commit()
 
     def save(self, prompt=None, response=None, session_id=None, task_id=None, agent_name: Optional[str] = None):
-        """Save prompt and response with task metadata."""
         entry = {
             "timestamp": datetime.now().isoformat(),
             "prompt": prompt,
@@ -71,19 +62,40 @@ class Memory:
         }
 
         if response:
+            logger.debug(f"Serializing response of type {type(response).__name__} for task {task_id}")
             if hasattr(response, 'model_dump'):  # Pydantic model
                 entry["response"] = json.dumps(response.model_dump())
-            else:  # String
-                entry["response"] = response
+            elif isinstance(response, Plan):
+                plan_dict = {
+                    "subtasks": [
+                        {
+                            "task_id": task.task_id,
+                            "description": task.description,
+                            "parameters": task.parameters
+                        } for task in response.subtasks
+                    ],
+                    "metadata": response.metadata
+                }
+                entry["response"] = json.dumps(plan_dict)
+            else:  # Assume string or JSON-serializable
+                try:
+                    entry["response"] = json.dumps(response) if not isinstance(response, str) else response
+                except TypeError as e:
+                    logger.error(f"Failed to serialize response: {str(e)}")
+                    entry["response"] = str(response)
 
         if not self.use_json:
-            with sqlite3.connect(self.db_file) as conn:
-                cursor = conn.execute("""
-                    INSERT INTO conversations (timestamp, prompt, response, session_id, task_id, agent_name)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (entry["timestamp"], prompt, entry["response"], entry["session_id"], task_id, agent_name))
-                conn.commit()
-                logger.info(f"Memory saved: Task {task_id} to {self.db_file}, rowid: {cursor.lastrowid}")
+            try:
+                with sqlite3.connect(self.db_file) as conn:
+                    cursor = conn.execute("""
+                        INSERT INTO conversations (timestamp, prompt, response, session_id, task_id, agent_name)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (entry["timestamp"], prompt, entry["response"], entry["session_id"], task_id, agent_name))
+                    conn.commit()
+                    logger.info(f"Memory saved: Task {task_id} to {self.db_file}, rowid: {cursor.lastrowid}")
+            except sqlite3.Error as e:
+                logger.error(f"SQLite save failed for task {task_id}: {str(e)}")
+                raise
         else:
             data = []
             if os.path.exists(self.json_file):
@@ -95,7 +107,7 @@ class Memory:
             with open(self.json_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
 
-        if prompt or response:
+        if prompt or entry["response"]:
             text = (prompt or "") + " " + (entry["response"] or "")
             if text.strip():
                 doc_id = f"{self.session_id}_{cursor.lastrowid if not self.use_json else len(data)-1}"
@@ -103,7 +115,6 @@ class Memory:
                 logger.debug(f"Queued embedding for Task {task_id} - {doc_id}")
 
     def _process_embedding_queue(self):
-        """Background thread to process embedding queue."""
         while not self._stop_event.is_set():
             try:
                 text, doc_id, timestamp, task_id, agent_name = self.embedding_queue.get(timeout=1.0)
@@ -127,12 +138,10 @@ class Memory:
                 logger.error(f"Embedding processing failed: {str(e)}")
 
     def stop(self):
-        """Stop the embedding thread."""
         self._stop_event.set()
         self._embedding_thread.join()
 
     def load_conversation_history(self, task_id: Optional[str] = None, agent_name: Optional[str] = None) -> List[Dict]:
-        """Load conversation history, optionally filtered by task_id or agent_name."""
         if not self.use_json:
             with sqlite3.connect(self.db_file) as conn:
                 query = "SELECT timestamp, prompt, response, task_id, agent_name FROM conversations WHERE session_id = ?"
@@ -160,7 +169,6 @@ class Memory:
             ]
 
     def format_history(self, history: List[Dict]) -> str:
-        """Format history for inference or display."""
         formatted = []
         for entry in history:
             if entry["prompt"]:
@@ -170,7 +178,11 @@ class Memory:
                     if entry["response"].strip().startswith("{"):
                         data = json.loads(entry["response"])
                         lines = []
-                        if "code" in data:
+                        if "subtasks" in data:
+                            lines.append("Plan:")
+                            for subtask in data["subtasks"]:
+                                lines.append(f"- {subtask['description']} ({subtask['parameters'].get('output_file', 'unknown')})")
+                        elif "code" in data:
                             lines.append("Code:\n" + data["code"].replace("\\n", "\n").strip())
                         if "tests" in data and data["tests"]:
                             lines.append("Tests:\n" + data["tests"].replace("\\n", "\n").strip())
@@ -189,7 +201,6 @@ class Memory:
         return "\n\n".join(formatted) or "No relevant history"
 
     def find_similar(self, query: str, task_id: Optional[str] = None, n_results: int = 3) -> List[str]:
-        """Find similar task outputs by embedding similarity."""
         if not query.strip():
             logger.warning("Empty query for similarity search")
             return []
