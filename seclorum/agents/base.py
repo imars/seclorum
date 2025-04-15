@@ -185,7 +185,7 @@ class Aggregate(Agent):
         self.log_update(f"Added agent {agent.name} with dependencies {dependencies}")
 
     def _check_condition(self, status: str, result: Any, condition: Optional[Dict[str, Any]]) -> bool:
-        self.log_update(f"Evaluating condition: status={status}, result={result}, condition={condition}")
+        self.log_update(f"Checking condition: status={status}, result_type={type(result).__name__}, condition={condition}")
         if not condition:
             return True
         if "status" in condition and condition["status"] != status:
@@ -202,9 +202,10 @@ class Aggregate(Agent):
         self.tasks[task_id]["status"] = status
         self.tasks[task_id]["result"] = result
         self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result}
-        self.log_update(f"Task state after {current_agent}: {self.tasks[task_id]}")
+        self.log_update(f"Propagated {current_agent}: status={status}, outputs={self.tasks[task_id]['outputs']}")
 
         if stop_at == current_agent:
+            self.log_update(f"Stopping propagation at {current_agent}")
             return status, result
 
         final_status, final_result = status, result
@@ -237,66 +238,68 @@ class Aggregate(Agent):
         task_id: str = task.task_id
         if task_id not in self.tasks:
             self.tasks[task_id] = {"status": None, "result": None, "outputs": {}, "processed": set()}
-        self.log_update(f"Orchestrating task {task_id} with {len(self.agents)} agents, stopping at {stop_at}")
+        self.log_update(f"Orchestrating task {task_id} with agents: {list(self.agents.keys())}, stop_at={stop_at}")
 
         final_status: Optional[str] = None
         final_result: Any = None
         pending_agents: Set[str] = set(self.agents.keys())
-        self.log_update(f"Initial pending agents: {pending_agents}")
+        self.log_update(f"Initial pending agents: {pending_agents}, graph: {self.graph}")
 
+        processed_agents = set()
         while pending_agents:
-            next_agent_name = self.decide_next_step(task, pending_agents)
-            self.log_update(f"Selected next agent: {next_agent_name}")
+            next_agent_name = None
+            for agent_name in pending_agents:
+                if agent_name in processed_agents:
+                    continue
+                deps = self.graph.get(agent_name, [])
+                agent_outputs = self.tasks[task_id]["outputs"].copy()
+                self.log_update(f"Checking {agent_name}: deps={deps}, outputs={agent_outputs}")
+                deps_satisfied = all(
+                    dep_name in agent_outputs and
+                    self._check_condition(agent_outputs[dep_name]["status"], agent_outputs[dep_name]["result"], condition)
+                    for dep_name, condition in deps
+                )
+                self.log_update(f"Deps satisfied for {agent_name}: {deps_satisfied}")
+                if deps_satisfied:
+                    next_agent_name = agent_name
+                    break
+
             if not next_agent_name:
-                self.log_update("No next agent selected, breaking")
+                self.log_update(f"No agent with satisfied dependencies, remaining: {pending_agents}")
                 break
-            if next_agent_name in self.tasks[task_id]["processed"]:
-                self.log_update(f"Agent {next_agent_name} already processed, removing")
-                pending_agents.remove(next_agent_name)
-                continue
-            deps = self.graph.get(next_agent_name, [])
-            self.log_update(f"Dependencies for {next_agent_name}: {deps}")
-            agent_outputs = self.tasks[task_id]["outputs"].copy()
-            self.log_update(f"Agent outputs for {next_agent_name}: {agent_outputs}")
-            deps_satisfied = all(
-                dep_name in agent_outputs and
-                self._check_condition(agent_outputs[dep_name]["status"], agent_outputs[dep_name]["result"], condition)
-                for dep_name, condition in deps
-            )
-            self.log_update(f"Dependencies satisfied for {next_agent_name}: {deps_satisfied}")
-            if deps_satisfied:
-                agent = self.agents[next_agent_name]
-                new_task = Task(task_id=task_id, description=task.description, parameters=agent_outputs)
-                self.log_update(f"Executing {next_agent_name} with task params: {new_task.parameters}")
-                agent_status, agent_result = agent.process_task(new_task)
-                agent.track_flow(new_task, agent_status, agent_result, new_task.parameters.get("use_remote", False))
-                self.tasks[task_id]["processed"].add(next_agent_name)
-                final_status, final_result = self._propagate(next_agent_name, agent_status, agent_result, task, stop_at)
-                self.log_update(f"After {next_agent_name}: status={final_status}, result_type={type(final_result).__name__}")
-                if stop_at == next_agent_name:
-                    self.log_update(f"Stopping at {next_agent_name}")
-                    return final_status, final_result
-            else:
-                self.log_update(f"Dependencies not satisfied for {next_agent_name}, removing")
+
+            self.log_update(f"Selected agent: {next_agent_name}")
+            agent = self.agents[next_agent_name]
+            new_task = Task(task_id=task_id, description=task.description, parameters=self.tasks[task_id]["outputs"].copy())
+            self.log_update(f"Executing {next_agent_name} with task params: {new_task.parameters}")
+            agent_status, agent_result = agent.process_task(new_task)
+            self.log_update(f"{next_agent_name} completed: status={agent_status}, result_type={type(agent_result).__name__}")
+            agent.track_flow(new_task, agent_status, agent_result, new_task.parameters.get("use_remote", False))
+            processed_agents.add(next_agent_name)
+            self.tasks[task_id]["processed"].add(next_agent_name)
+            final_status, final_result = self._propagate(next_agent_name, agent_status, agent_result, task, stop_at)
+            self.log_update(f"After {next_agent_name}: final_status={final_status}, final_result_type={type(final_result).__name__}")
             pending_agents.remove(next_agent_name)
+            if stop_at == next_agent_name:
+                self.log_update(f"Stopping at {next_agent_name}")
+                return final_status, final_result
 
         if final_status is None or final_result is None:
-            self.log_update(f"No agent processed task {task_id}, returning default")
+            self.log_update(f"No agents processed task {task_id}, using task state")
             final_status = self.tasks[task_id]["status"] or "failed"
             final_result = self.tasks[task_id]["result"] or CodeOutput(code="", tests=None)
-        self.log_update(f"Orchestration complete, final status: {final_status}, result_type={type(final_result).__name__}")
+        self.log_update(f"Orchestration complete: status={final_status}, result_type={type(final_result).__name__}")
         return final_status, final_result
 
     def decide_next_step(self, task: Task, pending_agents: Set[str]) -> Optional[str]:
         task_id = task.task_id
-        if task_id not in self.tasks:
-            self.log_update(f"No task state for {task_id}, selecting first agent")
-            return next(iter(pending_agents), None)
-        current_state = self.tasks[task_id]
         self.log_update(f"Deciding next step for task {task_id}, pending: {pending_agents}")
+        if task_id not in self.tasks:
+            self.log_update(f"No task state, picking first agent")
+            return next(iter(pending_agents), None)
         for agent_name in pending_agents:
             deps = self.graph.get(agent_name, [])
-            agent_outputs = current_state["outputs"].copy()
+            agent_outputs = self.tasks[task_id]["outputs"].copy()
             deps_satisfied = all(
                 dep_name in agent_outputs and
                 self._check_condition(agent_outputs[dep_name]["status"], agent_outputs[dep_name]["result"], condition)
@@ -306,4 +309,4 @@ class Aggregate(Agent):
                 self.log_update(f"Selected {agent_name} as next step")
                 return agent_name
         self.log_update("No agent with satisfied dependencies")
-        return next(iter(pending_agents), None)
+        return None
