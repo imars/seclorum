@@ -169,8 +169,11 @@ class Agent(AbstractAgent, Remote):
     def store_output(self, task: Task, status: str, result: Any):
         """Store agent output in task parameters with a consistent key."""
         agent_key = f"{self.name}"
+        # Wrap result in CodeOutput if it's not already
+        if not isinstance(result, (CodeOutput, TestResult)):
+            result = CodeOutput(code=str(result), tests=None)
         task.parameters[agent_key] = {"status": status, "result": result}
-        self.log_update(f"Stored output for {self.name}: {status}, {result}")
+        self.log_update(f"Stored output for {self.name}: status={status}, result_type={type(result).__name__}")
 
 class Aggregate(Agent):
     def __init__(self, session_id: str, model_manager=None):
@@ -216,6 +219,7 @@ class Aggregate(Agent):
                 params = self.tasks[task_id]["outputs"].copy()
                 new_task = Task(task_id=task.task_id, description=task.description, parameters=params)
                 new_status, new_result = next_agent.process_task(new_task)
+                new_task.parameters["language"] = task.parameters.get("language")
                 next_agent.track_flow(new_task, new_status, new_result, new_task.parameters.get("use_remote", False))
                 self.tasks[task_id]["processed"].add(next_agent_name)
                 final_status, final_result = self._propagate(next_agent_name, new_status, new_result, task, stop_at)
@@ -263,10 +267,13 @@ class Aggregate(Agent):
                 continue
             agent = self.agents[next_agent_name]
             new_task = Task(task_id=task_id, description=task.description, parameters=agent_outputs)
+            new_task.parameters["language"] = task.parameters.get("language")
             self.log_update(f"Executing agent {next_agent_name} with params={new_task.parameters}")
             agent_status, agent_result = agent.process_task(new_task)
             self.log_update(f"Agent {next_agent_name} completed: status={agent_status}, result_type={type(agent_result).__name__}")
             agent.track_flow(new_task, agent_status, agent_result, new_task.parameters.get("use_remote", False))
+            # Update original task.parameters with agent's output
+            task.parameters[next_agent_name] = {"status": agent_status, "result": agent_result}
             final_status, final_result = self._propagate(next_agent_name, agent_status, agent_result, task, stop_at)
             self.tasks[task_id]["processed"].add(next_agent_name)
             if stop_at == next_agent_name:
