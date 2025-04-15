@@ -5,7 +5,7 @@ import sys
 import importlib
 import json
 from unittest.mock import patch, MagicMock
-from seclorum.agents.base import Aggregate, AbstractAgent, agent_flow
+from seclorum.agents.base import Aggregate, AbstractAgent
 from seclorum.models import Task, CodeOutput, create_model_manager
 from seclorum.models.task import TaskFactory
 from typing import Tuple, Any, Optional, Union
@@ -13,6 +13,9 @@ from typing import Tuple, Any, Optional, Union
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("AggregateMessagePassingTest")
+
+# Store agent flow for MockAgent tests
+agent_flow = []
 
 @pytest.fixture(autouse=True)
 def clear_modules():
@@ -188,6 +191,7 @@ class AggregateForTest(Aggregate):
                 agent_status, agent_result = agent.process_task(task)
                 task.parameters[f"result_{agent_name}"] = agent_result
                 task.parameters[f"status_{agent_name}"] = agent_status
+                logger.debug(f"Agent {agent_name} completed: status={agent_status}, result={agent_result.code if hasattr(agent_result, 'code') else agent_result}")
             except Exception as e:
                 logger.error(f"Error processing agent {agent_name}: {str(e)}")
                 status = "failed"
@@ -206,7 +210,7 @@ class AggregateForTest(Aggregate):
 
         if not processed:
             logger.error("No agents were processed")
-        logger.debug(f"AggregateForTest complete: status={status}, result={result.code if result else None}")
+        logger.debug(f"AggregateForTest complete: status={status}, result={result.code if result else None}, task_parameters={task.parameters}")
         return status, result
 
 def test_aggregate_two_agents(model_manager, task):
@@ -234,14 +238,14 @@ def test_aggregate_two_agents(model_manager, task):
 
         logger.debug("Starting AggregateForTest.process_task")
         status, result = aggregate.process_task(task)
-        logger.debug(f"Task complete: status={status}")
+        logger.debug(f"Task complete: status={status}, agent_flow={agent_flow}")
 
     logger.debug(f"Agent flow before assertions: {agent_flow}")
     assert len(agent_flow) >= 4, f"Expected at least 4 entries (2 agents × init+process), got {len(agent_flow)}: {agent_flow}"
-    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), "Architect init missing"
-    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "instantiated" for a in agent_flow), "Generator init missing"
-    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "completed" for a in agent_flow), "Architect process missing"
-    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "completed" for a in agent_flow), "Generator process missing"
+    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), f"Architect init missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "instantiated" for a in agent_flow), f"Generator init missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "completed" for a in agent_flow), f"Architect process missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "completed" for a in agent_flow), f"Generator process missing: {agent_flow}"
     assert status == "completed", f"Expected status 'completed', got {status}"
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert result.code.startswith("generated_from_"), f"Expected Generator output, got {result.code}"
@@ -275,16 +279,16 @@ def test_aggregate_three_agents(model_manager, task):
 
         logger.debug("Starting AggregateForTest.process_task")
         status, result = aggregate.process_task(task)
-        logger.debug(f"Task complete: status={status}")
+        logger.debug(f"Task complete: status={status}, agent_flow={agent_flow}")
 
     logger.debug(f"Agent flow before assertions: {agent_flow}")
     assert len(agent_flow) >= 6, f"Expected at least 6 entries (3 agents × init+process), got {len(agent_flow)}: {agent_flow}"
-    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), "Architect init missing"
-    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "instantiated" for a in agent_flow), "Generator init missing"
-    assert any(a["agent_name"].startswith("Tester_") and a["status"] == "instantiated" for a in agent_flow), "Tester init missing"
-    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "completed" for a in agent_flow), "Architect process missing"
-    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "completed" for a in agent_flow), "Generator process missing"
-    assert any(a["agent_name"].startswith("Tester_") and a["status"] == "completed" for a in agent_flow), "Tester process missing"
+    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), f"Architect init missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "instantiated" for a in agent_flow), f"Generator init missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Tester_") and a["status"] == "instantiated" for a in agent_flow), f"Tester init missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "completed" for a in agent_flow), f"Architect process missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "completed" for a in agent_flow), f"Generator process missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Tester_") and a["status"] == "completed" for a in agent_flow), f"Tester process missing: {agent_flow}"
     assert status == "completed", f"Expected status 'completed', got {status}"
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert result.code.startswith("processed_"), f"Expected Tester output, got {result.code}"
@@ -314,14 +318,14 @@ def test_aggregate_two_agents_remote(model_manager, task):
 
         logger.debug("Starting AggregateForTest.process_task")
         status, result = aggregate.process_task(task)
-        logger.debug(f"Task complete: status={status}")
+        logger.debug(f"Task complete: status={status}, agent_flow={agent_flow}")
 
     logger.debug(f"Agent flow before assertions: {agent_flow}")
     assert len(agent_flow) >= 4, f"Expected at least 4 entries (2 agents × init+process), got {len(agent_flow)}: {agent_flow}"
-    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), "Architect init missing"
-    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "instantiated" for a in agent_flow), "Generator init missing"
-    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "completed" for a in agent_flow), "Architect process missing"
-    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "completed" and a["output"].startswith("remote_") for a in agent_flow), "Generator process missing"
+    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), f"Architect init missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "instantiated" for a in agent_flow), f"Generator init missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "completed" for a in agent_flow), f"Architect process missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "completed" and a["output"].startswith("remote_") for a in agent_flow), f"Generator process missing: {agent_flow}"
     assert status == "completed", f"Expected status 'completed', got {status}"
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert result.code.startswith("remote_generated_from_"), f"Expected remote Generator output, got {result.code}"
@@ -359,18 +363,18 @@ def test_aggregate_four_agents(model_manager, task):
 
         logger.debug("Starting AggregateForTest.process_task")
         status, result = aggregate.process_task(task)
-        logger.debug(f"Task complete: status={status}")
+        logger.debug(f"Task complete: status={status}, agent_flow={agent_flow}")
 
     logger.debug(f"Agent flow before assertions: {agent_flow}")
     assert len(agent_flow) >= 8, f"Expected at least 8 entries (4 agents × init+process), got {len(agent_flow)}: {agent_flow}"
-    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), "Architect init missing"
-    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "instantiated" for a in agent_flow), "Generator init missing"
-    assert any(a["agent_name"].startswith("Tester_") and a["status"] == "instantiated" for a in agent_flow), "Tester init missing"
-    assert any(a["agent_name"].startswith("Executor_") and a["status"] == "instantiated" for a in agent_flow), "Executor init missing"
-    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "completed" for a in agent_flow), "Architect process missing"
-    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "completed" for a in agent_flow), "Generator process missing"
-    assert any(a["agent_name"].startswith("Tester_") and a["status"] == "completed" for a in agent_flow), "Tester process missing"
-    assert any(a["agent_name"].startswith("Executor_") and a["status"] == "completed" for a in agent_flow), "Executor process missing"
+    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), f"Architect init missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "instantiated" for a in agent_flow), f"Generator init missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Tester_") and a["status"] == "instantiated" for a in agent_flow), f"Tester init missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Executor_") and a["status"] == "instantiated" for a in agent_flow), f"Executor init missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "completed" for a in agent_flow), f"Architect process missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "completed" for a in agent_flow), f"Generator process missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Tester_") and a["status"] == "completed" for a in agent_flow), f"Tester process missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Executor_") and a["status"] == "completed" for a in agent_flow), f"Executor process missing: {agent_flow}"
     assert status == "completed", f"Expected status 'completed', got {status}"
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert result.code.startswith("processed_"), f"Expected Executor output, got {result.code}"
@@ -413,28 +417,28 @@ def test_aggregate_complex_pipelines(model_manager, task):
 
         logger.debug("Starting AggregateForTest.process_task")
         status, result = aggregate.process_task(task)
-        logger.debug(f"Task complete: status={status}")
+        logger.debug(f"Task complete: status={status}, agent_flow={agent_flow}")
 
     logger.debug(f"Agent flow before assertions: {agent_flow}")
     assert len(agent_flow) >= 10, f"Expected at least 10 entries (5 agents × init+process), got {len(agent_flow)}: {agent_flow}"
-    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), "Architect init missing"
-    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "instantiated" for a in agent_flow), "Generator init missing"
-    assert any(a["agent_name"].startswith("Tester_") and a["status"] == "instantiated" for a in agent_flow), "Tester init missing"
-    assert any(a["agent_name"].startswith("Debugger_") and a["status"] == "instantiated" for a in agent_flow), "Debugger init missing"
-    assert any(a["agent_name"].startswith("Executor_") and a["status"] == "instantiated" for a in agent_flow), "Executor init missing"
-    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "completed" for a in agent_flow), "Architect complex output missing"
-    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "completed" and a["output"].startswith("generated_from_design_by_") for a in agent_flow), "Generator process missing"
-    assert any(a["agent_name"].startswith("Tester_") and a["status"] == "completed" and a["output"].startswith("processed_generated_from_") for a in agent_flow), "Tester process missing"
-    assert any(a["agent_name"].startswith("Debugger_") and a["status"] == "completed" and a["output"].startswith("debugged_from_spec_by_") for a in agent_flow), "Debugger process missing"
-    assert any(a["agent_name"].startswith("Executor_") and a["status"] == "completed" and a["output"].startswith("processed_debugged_from_") for a in agent_flow), "Executor process missing"
+    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), f"Architect init missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "instantiated" for a in agent_flow), f"Generator init missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Tester_") and a["status"] == "instantiated" for a in agent_flow), f"Tester init missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Debugger_") and a["status"] == "instantiated" for a in agent_flow), f"Debugger init missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Executor_") and a["status"] == "instantiated" for a in agent_flow), f"Executor init missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Architect_") and a["status"] == "completed" for a in agent_flow), f"Architect complex output missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Generator_") and a["status"] == "completed" and a["output"].startswith("generated_from_design_by_") for a in agent_flow), f"Generator process missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Tester_") and a["status"] == "completed" and a["output"].startswith("processed_generated_from_") for a in agent_flow), f"Tester process missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Debugger_") and a["status"] == "completed" and a["output"].startswith("debugged_from_spec_by_") for a in agent_flow), f"Debugger process missing: {agent_flow}"
+    assert any(a["agent_name"].startswith("Executor_") and a["status"] == "completed" and a["output"].startswith("processed_debugged_from_") for a in agent_flow), f"Executor process missing: {agent_flow}"
     assert status == "completed", f"Expected status 'completed', got {status}"
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert result.code.startswith("processed_debugged_from_"), f"Expected Executor output, got {result.code}"
 
 def test_real_agents_message_passing(model_manager, task):
     """Test 1 aggregate with real Architect and Generator using mocked remote inference."""
-    agent_flow.clear()
     session_id = "test_real_agents_session"
+    test_agent_flow = []
 
     # Mock remote inference responses
     mock_response_architect = {
@@ -505,27 +509,31 @@ def test_real_agents_message_passing(model_manager, task):
         logger.debug(f"Task parameters before setup: {task.parameters}")
         aggregate.add_agent(architect, [])
         aggregate.add_agent(generator, [(architect.name, {"status": "planned"})])
-        logger.debug(f"Agent flow after agent creation: {agent_flow}")
+        logger.debug(f"Agent flow before process: {test_agent_flow}")
 
         logger.debug("Starting Aggregate.process_task")
         status, result = aggregate.process_task(task)
         logger.debug(f"Task complete: status={status}, result_code={result.code[:50] if result else None}")
         logger.debug(f"Task parameters after process: {task.parameters}")
         logger.debug(f"Mock post calls: {len(mock_post.call_args_list)}")
-        logger.debug(f"Agent flow after process: {agent_flow}")
+
+        # Collect flow from agents
+        test_agent_flow.extend(architect._flow_tracker)
+        test_agent_flow.extend(generator._flow_tracker)
+        logger.debug(f"Agent flow after process: {test_agent_flow}")
 
     # Assertions
-    assert len(agent_flow) >= 2, f"Expected at least 2 flow entries (Architect, Generator), got {len(agent_flow)}: {agent_flow}"
-    assert any(a["agent_name"] == architect.name and a["status"] == "planned" for a in agent_flow), f"Architect process missing: {agent_flow}"
-    assert any(a["agent_name"] == generator.name and a["status"] == "generated" for a in agent_flow), f"Generator process missing: {agent_flow}"
+    assert len(test_agent_flow) >= 2, f"Expected at least 2 flow entries (Architect, Generator), got {len(test_agent_flow)}: {test_agent_flow}"
+    assert any(a["agent_name"] == architect.name and a["status"] == "planned" for a in test_agent_flow), f"Architect process missing: {test_agent_flow}"
+    assert any(a["agent_name"] == generator.name and a["status"] == "generated" for a in test_agent_flow), f"Generator process missing: {test_agent_flow}"
     assert status == "generated", f"Expected status 'generated', got {status}"
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert "scene = new THREE.Scene()" in result.code, "Expected Generator to produce Three.js code"
     assert architect.name in task.parameters, f"Architect output missing: {task.parameters}"
     assert generator.name in task.parameters, f"Generator output missing: {task.parameters}"
     architect_output = task.parameters.get(architect.name, {}).get("result")
-    assert isinstance(architect_output, CodeOutput), f"Architect result should be CodeOutput, got {type(architect_output)}"
-    assert json.loads(architect_output.code).get("design") == "drone_game_design", "Architect design incorrect"
+    assert isinstance(architect_output, str), f"Architect result should be str, got {type(architect_output)}"
+    assert json.loads(architect_output).get("design") == "drone_game_design", "Architect design incorrect"
     assert mock_post.called, "Remote inference was not called"
     assert len(mock_post.call_args_list) >= 2, f"Expected at least 2 remote calls, got {len(mock_post.call_args_list)}"
 
