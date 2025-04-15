@@ -528,6 +528,7 @@ def test_real_agents_message_passing(model_manager, task):
         test_agent_flow.extend(generator._flow_tracker)
         logger.debug(f"Agent flow after process: {test_agent_flow}")
 
+    logger.debug(f"Final test_agent_flow: {test_agent_flow}")
     assert len(test_agent_flow) >= 2, f"Expected at least 2 flow entries, got {len(test_agent_flow)}: {test_agent_flow}"
     assert any(a["agent_name"] == architect.name and a["status"] == "planned" for a in test_agent_flow), f"Architect process missing: {test_agent_flow}"
     assert any(a["agent_name"] == generator.name and a["status"] == "generated" for a in test_agent_flow), f"Generator process missing: {test_agent_flow}"

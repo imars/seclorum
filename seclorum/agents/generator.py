@@ -68,10 +68,14 @@ class Generator(Agent):
             result = CodeOutput(code=code, tests=tests)
             self.save_output(task, result, status="generated")
             self.commit_changes(f"Generated {language} code for {output_file}")
+            logger.debug(f"Tracking flow for {self.name}: status=generated, task_id={task.task_id}")
+            self.track_flow(task, "generated", result, task.parameters.get("use_remote", False))
             return "generated", result
         except Exception as e:
             logger.error(f"Generation failed for {output_file}: {str(e)}")
-            return "failed", CodeOutput(code="", tests=None)
+            result = CodeOutput(code="", tests=None)
+            self.track_flow(task, "failed", result, task.parameters.get("use_remote", False))
+            return "failed", result
 
     def generate_html(self, task: Task) -> str:
         logger.debug(f"Generating HTML for task={task.task_id}, output_file={task.parameters.get('output_file', 'unknown')}")

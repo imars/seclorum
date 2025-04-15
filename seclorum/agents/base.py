@@ -58,12 +58,17 @@ class AbstractAgent(ABC, LoggerMixin):
         self.store_output(task, status, output)
 
     def track_flow(self, task: Task, status: str, result: Any, use_remote: bool):
+        passed = False
+        try:
+            passed = isinstance(result, TestResult) and result.passed or bool(getattr(result, 'code', '').strip())
+        except Exception as e:
+            self.log_update(f"Error evaluating flow passed status: {str(e)}")
         flow_entry = {
             "agent_name": self.name,
             "task_id": task.task_id,
             "session_id": self.session_id,
             "remote": use_remote,
-            "passed": isinstance(result, TestResult) and result.passed or bool(getattr(result, 'code', '').strip()),
+            "passed": passed,
             "status": status
         }
         self._flow_tracker.append(flow_entry)
@@ -195,55 +200,76 @@ class Aggregate(Agent):
             self.tasks[task_id] = {"status": None, "result": None, "outputs": {}, "processed": set()}
 
         final_status, final_result = status, result
+        self.log_update(f"Propagating from {current_agent}: status={status}, result_type={type(result).__name__}")
+
         if isinstance(result, Plan):
             self.log_update(f"Handling Plan from {current_agent} with {len(result.subtasks)} subtasks")
             self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result}
             task.parameters[current_agent] = {"status": status, "result": result}
             for subtask in result.subtasks:
                 subtask_id = subtask.task_id
-                self.tasks[subtask_id] = {"status": None, "result": None, "outputs": {}, "processed": set()}
                 self.log_update(f"Processing subtask {subtask_id}: {subtask.description[:50]}...")
+                if subtask_id not in self.tasks:
+                    self.tasks[subtask_id] = {"status": None, "result": None, "outputs": {}, "processed": set()}
                 dependents = self.graph.get(current_agent, [])
+                self.log_update(f"Dependents for {current_agent}: {dependents}")
                 for next_agent_name, condition in dependents:
                     if next_agent_name in self.tasks[subtask_id]["processed"]:
                         self.log_update(f"Skipping processed agent {next_agent_name} for subtask {subtask_id}")
                         continue
                     if self._check_condition(status, result, condition):
-                        next_agent = self.agents[next_agent_name]
+                        next_agent = self.agents.get(next_agent_name)
+                        if not next_agent:
+                            self.log_update(f"Agent {next_agent_name} not found")
+                            continue
                         params = self.tasks[task_id]["outputs"].copy()
                         new_task = Task(
                             task_id=subtask_id,
                             description=subtask.description,
                             parameters={**subtask.parameters, **params}
                         )
-                        self.log_update(f"Executing {next_agent_name} for subtask {subtask_id}")
-                        new_status, new_result = next_agent.process_task(new_task)
-                        next_agent.track_flow(new_task, new_status, new_result, new_task.parameters.get("use_remote", False))
-                        self.tasks[subtask_id]["processed"].add(next_agent_name)
-                        self.tasks[subtask_id]["outputs"][next_agent_name] = {"status": new_status, "result": new_result}
-                        task.parameters[next_agent_name] = {"status": new_status, "result": new_result}
-                        final_status, final_result = new_status, new_result
+                        self.log_update(f"Executing {next_agent_name} for subtask {subtask_id} with params: {new_task.parameters}")
+                        try:
+                            new_status, new_result = next_agent.process_task(new_task)
+                            next_agent.track_flow(new_task, new_status, new_result, new_task.parameters.get("use_remote", False))
+                            self.tasks[subtask_id]["processed"].add(next_agent_name)
+                            self.tasks[subtask_id]["outputs"][next_agent_name] = {"status": new_status, "result": new_result}
+                            task.parameters[next_agent_name] = {"status": new_status, "result": new_result}
+                            final_status, final_result = new_status, new_result
+                            self.log_update(f"{next_agent_name} completed subtask {subtask_id}: status={new_status}")
+                        except Exception as e:
+                            self.log_update(f"Error in {next_agent_name} for subtask {subtask_id}: {str(e)}")
+                            final_status, final_result = "failed", None
                     else:
-                        self.log_update(f"Condition not met for {next_agent_name} in subtask {subtask_id}")
+                        self.log_update(f"Condition not met for {next_agent_name} in subtask {subtask_id}: {condition}")
         else:
             self.tasks[task_id]["status"] = status
             self.tasks[task_id]["result"] = result
             self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result}
             task.parameters[current_agent] = {"status": status, "result": result}
             dependents = self.graph.get(current_agent, [])
+            self.log_update(f"Non-Plan dependents for {current_agent}: {dependents}")
             for next_agent_name, condition in dependents:
                 if next_agent_name in self.tasks[task_id]["processed"]:
                     continue
                 if self._check_condition(status, result, condition):
-                    next_agent = self.agents[next_agent_name]
+                    next_agent = self.agents.get(next_agent_name)
+                    if not next_agent:
+                        self.log_update(f"Agent {next_agent_name} not found")
+                        continue
                     params = self.tasks[task_id]["outputs"].copy()
                     new_task = Task(task_id=task_id, description=task.description, parameters=params)
-                    new_status, new_result = next_agent.process_task(new_task)
-                    next_agent.track_flow(new_task, new_status, new_result, new_task.parameters.get("use_remote", False))
-                    self.tasks[task_id]["processed"].add(next_agent_name)
-                    final_status, final_result = self._propagate(next_agent_name, new_status, new_result, task, stop_at)
+                    self.log_update(f"Executing {next_agent_name} for task {task_id}")
+                    try:
+                        new_status, new_result = next_agent.process_task(new_task)
+                        next_agent.track_flow(new_task, new_status, new_result, new_task.parameters.get("use_remote", False))
+                        self.tasks[task_id]["processed"].add(next_agent_name)
+                        final_status, final_result = self._propagate(next_agent_name, new_status, new_result, task, stop_at)
+                    except Exception as e:
+                        self.log_update(f"Error in {next_agent_name}: {str(e)}")
+                        final_status, final_result = "failed", None
 
-        self.log_update(f"Propagation from {current_agent}: status={final_status}, result_type={type(final_result).__name__}")
+        self.log_update(f"Propagation complete from {current_agent}: status={final_status}, result_type={type(final_result).__name__}")
         if stop_at == current_agent:
             return status, result
         return final_status, final_result
@@ -282,21 +308,25 @@ class Aggregate(Agent):
             )
             self.log_update(f"Dependencies for {next_agent_name}: {deps}, satisfied={deps_satisfied}")
             if not deps_satisfied:
-                self.log_update(f"Dependencies not satisfied for {next_agent_name}, removing")
-                pending_agents.remove(next_agent_name)
-                continue
+                self.log_update(f"Dependencies not satisfied for {next_agent_name}, deferring")
+                continue  # Keep agent in pending to retry
             agent = self.agents[next_agent_name]
             new_task = Task(task_id=task_id, description=task.description, parameters=agent_outputs)
             self.log_update(f"Executing agent {next_agent_name} with params: {new_task.parameters.keys()}")
-            agent_status, agent_result = agent.process_task(new_task)
-            self.log_update(f"Agent {next_agent_name} returned status={agent_status}, result_type={type(agent_result).__name__}")
-            agent.track_flow(new_task, agent_status, agent_result, new_task.parameters.get("use_remote", False))
-            final_status, final_result = self._propagate(next_agent_name, agent_status, agent_result, task, stop_at)
-            self.tasks[task_id]["processed"].add(next_agent_name)
+            try:
+                agent_status, agent_result = agent.process_task(new_task)
+                self.log_update(f"Agent {next_agent_name} returned status={agent_status}, result_type={type(agent_result).__name__}")
+                agent.track_flow(new_task, agent_status, agent_result, new_task.parameters.get("use_remote", False))
+                final_status, final_result = self._propagate(next_agent_name, agent_status, agent_result, task, stop_at)
+                self.tasks[task_id]["processed"].add(next_agent_name)
+                pending_agents.remove(next_agent_name)
+            except Exception as e:
+                self.log_update(f"Error processing agent {next_agent_name}: {str(e)}")
+                final_status, final_result = "failed", None
+                break
             if stop_at == next_agent_name:
                 self.log_update(f"Stopping at {next_agent_name}")
                 return final_status, final_result
-            pending_agents.remove(next_agent_name)
 
         if final_status is None or final_result is None:
             self.log_update(f"No agent processed task {task_id}, raising error")
