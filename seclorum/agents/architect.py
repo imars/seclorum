@@ -1,71 +1,81 @@
 from seclorum.agents.base import Agent
-from seclorum.models import Task, create_model_manager, ModelManager, Plan
-from seclorum.models.task import TaskFactory
-from typing import Tuple
-import logging
+from seclorum.models import Task, Plan, create_model_manager, ModelManager
+from typing import Tuple, List
 import json
+import logging
 import uuid
 
+logger = logging.getLogger(__name__)
+
 class Architect(Agent):
-    def __init__(self, task_id: str, session_id: str, model_manager: ModelManager):
-        super().__init__(f"Architect_{task_id}", session_id)
+    def __init__(self, task_id: str, session_id: str, model_manager: ModelManager = None):
+        super().__init__(f"Architect_{task_id}", session_id, model_manager)
         self.task_id = task_id
-        self.model = model_manager
         self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
-        self.log_update(f"Architect initialized for Task {task_id}")
+        logger.debug(f"Architect initialized for task {task_id}, session_id={session_id}")
 
     def process_task(self, task: Task) -> Tuple[str, Plan]:
-        self.log_update(f"Planning for task: {task.description[:100]}...")
-        prompt = (
-            f"Create a development plan for the following task:\n{task.description}\n\n"
-            "Generate a structured plan outlining components, subtasks, and output files. "
-            "Return a JSON object with 'subtasks' (list of objects with 'description', 'language', and 'output_file') "
-            "and 'metadata' (e.g., version, project name)."
-        )
-        use_remote = task.parameters.get("use_remote", False)
-        plan_json = self.infer(prompt, task, use_remote=use_remote, use_context=False)
-        self.log_update(f"Generated plan JSON: {plan_json[:100]}...")
-
+        logger.debug(f"Processing task {task.task_id}: description={task.description[:100]}...")
         try:
-            plan_data = json.loads(plan_json)
+            prompt = (
+                f"Create a plan for the following task:\n{task.description}\n\n"
+                "Generate a JSON object with:\n"
+                "- 'subtasks': List of subtasks, each with 'description' (string), 'language' (e.g., 'javascript', 'html'), and 'output_file' (filename).\n"
+                "- 'metadata': Optional dictionary with additional info (e.g., version, project).\n"
+                "Return only the JSON string, no markdown or explanations."
+            )
+            use_remote = task.parameters.get("use_remote", False)
+            raw_plan = self.infer(prompt, task, use_remote=use_remote, max_tokens=2000)
+            logger.debug(f"Raw plan: {raw_plan[:200]}...")
+
+            try:
+                plan_data = json.loads(raw_plan)
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse plan JSON: {str(e)}, raw_plan={raw_plan[:200]}...")
+                plan_data = {
+                    "subtasks": [
+                        {
+                            "description": "Generate default code",
+                            "language": "javascript",
+                            "output_file": "app.js"
+                        }
+                    ],
+                    "metadata": {"version": 1, "error": "Invalid JSON fallback"}
+                }
+
             subtasks = []
             for subtask_data in plan_data.get("subtasks", []):
-                self.log_update(f"Creating subtask: {subtask_data}")
-                subtask = TaskFactory.create_code_task(
-                    description=subtask_data.get("description", "Unnamed subtask"),
-                    language=subtask_data.get("language", "javascript"),
-                    output_file=subtask_data.get("output_file", "output"),
-                    generate_tests=False,
-                    execute=False,
-                    use_remote=use_remote,
-                    task_id=str(uuid.uuid4())
+                subtask_id = str(uuid.uuid4())
+                description = subtask_data.get("description", "")
+                language = subtask_data.get("language", "javascript")
+                output_file = subtask_data.get("output_file", "output")
+                subtask = Task(
+                    task_id=subtask_id,
+                    description=description,
+                    parameters={"language": language, "output_file": output_file}
                 )
                 subtasks.append(subtask)
-            plan = Plan(
-                subtasks=subtasks,
-                metadata=plan_data.get("metadata", {})
+                logger.debug(f"Created subtask {subtask_id}: output_file={output_file}")
+
+            metadata = plan_data.get("metadata", {})
+            plan = Plan(subtasks=subtasks, metadata=metadata)
+            logger.debug(f"Generated plan with {len(subtasks)} subtasks: metadata={metadata}")
+
+            self.save_output(task, plan, status="planned")
+            self.commit_changes(f"Created plan for task {task.task_id}")
+            self.track_flow(task, "planned", plan, use_remote)
+            return "planned", plan
+        except Exception as e:
+            logger.error(f"Planning failed for task {task.task_id}: {str(e)}")
+            default_plan = Plan(
+                subtasks=[
+                    Task(
+                        task_id=str(uuid.uuid4()),
+                        description="Generate default code",
+                        parameters={"language": "javascript", "output_file": "app.js"}
+                    )
+                ],
+                metadata={"version": 1, "error": str(e)}
             )
-        except json.JSONDecodeError as e:
-            self.log_update(f"Failed to parse plan JSON: {str(e)}, using fallback plan")
-            plan = Plan(
-                subtasks=[TaskFactory.create_code_task(
-                    description=task.description,
-                    language="javascript",
-                    output_file="output.js",
-                    generate_tests=False,
-                    execute=False,
-                    use_remote=use_remote,
-                    task_id=str(uuid.uuid4())
-                )],
-                metadata={"error": "Invalid plan format", "original_task": task.description}
-            )
-
-        self.save_output(task, plan, status="planned")
-        self.commit_changes(f"Planned task {task.task_id}")
-        return "planned", plan
-
-    def start(self):
-        self.log_update("Starting architect")
-
-    def stop(self):
-        self.log_update("Stopping architect")
+            self.track_flow(task, "failed", default_plan, use_remote)
+            return "failed", default_plan

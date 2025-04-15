@@ -19,16 +19,6 @@ logger = logging.getLogger(__name__)
 agent_flow = []
 
 @pytest.fixture(autouse=True)
-def reset_memory():
-    """Reset Memory state before and after each test."""
-    from seclorum.agents.memory.core import Memory
-    AbstractAgent._memory_cache.clear()
-    yield
-    for memory in AbstractAgent._memory_cache.values():
-        memory.stop_threads()
-    AbstractAgent._memory_cache.clear()
-
-@pytest.fixture(autouse=True)
 def clear_modules():
     """Clear seclorum.agents modules to avoid caching."""
     modules_to_clear = [k for k in sys.modules if k.startswith('seclorum.agents')]
@@ -449,6 +439,16 @@ def test_aggregate_complex_pipelines(model_manager, task):
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert result.code.startswith("processed_debugged_from_"), f"Expected Executor output, got {result.code}"
 
+@pytest.fixture(autouse=True)
+def reset_memory():
+    """Reset Memory state before and after each test."""
+    from seclorum.agents.memory.core import Memory
+    AbstractAgent._memory_cache.clear()
+    yield
+    for memory in AbstractAgent._memory_cache.values():
+        memory.stop_threads()
+    AbstractAgent._memory_cache.clear()
+
 @pytest.mark.timeout(30)
 def test_real_agents_message_passing(model_manager, task):
     """Test 1 aggregate with real Architect and Generator using mocked remote inference."""
@@ -522,7 +522,7 @@ def test_real_agents_message_passing(model_manager, task):
         def side_effect_generate(prompt, **kwargs):
             logger.debug(f"Mocking ModelManager.generate for prompt: {prompt[:50]}...")
             if "plan" in prompt.lower() or "architect" in prompt.lower():
-                return json.dumps(mock_response_architect["candidates"][0]["content"]["parts"][0]["text"])
+                return mock_response_architect["candidates"][0]["content"]["parts"][0]["text"]
             return mock_response_generator["candidates"][0]["content"]["parts"][0]["text"]
 
         mock_post.side_effect = side_effect_post
@@ -552,6 +552,8 @@ def test_real_agents_message_passing(model_manager, task):
 
     logger.debug(f"Final test_agent_flow: {test_agent_flow}")
     logger.debug(f"Result code: {result.code[:200] if result.code else 'Empty'}")
+    architect_result = task.parameters.get(architect.name, {}).get("result", Plan(subtasks=[]))
+    logger.debug(f"Architect result: subtasks={[t.parameters for t in architect_result.subtasks]}")
     assert len(test_agent_flow) >= 2, f"Expected at least 2 flow entries, got {len(test_agent_flow)}: {test_agent_flow}"
     assert any(a["agent_name"] == architect.name and a["status"] == "planned" for a in test_agent_flow), f"Architect process missing: {test_agent_flow}"
     assert any(a["agent_name"] == generator.name and a["status"] == "generated" for a in test_agent_flow), f"Generator process missing: {test_agent_flow}"

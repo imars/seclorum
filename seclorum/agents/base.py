@@ -78,7 +78,8 @@ class AbstractAgent(ABC, LoggerMixin):
             "session_id": self.session_id,
             "remote": use_remote,
             "passed": passed,
-            "status": status
+            "status": status,
+            "timestamp": time.time()
         }
         self._flow_tracker.append(flow_entry)
         self.log_update(f"Tracked flow: {flow_entry}")
@@ -184,7 +185,7 @@ class Agent(AbstractAgent, Remote):
 
     def store_output(self, task: Task, status: str, result: Any):
         agent_key = f"{self.name}"
-        task.parameters[agent_key] = {"status": status, "result": result}
+        task.parameters[agent_key] = {"status": status, "result": result, "timestamp": time.time()}
         self.log_update(f"Stored output for {self.name}: status={status}, result_type={type(result).__name__}")
 
 class Aggregate(Agent):
@@ -223,8 +224,8 @@ class Aggregate(Agent):
 
         if isinstance(result, Plan):
             self.log_update(f"Handling Plan from {current_agent} with {len(result.subtasks)} subtasks")
-            self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result}
-            task.parameters[current_agent] = {"status": status, "result": result}
+            self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result, "timestamp": time.time()}
+            task.parameters[current_agent] = {"status": status, "result": result, "timestamp": time.time()}
             subtask_count = 0
             for subtask in result.subtasks:
                 if subtask_count >= self.max_subtasks:
@@ -260,8 +261,8 @@ class Aggregate(Agent):
                             elapsed = time.time() - start_time
                             next_agent.track_flow(new_task, new_status, new_result, new_task.parameters.get("use_remote", False))
                             self.tasks[subtask_id]["processed"].add(next_agent_name)
-                            self.tasks[subtask_id]["outputs"][next_agent_name] = {"status": new_status, "result": new_result}
-                            task.parameters[next_agent_name] = {"status": new_status, "result": new_result}
+                            self.tasks[subtask_id]["outputs"][next_agent_name] = {"status": new_status, "result": new_result, "timestamp": time.time()}
+                            task.parameters[next_agent_name] = {"status": new_status, "result": new_result, "timestamp": time.time()}
                             final_status, final_result = new_status, new_result
                             self.log_update(f"{next_agent_name} completed subtask {subtask_id}: status={new_status}, "
                                            f"result_type={type(new_result).__name__}, time={elapsed:.2f}s")
@@ -273,8 +274,8 @@ class Aggregate(Agent):
         else:
             self.tasks[task_id]["status"] = status
             self.tasks[task_id]["result"] = result
-            self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result}
-            task.parameters[current_agent] = {"status": status, "result": result}
+            self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result, "timestamp": time.time()}
+            task.parameters[current_agent] = {"status": status, "result": result, "timestamp": time.time()}
             dependents = self.graph.get(current_agent, [])
             self.log_update(f"Non-Plan dependents for {current_agent}: {dependents}")
             for next_agent_name, condition in dependents:
@@ -301,6 +302,7 @@ class Aggregate(Agent):
                         final_status, final_result = "failed", None
 
         self.log_update(f"Propagation complete from {current_agent}: status={final_status}, result_type={type(final_result).__name__}")
+        logger.debug(f"Task parameters after {current_agent}: {task.parameters}")
         if stop_at == current_agent:
             return status, result
         return final_status, final_result
