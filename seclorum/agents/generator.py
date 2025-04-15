@@ -33,9 +33,8 @@ class Generator(Agent):
             return "failed", result
 
         try:
-            if language == "html":
-                code = self.generate_html(task)
-            else:
+            code = handler.get_code(task, output_file)
+            if not code:
                 code_prompt = handler.get_code_prompt(task, output_file)
                 logger.debug(f"Code prompt: {code_prompt[:200]}...")
                 use_remote = task.parameters.get("use_remote", False)
@@ -46,10 +45,10 @@ class Generator(Agent):
             logger.debug(f"Generated code before validation: {code[:200]}...")
             if not handler.validate_code(code):
                 logger.warning(f"Invalid {language} code generated for {output_file}, falling back to default")
-                code = self.generate_fallback(language, task)
+                code = handler.get_fallback_code(task)
                 if not handler.validate_code(code):
                     logger.error(f"Fallback {language} code invalid for {output_file}")
-                    code = self.generate_fallback(language, task)  # Retry fallback
+                    code = ""
 
             logger.debug(f"Final generated code for {output_file}: {code[:200]}...")
 
@@ -81,57 +80,3 @@ class Generator(Agent):
             elapsed = time.time() - start_time
             logger.debug(f"Generator.process_task failed in {elapsed:.2f}s")
             return "failed", result
-
-    def generate_html(self, task: Task) -> str:
-        logger.debug(f"Generating HTML for task={task.task_id}, output_file={task.parameters.get('output_file', 'unknown')}")
-        title = task.parameters.get("title", "Application")
-        script = task.parameters.get("script", task.parameters.get("output_file", "app.js"))
-        html_code = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>{title}</title>
-    <style>
-        body {{ margin: 0; font-family: Arial, sans-serif; background: #f0f0f0; }}
-        canvas#myCanvas {{ display: block; }}
-        #ui {{ position: absolute; top: 10px; left: 10px; color: #000; font-family: Arial; background: rgba(255, 255, 255, 0.7); padding: 10px; }}
-        #startReset {{ margin: 5px; padding: 10px; background: #007bff; color: #fff; border: none; cursor: pointer; }}
-        #startReset:hover {{ background: #0056b3; }}
-    </style>
-</head>
-<body>
-    <div id="ui">
-        <span id="timer">0</span>s
-        <br>
-        <span id="status">-</span>
-        <br>
-        <button id="startReset">Start</button>
-    </div>
-    <canvas id="myCanvas"></canvas>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-    <script src="{script}"></script>
-</body>
-</html>"""
-        return html_code
-
-    def generate_fallback(self, language: str, task: Task) -> str:
-        logger.debug(f"Generating fallback code for language={language}, task={task.task_id}")
-        output_file = task.parameters.get("output_file", "app.js")
-        if language == "javascript":
-            return f"""let scene = new THREE.Scene();
-let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-let renderer = new THREE.WebGLRenderer({{ canvas: document.getElementById('myCanvas') }});
-renderer.setSize(window.innerWidth, window.innerHeight);
-let object = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({{ color: 0x00ff00 }}));
-scene.add(object);
-camera.position.z = 5;
-function animate() {{
-    requestAnimationFrame(animate);
-    object.rotation.x += 0.01;
-    renderer.render(scene, camera);
-}}
-animate();
-"""
-        elif language == "html":
-            return self.generate_html(task)
-        return ""
