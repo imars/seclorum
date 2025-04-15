@@ -41,7 +41,7 @@ def task():
         language="javascript",
         generate_tests=False,
         execute=False,
-        use_remote=True
+        use_remote=False  # Default to False for non-remote tests
     )
 
 class MockAgent:
@@ -297,6 +297,9 @@ def test_aggregate_two_agents_remote(model_manager, task):
     """Test 1 aggregate with 2 agents using remote inference."""
     agent_flow.clear()
     session_id = "test_aggregate_session"
+
+    # Enable remote inference
+    task.parameters["use_remote"] = True
 
     # Create aggregate
     aggregate = AggregateForTest(session_id, model_manager)
