@@ -12,9 +12,6 @@ import logging
 import requests
 import os
 
-# Global agent_flow for test compatibility
-agent_flow = []
-
 class AbstractAgent(ABC, LoggerMixin):
     _memory_cache = {}  # Class-level cache for MemoryManager
 
@@ -73,7 +70,6 @@ class AbstractAgent(ABC, LoggerMixin):
             "status": status
         }
         self._flow_tracker.append(flow_entry)
-        agent_flow.append(flow_entry)  # Append to global agent_flow for tests
         self.log_update(f"Tracked flow: {flow_entry}")
 
     def infer(self, prompt: str, task: Task, use_remote: Optional[bool] = None, use_context: bool = False, endpoint: str = "google_ai_studio", **kwargs) -> str:
