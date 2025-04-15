@@ -12,6 +12,9 @@ import logging
 import requests
 import os
 
+# Global agent_flow for test compatibility
+agent_flow = []
+
 class AbstractAgent(ABC, LoggerMixin):
     _memory_cache = {}  # Class-level cache for MemoryManager
 
@@ -46,12 +49,10 @@ class AbstractAgent(ABC, LoggerMixin):
 
     def commit_changes(self, message: str) -> bool:
         """Commit changes to the Git repository with agent prefix."""
-        self.log_update(f"Committing changes: {message}")
         return self.fs_manager.commit_changes(f"{self.name}: {message}")
 
     def save_output(self, task: Task, output: Any, status: str = "completed") -> None:
         """Save output to memory and task parameters."""
-        self.log_update(f"Saving output for task {task.task_id}: status={status}, output_type={type(output).__name__}")
         self.memory.save(
             prompt=task.description,
             response=output,
@@ -59,18 +60,21 @@ class AbstractAgent(ABC, LoggerMixin):
             agent_name=self.name
         )
         self.store_output(task, status, output)
+        self.log_update(f"Saved output for task {task.task_id}: status={status}, output_type={type(output).__name__}")
 
     def track_flow(self, task: Task, status: str, result: Any, use_remote: bool):
         """Track agent visit for flow testing."""
-        self._flow_tracker.append({
+        flow_entry = {
             "agent_name": self.name,
             "task_id": task.task_id,
             "session_id": self.session_id,
             "remote": use_remote,
             "passed": isinstance(result, TestResult) and result.passed or bool(getattr(result, 'code', '').strip()),
             "status": status
-        })
-        self.log_update(f"Tracked flow: agent={self.name}, task={task.task_id}, status={status}")
+        }
+        self._flow_tracker.append(flow_entry)
+        agent_flow.append(flow_entry)  # Append to global agent_flow for tests
+        self.log_update(f"Tracked flow: {flow_entry}")
 
     def infer(self, prompt: str, task: Task, use_remote: Optional[bool] = None, use_context: bool = False, endpoint: str = "google_ai_studio", **kwargs) -> str:
         """Run inference with optional history and similar tasks."""
@@ -96,8 +100,8 @@ class AbstractAgent(ABC, LoggerMixin):
 
     def _run_inference(self, prompt: str, use_remote: bool, endpoint: str, **kwargs) -> str:
         """Helper method to handle inference with logging."""
-        self.log_update(f"Running inference: remote={use_remote}, endpoint={endpoint}")
         if use_remote:
+            self.log_update(f"Running remote inference to {endpoint}")
             return self.remote_infer(prompt, endpoint=endpoint, **kwargs)
         return self.model.generate(prompt, **kwargs)
 
@@ -123,14 +127,11 @@ class Agent(AbstractAgent, Remote):
                 "contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": {"maxOutputTokens": 512, "temperature": 0.7}
             }
-            self.log_update(f"Sending request to {url}")
             try:
                 response = requests.post(url, json=payload, timeout=30)
                 response.raise_for_status()
                 result = response.json()
-                text = result["candidates"][0]["content"]["parts"][0]["text"]
-                self.log_update(f"Remote inference successful: {text[:50]}...")
-                return text
+                return result["candidates"][0]["content"]["parts"][0]["text"]
             except requests.RequestException as e:
                 self.log_update(f"Remote inference failed: {str(e)}")
                 raise
@@ -190,16 +191,13 @@ class Aggregate(Agent):
         self.log_update(f"Added agent {agent.name} with dependencies {dependencies}")
 
     def _check_condition(self, status: str, result: Any, condition: Optional[Dict[str, Any]]) -> bool:
-        self.log_update(f"Checking condition: status={status}, result_type={type(result).__name__}, condition={condition}")
+        self.log_update(f"Evaluating condition: status={status}, result_type={type(result).__name__}, condition={condition}")
         if not condition:
             return True
         if "status" in condition and condition["status"] != status:
-            self.log_update(f"Condition failed: expected status {condition['status']}, got {status}")
             return False
         if "passed" in condition and isinstance(result, TestResult):
-            passed = condition["passed"] == result.passed
-            self.log_update(f"Passed condition: expected {condition['passed']}, got {result.passed}")
-            return passed
+            return condition["passed"] == result.passed
         return True
 
     def _propagate(self, current_agent: str, status: str, result: Any, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
@@ -209,35 +207,30 @@ class Aggregate(Agent):
         self.tasks[task_id]["status"] = status
         self.tasks[task_id]["result"] = result
         self.tasks[task_id]["outputs"][current_agent] = {"status": status, "result": result}
-        self.log_update(f"Propagating from {current_agent}: task={task_id}, status={status}, result_type={type(result).__name__}")
+        self.log_update(f"Task state after {current_agent}: {self.tasks[task_id]}")
+
+        # Update original task.parameters
+        task.parameters[current_agent] = {"status": status, "result": result}
 
         if stop_at == current_agent:
-            self.log_update(f"Stopping propagation at {current_agent}")
             return status, result
 
         final_status, final_result = status, result
         dependents = self.graph.get(current_agent, [])
-        self.log_update(f"Dependents for {current_agent}: {dependents}")
         for next_agent_name, condition in dependents:
             if next_agent_name in self.tasks[task_id]["processed"]:
-                self.log_update(f"Skipping processed agent {next_agent_name}")
                 continue
             if self._check_condition(status, result, condition):
                 next_agent = self.agents[next_agent_name]
                 params = self.tasks[task_id]["outputs"].copy()
                 new_task = Task(task_id=task.task_id, description=task.description, parameters=params)
-                self.log_update(f"Executing {next_agent_name} with params: {params.keys()}")
                 new_status, new_result = next_agent.process_task(new_task)
-                self.log_update(f"Agent {next_agent_name} returned: status={new_status}, result_type={type(new_result).__name__}")
                 next_agent.track_flow(new_task, new_status, new_result, new_task.parameters.get("use_remote", False))
                 self.tasks[task_id]["processed"].add(next_agent_name)
                 final_status, final_result = self._propagate(next_agent_name, new_status, new_result, task, stop_at)
-            else:
-                self.log_update(f"Condition not met for {next_agent_name}, skipping")
         return final_status, final_result
 
     def process_task(self, task: Task) -> Tuple[str, Any]:
-        self.log_update(f"Starting process_task for task={task.task_id}")
         return self.orchestrate(task)
 
     def orchestrate(self, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
@@ -249,11 +242,10 @@ class Aggregate(Agent):
         final_status: Optional[str] = None
         final_result: Any = None
         pending_agents: Set[str] = set(self.agents.keys())
-        self.log_update(f"Pending agents: {pending_agents}")
 
         while pending_agents:
             next_agent_name = self.decide_next_step(task, pending_agents)
-            self.log_update(f"Decided next agent: {next_agent_name}")
+            self.log_update(f"Selected next agent: {next_agent_name}")
             if not next_agent_name:
                 self.log_update(f"No valid next agent for task {task_id}, pending={pending_agents}")
                 break
@@ -266,7 +258,7 @@ class Aggregate(Agent):
             deps_satisfied = True
             for dep_name, condition in deps:
                 if dep_name not in agent_outputs:
-                    self.log_update(f"Dependency {dep_name} not in outputs for {next_agent_name}: outputs={agent_outputs.keys()}")
+                    self.log_update(f"Dependency {dep_name} not in outputs for {next_agent_name}: outputs={agent_outputs}")
                     deps_satisfied = False
                     break
                 dep_status = agent_outputs[dep_name]["status"]
@@ -281,12 +273,16 @@ class Aggregate(Agent):
                 continue
             agent = self.agents[next_agent_name]
             new_task = Task(task_id=task_id, description=task.description, parameters=agent_outputs)
-            self.log_update(f"Executing agent {next_agent_name} with params: {new_task.parameters.keys()}")
-            agent_status, agent_result = agent.process_task(new_task)
-            self.log_update(f"Agent {next_agent_name} completed: status={agent_status}, result_type={type(agent_result).__name__}")
-            agent.track_flow(new_task, agent_status, agent_result, new_task.parameters.get("use_remote", False))
-            final_status, final_result = self._propagate(next_agent_name, agent_status, agent_result, task, stop_at)
-            self.tasks[task_id]["processed"].add(next_agent_name)
+            self.log_update(f"Executing agent {next_agent_name} with params={new_task.parameters}")
+            try:
+                agent_status, agent_result = agent.process_task(new_task)
+                self.log_update(f"Agent {next_agent_name} completed: status={agent_status}, result_type={type(agent_result).__name__}")
+                agent.track_flow(new_task, agent_status, agent_result, new_task.parameters.get("use_remote", False))
+                final_status, final_result = self._propagate(next_agent_name, agent_status, agent_result, task, stop_at)
+                self.tasks[task_id]["processed"].add(next_agent_name)
+            except Exception as e:
+                self.log_update(f"Error processing agent {next_agent_name}: {str(e)}")
+                raise
             if stop_at == next_agent_name:
                 self.log_update(f"Stopping at {next_agent_name} as requested")
                 return final_status, final_result
@@ -295,7 +291,7 @@ class Aggregate(Agent):
         if final_status is None or final_result is None:
             self.log_update(f"No agents processed task {task_id}, outputs={self.tasks.get(task_id, {}).get('outputs', {})}")
             raise ValueError(f"No agent processed task {task_id}")
-        self.log_update(f"Orchestration complete, final status: {final_status}")
+        self.log_update(f"Orchestration complete, final status={final_status}, task_parameters={task.parameters}")
         return final_status, final_result
 
     def decide_next_step(self, task: Task, pending_agents: Set[str]) -> Optional[str]:
@@ -313,9 +309,12 @@ class Aggregate(Agent):
             f"Graph: {self.graph}\n"
             "Which agent should process the task next? Return only the agent name or 'None' if no step is clear."
         )
-        decision = self.infer(prompt, task).strip()
+        try:
+            decision = self.infer(prompt, task).strip()
+        except Exception as e:
+            self.log_update(f"Error in decide_next_step inference: {str(e)}")
+            decision = "None"
         self.log_update(f"Decided next step for task {task_id}: {decision}")
         if decision == "None" or decision not in pending_agents:
-            self.log_update(f"Decision invalid, selecting first pending agent")
             return next(iter(pending_agents), None)
         return decision

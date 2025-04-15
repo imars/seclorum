@@ -5,7 +5,7 @@ import sys
 import importlib
 import json
 from unittest.mock import patch, MagicMock
-from seclorum.agents.base import Aggregate, AbstractAgent
+from seclorum.agents.base import Aggregate, AbstractAgent, agent_flow
 from seclorum.models import Task, CodeOutput, create_model_manager
 from seclorum.models.task import TaskFactory
 from typing import Tuple, Any, Optional, Union
@@ -13,9 +13,6 @@ from typing import Tuple, Any, Optional, Union
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("AggregateMessagePassingTest")
-
-# Store agent flow
-agent_flow = []
 
 @pytest.fixture(autouse=True)
 def clear_modules():
@@ -212,23 +209,13 @@ class AggregateForTest(Aggregate):
         logger.debug(f"AggregateForTest complete: status={status}, result={result.code if result else None}")
         return status, result
 
-def test_aggregate_two_agents():
+def test_aggregate_two_agents(model_manager, task):
     """Test 1 aggregate with 2 agents."""
     agent_flow.clear()
     session_id = "test_aggregate_session"
-    model_manager = create_model_manager(provider="ollama", model_name="llama3.2:latest")
 
     # Create aggregate
     aggregate = AggregateForTest(session_id, model_manager)
-
-    # Create task
-    task = TaskFactory.create_code_task(
-        description="Test message passing between agents.",
-        language="javascript",
-        generate_tests=False,
-        execute=False,
-        use_remote=False
-    )
 
     # Patch and instantiate agents
     logger.debug("Starting test_aggregate_two_agents")
@@ -259,23 +246,13 @@ def test_aggregate_two_agents():
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert result.code.startswith("generated_from_"), f"Expected Generator output, got {result.code}"
 
-def test_aggregate_three_agents():
+def test_aggregate_three_agents(model_manager, task):
     """Test 1 aggregate with 3 agents."""
     agent_flow.clear()
     session_id = "test_aggregate_session"
-    model_manager = create_model_manager(provider="ollama", model_name="llama3.2:latest")
 
     # Create aggregate
     aggregate = AggregateForTest(session_id, model_manager)
-
-    # Create task
-    task = TaskFactory.create_code_task(
-        description="Test message passing between agents.",
-        language="javascript",
-        generate_tests=False,
-        execute=False,
-        use_remote=False
-    )
 
     # Patch and instantiate agents
     logger.debug("Starting test_aggregate_three_agents")
@@ -312,23 +289,13 @@ def test_aggregate_three_agents():
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert result.code.startswith("processed_"), f"Expected Tester output, got {result.code}"
 
-def test_aggregate_two_agents_remote():
+def test_aggregate_two_agents_remote(model_manager, task):
     """Test 1 aggregate with 2 agents using remote inference."""
     agent_flow.clear()
     session_id = "test_aggregate_session"
-    model_manager = create_model_manager(provider="ollama", model_name="llama3.2:latest")
 
     # Create aggregate
     aggregate = AggregateForTest(session_id, model_manager)
-
-    # Create task
-    task = TaskFactory.create_code_task(
-        description="Test message passing between agents.",
-        language="javascript",
-        generate_tests=False,
-        execute=False,
-        use_remote=True
-    )
 
     # Patch and instantiate agents
     logger.debug("Starting test_aggregate_two_agents_remote")
@@ -359,23 +326,13 @@ def test_aggregate_two_agents_remote():
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert result.code.startswith("remote_generated_from_"), f"Expected remote Generator output, got {result.code}"
 
-def test_aggregate_four_agents():
+def test_aggregate_four_agents(model_manager, task):
     """Test 1 aggregate with 4 agents."""
     agent_flow.clear()
     session_id = "test_aggregate_session"
-    model_manager = create_model_manager(provider="ollama", model_name="llama3.2:latest")
 
     # Create aggregate
     aggregate = AggregateForTest(session_id, model_manager)
-
-    # Create task
-    task = TaskFactory.create_code_task(
-        description="Test message passing with 4 agents.",
-        language="javascript",
-        generate_tests=False,
-        execute=False,
-        use_remote=False
-    )
 
     # Patch and instantiate agents
     logger.debug("Starting test_aggregate_four_agents")
@@ -418,23 +375,13 @@ def test_aggregate_four_agents():
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert result.code.startswith("processed_"), f"Expected Executor output, got {result.code}"
 
-def test_aggregate_complex_pipelines():
+def test_aggregate_complex_pipelines(model_manager, task):
     """Test 1 aggregate with complex Architect output feeding multiple pipelines."""
     agent_flow.clear()
     session_id = "test_aggregate_session"
-    model_manager = create_model_manager(provider="ollama", model_name="llama3.2:latest")
 
     # Create aggregate
     aggregate = AggregateForTest(session_id, model_manager)
-
-    # Create task
-    task = TaskFactory.create_code_task(
-        description="Test complex Architect output with multiple pipelines.",
-        language="javascript",
-        generate_tests=False,
-        execute=False,
-        use_remote=False
-    )
 
     # Patch and instantiate agents
     logger.debug("Starting test_aggregate_complex_pipelines")
@@ -565,18 +512,19 @@ def test_real_agents_message_passing(model_manager, task):
         logger.debug(f"Task complete: status={status}, result_code={result.code[:50] if result else None}")
         logger.debug(f"Task parameters after process: {task.parameters}")
         logger.debug(f"Mock post calls: {len(mock_post.call_args_list)}")
+        logger.debug(f"Agent flow after process: {agent_flow}")
 
     # Assertions
     assert len(agent_flow) >= 2, f"Expected at least 2 flow entries (Architect, Generator), got {len(agent_flow)}: {agent_flow}"
-    assert any(a["agent_name"] == architect.name and a["status"] == "planned" for a in agent_flow), "Architect process missing"
-    assert any(a["agent_name"] == generator.name and a["status"] == "generated" for a in agent_flow), "Generator process missing"
+    assert any(a["agent_name"] == architect.name and a["status"] == "planned" for a in agent_flow), f"Architect process missing: {agent_flow}"
+    assert any(a["agent_name"] == generator.name and a["status"] == "generated" for a in agent_flow), f"Generator process missing: {agent_flow}"
     assert status == "generated", f"Expected status 'generated', got {status}"
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert "scene = new THREE.Scene()" in result.code, "Expected Generator to produce Three.js code"
-    assert task.parameters.get(architect.name), "Architect output missing"
-    assert task.parameters.get(generator.name), "Generator output missing"
+    assert architect.name in task.parameters, f"Architect output missing: {task.parameters}"
+    assert generator.name in task.parameters, f"Generator output missing: {task.parameters}"
     architect_output = task.parameters.get(architect.name, {}).get("result")
-    assert isinstance(architect_output, CodeOutput), "Architect result should be CodeOutput"
+    assert isinstance(architect_output, CodeOutput), f"Architect result should be CodeOutput, got {type(architect_output)}"
     assert json.loads(architect_output.code).get("design") == "drone_game_design", "Architect design incorrect"
     assert mock_post.called, "Remote inference was not called"
     assert len(mock_post.call_args_list) >= 2, f"Expected at least 2 remote calls, got {len(mock_post.call_args_list)}"
