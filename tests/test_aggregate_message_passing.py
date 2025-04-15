@@ -6,7 +6,7 @@ import importlib
 import json
 from unittest.mock import patch, MagicMock
 from seclorum.agents.base import Aggregate, AbstractAgent
-from seclorum.models import Task, CodeOutput, create_model_manager
+from seclorum.models import Task, CodeOutput, Plan, create_model_manager
 from seclorum.models.task import TaskFactory
 from typing import Tuple, Any, Optional, Union
 
