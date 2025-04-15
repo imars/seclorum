@@ -221,6 +221,9 @@ class Aggregate(Agent):
                 final_status, final_result = self._propagate(next_agent_name, new_status, new_result, task, stop_at)
         return final_status, final_result
 
+    def process_task(self, task: Task) -> Tuple[str, Any]:
+        return self.orchestrate(task)
+
     def orchestrate(self, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
         task_id: str = task.task_id
         if task_id not in self.tasks:

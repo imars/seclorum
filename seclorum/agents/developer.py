@@ -38,7 +38,7 @@ class Developer(Aggregate):
         debugger = Debugger(f"{task_id}_{language}_debug", self.session_id, self.model_manager)
 
         logger.debug(f"Instantiated agents: Generator={generator.name} (type: {type(generator).__name__}), "
-                     f"Tester={tester.name} (type: {type(tester).__name__}), "
+                      f"Tester={tester.name} (type: {type(tester).__name__}), "
                      f"Executor={executor.name} (type: {type(executor).__name__}), "
                      f"Debugger={debugger.name} (type: {type(debugger).__name__})")
 
