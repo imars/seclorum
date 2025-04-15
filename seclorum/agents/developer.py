@@ -38,7 +38,7 @@ class Developer(Aggregate):
         debugger = Debugger(f"{task_id}_{language}_debug", self.session_id, self.model_manager)
 
         logger.debug(f"Instantiated agents: Generator={generator.name} (type: {type(generator).__name__}), "
-                      f"Tester={tester.name} (type: {type(tester).__name__}), "
+                     f"Tester={tester.name} (type: {type(tester).__name__}), "
                      f"Executor={executor.name} (type: {type(executor).__name__}), "
                      f"Debugger={debugger.name} (type: {type(debugger).__name__})")
 
@@ -85,7 +85,8 @@ class Developer(Aggregate):
             ]
 
     def process_task(self, task: Task) -> Tuple[str, Any]:
-        logger.debug(f"Developer processing Task {task.task_id}, language={task.parameters.get('language', '')}")
+        logger.debug(f"Developer processing Task {task.task_id}, language={task.parameters.get('language', '')}, "
+                     f"parameters={task.parameters}")
         return self.orchestrate(task)
 
     def orchestrate(self, task: Task, stop_at: Optional[str] = None) -> Tuple[str, Any]:
@@ -107,97 +108,3 @@ class Developer(Aggregate):
 
         pipeline_configs = self.infer_pipelines(task, plan)
         self.pipelines[task.task_id] = []
-
-        # Filter pipelines by task's output_file if provided
-        task_output_file = task.parameters.get("output_file", None)
-        if task_output_file:
-            pipeline_configs = [cfg for cfg in pipeline_configs if cfg["output_file"] == task_output_file]
-            logger.debug(f"Filtered pipelines to match task_output_file={task_output_file}")
-        elif not pipeline_configs:
-            logger.warning(f"No pipeline configs for task={task.task_id}, using default")
-            pipeline_configs = self.infer_pipelines(task, "")
-
-        # Create subtasks for each pipeline
-        for config in pipeline_configs:
-            language = config["language"].lower()
-            output_file = config["output_file"]
-            pipeline = self.setup_pipeline(task.task_id, language, output_file)
-            self.pipelines[task.task_id].extend(pipeline)
-            logger.debug(f"Setup pipeline for task={task.task_id}, language={language}, output_file={output_file}")
-
-        final_outputs = []
-        for pipeline in self.pipelines[task.task_id]:
-            agent = pipeline["agent"]
-            agent_name = pipeline["name"]
-            output_file = pipeline["output_file"]
-            language = pipeline["language"]
-
-            logger.debug(f"Processing agent: {agent_name} (type: {type(agent).__name__}) for output_file={output_file}, language={language}")
-            self.agent_flow.append({"agent_name": agent_name, "task_id": task.task_id, "language": language})
-
-            try:
-                subtask = TaskFactory.create_code_task(
-                    description=f"{task.description}\nFocus on generating {language} code for {output_file}",
-                    language=language,
-                    generate_tests=task.parameters.get("generate_tests", False),
-                    execute=task.parameters.get("execute", False),
-                    use_remote=task.parameters.get("use_remote", False)
-                )
-                subtask.parameters["output_file"] = output_file
-                # Pass previous results to subtask
-                for prev_name, prev_data in task.parameters.items():
-                    if prev_name.startswith(("Generator_", "Debugger_")) and "result" in prev_data:
-                        subtask.parameters[prev_name] = prev_data
-                logger.debug(f"Subtask parameters for {agent_name}: {subtask.parameters}")
-                status, result = agent.process_task(subtask)
-                logger.debug(f"{agent_name} executed, status={status}, result_type={type(result).__name__}")
-
-                # Convert CodeResult to CodeOutput for Executor
-                if isinstance(result, CodeResult) and result.code.strip():
-                    result = CodeOutput(code=result.code, tests=result.test_code)
-
-                task.parameters[agent_name] = {
-                    "status": status,
-                    "result": result,
-                    "output_file": output_file if output_file else None,
-                    "language": language
-                }
-
-                if isinstance(result, CodeOutput) and result.code.strip():
-                    final_outputs.append({"output_file": output_file, "code": result.code, "tests": result.tests})
-                    # Save output via Agent
-                    agent.save_output(subtask, result, status="generated")
-                    logger.debug(f"Saved output to {output_file}")
-            except Exception as e:
-                logger.debug(f"{agent_name} failed: {str(e)}")
-                task.parameters[agent_name] = {
-                    "status": "failed",
-                    "result": CodeOutput(code="", tests=None),
-                    "output_file": output_file if output_file else None,
-                    "language": language
-                }
-
-            if stop_at == agent_name:
-                logger.debug(f"Stopping orchestration at {agent_name}")
-                break
-
-        # Combine outputs
-        final_status = "generated" if final_outputs else "failed"
-        final_result = CodeOutput(code="", Wtests=None)
-        output_dir = "examples/3d_game"
-        os.makedirs(output_dir, exist_ok=True)
-        for output in final_outputs:
-            if output["output_file"]:
-                if output["output_file"].endswith(".js"):
-                    final_result.code = output["code"]
-                    final_result.tests = output["tests"]
-                elif output["output_file"].endswith(".html"):
-                    final_result.code += f"\n{output['code']}"
-                # Save to examples/3d_game/
-                output_path = os.path.join(output_dir, output["output_file"])
-                with open(output_path, "w") as f:
-                    f.write(output["code"])
-                logger.debug(f"Final save to {output_path}")
-
-        logger.debug(f"Orchestration complete: status={final_status}, outputs={[o['output_file'] for o in final_outputs if o['output_file']]}")
-        return final_status, final_result
