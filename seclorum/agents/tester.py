@@ -3,7 +3,7 @@ import os
 import subprocess
 import tempfile
 from seclorum.agents.agent import Agent
-from seclorum.models import Task, CodeResult, create_model_manager, ModelManager
+from seclorum.models import Task, CodeResult, TestResult, create_model_manager, ModelManager
 from seclorum.languages import LANGUAGE_HANDLERS
 from typing import Tuple, Optional
 import logging
