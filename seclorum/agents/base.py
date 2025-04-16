@@ -84,7 +84,7 @@ class AbstractAgent(ABC, LoggerMixin):
         self._flow_tracker.append(flow_entry)
         self.log_update(f"Tracked flow: {flow_entry}")
 
-    @timeout_decorator.timeout(300, timeout_exception=TimeoutError)
+    @timeout_decorator.timeout(1200, timeout_exception=TimeoutError)
     def infer(self, prompt: str, task: Task, use_remote: Optional[bool] = None, use_context: bool = False, endpoint: str = "google_ai_studio", **kwargs) -> str:
         use_remote = use_remote if use_remote is not None else task.parameters.get("use_remote", False)
         if use_context:

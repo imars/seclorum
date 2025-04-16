@@ -54,7 +54,7 @@ def create_drone_game():
         description=(
             "Create a Three.js JavaScript game with a player-controlled drone (Arrow keys/W/S) in a 3D scene. "
             "Drones race across a scrolling landscape with mountains, valleys, and flatlands using Perlin noise (via three-noise CDN). "
-            "Include scene, camera, ambient/directional lighting, and a sphere drone model. Use global THREE object from CDN. "
+            "Include scene, camera, ambient/directional lighting, and a sphere drone model. Use global THREE object from CDN (no import statements). "
             "Implement race mechanics: timer, checkpoints (score points), standings (time-based ranking), win condition (first to all checkpoints or fastest time). "
             "Add static obstacles (trees, rocks) and AI drones with A* pathfinding to checkpoints, avoiding obstacles. "
             "Include HTML UI with timer, speed, standings (table format), blue start/reset buttons with hover effects."
@@ -62,38 +62,41 @@ def create_drone_game():
         language="javascript",
         generate_tests=True,
         execute=True,
-        use_remote=True
+        use_remote=True  # Enforce remote inference
     )
 
     output_dir = Path("examples/3d_game")
     output_dir.mkdir(exist_ok=True)
 
+    status, result = None, None
     try:
         status, result = developer.process_task(task)
+        if status is None or result is None:
+            raise ValueError("Developer returned None")
     except Exception as e:
         logger.error(f"Developer pipeline failed: {str(e)}")
-        raise
+        status = "failed"
+        result = None
 
     outputs = []
-    for key, value in task.parameters.items():
-        if not isinstance(value, dict):
-            logger.debug(f"Skipping invalid parameter value for {key}: {value}")
-            continue
-        if "output_file" in value and isinstance(value.get("result"), CodeOutput) and value["result"].code.strip():
-            outputs.append({
-                "output_file": str(output_dir / value["output_file"]),
-                "code": value["result"].code,
-                "tests": value["result"].tests
-            })
+    if status in ["generated", "tested", "executed"] and result and isinstance(result, CodeOutput):
+        for key, value in task.parameters.items():
+            if not isinstance(value, dict):
+                logger.debug(f"Skipping invalid parameter value for {key}: {value}")
+                continue
+            if "output_file" in value and isinstance(value.get("result"), CodeOutput) and value["result"].code.strip():
+                outputs.append({
+                    "output_file": str(output_dir / value["output_file"]),
+                    "code": value["result"].code,
+                    "tests": value["result"].tests
+                })
 
     if not outputs:
-        logger.warning("No valid outputs generated, falling back to default code")
+        logger.warning(f"No valid outputs generated (status={status}), falling back to default code")
         outputs = [{
             "output_file": str(output_dir / "drone_game.js"),
             "code": """
-import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
-import { Noise } from 'https://unpkg.com/three-noise/build/three-noise.module.js';
-
+// Assumes global THREE and Noise from CDNs
 let scene, camera, renderer, playerDrone, aiDrones = [], terrain, checkpoints = [], obstacles = [], timer = 0, standings = [];
 const clock = new THREE.Clock();
 
@@ -232,7 +235,7 @@ function updatePlayerDrone(delta) {
     playerDrone.momentum.clampLength(0, maxSpeed);
     playerDrone.momentum.multiplyScalar(friction);
     playerDrone.position.add(playerDrone.momentum);
-    playerDrone.position.y = Math.max(10, terrain.getHeightAt(playerDrone.position.x, playerDrone.position.z) + 10);
+    playerDrone.position.y = Math.max(10, terrain.getHeightAt ? terrain.getHeightAt(playerDrone.position.x, playerDrone.position.z) + 10 : 10);
 }
 
 function updateAIDrones(delta) {
@@ -246,7 +249,7 @@ function updateAIDrones(delta) {
             const next = d.path.shift();
             const direction = next.clone().sub(d.position).normalize();
             d.position.add(direction.multiplyScalar(3 * delta));
-            d.position.y = Math.max(10, terrain.getHeightAt(d.position.x, d.position.z) + 10);
+            d.position.y = Math.max(10, terrain.getHeightAt ? terrain.getHeightAt(d.position.x, d.position.z) + 10 : 10);
         }
     });
 }
@@ -275,7 +278,7 @@ function aStarPath(start, goal, obstacles) {
                 if (dx === 0 && dz === 0) continue;
                 const nextPos = current.pos.clone().add(new THREE.Vector3(dx, 0, dz));
                 const nextKey = `${Math.round(nextPos.x / gridSize)},${Math.round(nextPos.z / gridSize)}`;
-                if (closed.has(nextKey) || grid[Math.round(nextPos.x)][Math.round(nextPos.z)] === Infinity) continue;
+                if (closed.has(nextKey) || (grid[Math.round(nextPos.x)] && grid[Math.round(nextPos.x)][Math.round(nextPos.z)] === Infinity)) continue;
                 const g = current.g + gridSize;
                 const h = nextPos.distanceTo(goal);
                 open.push({ pos: nextPos, g, h, f: g + h, path: current.path.concat([nextPos]) });
@@ -456,7 +459,7 @@ describe('Drone Racing Game', () => {
         <button id="startReset">Start</button>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://unpkg.com/three-noise/build/three-noise.module.js"></script>
+    <script src="https://unpkg.com/three-noise/build/three-noise.min.js"></script>
     <script src="drone_game.js"></script>
 </body>
 </html>
@@ -473,7 +476,7 @@ describe('Drone Game UI', () => {
                 <button id="startReset">Start</button>
             </div>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-            <script src="https://unpkg.com/three-noise/build/three-noise.module.js"></script>
+            <script src="https://unpkg.com/three-noise/build/three-noise.min.js"></script>
             <script src="drone_game.js"></script>`;
     });
 
@@ -493,8 +496,8 @@ describe('Drone Game UI', () => {
     });
 
     test('styles start button correctly', () => {
-        const button = document.getElementById('standings');
-        expect(window.getComputedStyle(button).backgroundColor).toMatch(/rgba?\(0, 0, 0/);
+        const button = document.getElementById('startReset');
+        expect(window.getComputedStyle(button).backgroundColor).toMatch(/rgba?\(0, 123, 255/);
     });
 
     afterEach(() => {
@@ -516,14 +519,14 @@ describe('Drone Game UI', () => {
             logger.info(f"File '{output_file}' created, size: {os.path.getsize(output_file)} bytes")
 
             if tests:
-                test_file = output_file.replace(".js", ".test.js").replace(".html", ".test.js")
+                test_file = output_file.replace(".js", ".test.js").replace(".html", ".html.test.js")
                 with open(test_file, "w") as f:
                     f.write(tests)
                 logger.info(f"Test file '{test_file}' created, size: {os.path.getsize(test_file)} bytes")
 
-    logger.info(f"Task completed with status: {status}")
+    logger.info(f"Task completed with status: {status or 'fallback'}")
     logger.info(f"Run 'open examples/3d_game/drone_game.html' to view the game in a browser.")
-    logger.info(f"To test: 'cd examples/3d_game && npx jest drone_game.test.js'")
+    logger.info(f"To test: 'cd examples/3d_game && npx jest *.test.js'")
 
 if __name__ == "__main__":
     create_drone_game()

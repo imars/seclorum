@@ -3,7 +3,7 @@ import logging
 from typing import Tuple, Any, Optional
 from seclorum.agents.agent import Agent
 from seclorum.models import CodeOutput, TestResult
-from seclorum.languages import validate_code, generate_test_code
+from seclorum.languages import LANGUAGE_HANDLERS
 
 logger = logging.getLogger(__name__)
 
@@ -30,19 +30,26 @@ class Tester(Agent):
                 return "failed", None
 
             code = generator_output.code
-            language = task.parameters.get("language", "javascript")
+            language = task.parameters.get("language", "javascript").lower()
             output_file = task.parameters.get("output_file", "output.js")
 
+            # Get language handler
+            handler = LANGUAGE_HANDLERS.get(language)
+            if not handler:
+                logger.error(f"No language handler for {language}")
+                return "failed", CodeOutput(code=code, tests=None, error=f"Unsupported language: {language}")
+
             # Validate generated code
-            is_valid, validation_error = validate_code(code, language)
+            is_valid = handler.validate_code(code)
             if not is_valid:
-                logger.error(f"Code validation failed: {validation_error}")
-                return "failed", CodeOutput(code=code, tests=None, error=validation_error)
+                logger.error(f"Code validation failed for {language}")
+                return "failed", CodeOutput(code=code, tests=None, error="Invalid code")
 
             # Generate tests if requested
             if task.parameters.get("generate_tests", False):
                 try:
-                    test_code = generate_test_code(code, language, task.description)
+                    test_prompt = handler.get_test_prompt(code)
+                    test_code = self.infer(test_prompt, task, use_remote=task.parameters.get("use_remote", False))
                     logger.debug(f"Generated test code for {output_file}: {test_code[:100]}...")
                 except Exception as e:
                     logger.error(f"Test generation failed: {str(e)}")

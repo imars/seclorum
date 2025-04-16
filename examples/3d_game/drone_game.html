@@ -1,25 +1,29 @@
-
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>3D Drone Game</title>
-                <style>
-                    body { margin: 0; }
-                    canvas { display: block; }
-                    #ui { position: absolute; top: 10px; left: 10px; color: white; }
-                    button { background-color: blue; color: white; padding: 10px; }
-                </style>
-            </head>
-            <body>
-                <canvas id="gameCanvas"></canvas>
-                <div id="ui">
-                    <div id="timer">Time: 0s</div>
-                    <div id="standings">Score: 0</div>
-                    <button onclick="location.reload()">Restart</button>
-                </div>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-                <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-                <script src="drone_game.js"></script>
-            </body>
-            </html>
-            
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Drone Racing Game</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; }
+        #gameCanvas { display: block; width: 100%; height: 100%; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial, sans-serif; font-size: 16px; }
+        #ui div { margin-bottom: 5px; }
+        #standings { background: rgba(0, 0, 0, 0.7); padding: 10px; border-radius: 5px; }
+        #standings table { border-collapse: collapse; }
+        #standings th, #standings td { padding: 5px; border: 1px solid #fff; }
+        #startReset { padding: 10px 20px; background: #007bff; border: none; color: white; cursor: pointer; border-radius: 5px; }
+        #startReset:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui">
+        <div>Timer: <span id="timer">0</span>s</div>
+        <div>Speed: <span id="speed">0</span></div>
+        <div id="standings"><table></table></div>
+        <button id="startReset">Start</button>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/three-noise/build/three-noise.module.js"></script>
+    <script src="drone_game.js"></script>
+</body>
+</html>
