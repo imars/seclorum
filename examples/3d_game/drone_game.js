@@ -1,29 +1,15 @@
-let scene = new THREE.Scene();
-let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-let renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('myCanvas') });
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-let drone = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
-drone.position.set(0, 0, 10);
-scene.add(drone);
-
-camera.position.set(0, -20, 15);
-camera.lookAt(drone.position);
-
-document.addEventListener('keydown', function(event) {
-    switch (event.key) {
-        case 'ArrowUp': drone.position.z += 0.5; break;
-        case 'ArrowDown': drone.position.z -= 0.5; break;
-        case 'ArrowLeft': drone.position.x -= 0.5; break;
-        case 'ArrowRight': drone.position.x += 0.5; break;
-        case 'w': drone.position.y += 0.5; break;
-        case 's': drone.position.y -= 0.5; break;
+{
+        "subtasks": [
+            {
+                "description": "Generate JavaScript logic for 3D drone game with THREE.js",
+                "language": "javascript",
+                "output_file": "examples/3d_game/drone_game.js"
+            },
+            {
+                "description": "Generate HTML UI with canvas and controls",
+                "language": "html",
+                "output_file": "examples/3d_game/drone_game.html"
+            }
+        ],
+        "metadata": {"version": 1}
     }
-});
-
-function animate() {
-    requestAnimationFrame(animate);
-    renderer.render(scene, camera);
-}
-animate();
