@@ -7,13 +7,14 @@ import logging
 import httpx
 import ollama
 import requests
+import os
 
 logger = logging.getLogger("ModelManager")
 
 class ModelManager(ABC):
     _model_cache = {}  # Class-level cache for models
 
-    def __init__(self, model_name: str, provider: str = "ollama", host: str = "http://localhost:11434"):
+    def __init__(self, model_name: str, provider: str, host: Optional[str] = None):
         self.logger = logging.getLogger(f"ModelManager")
         self.model_name = model_name
         self.provider = provider
@@ -24,11 +25,13 @@ class ModelManager(ABC):
         pass
 
     @classmethod
-    def get_or_create(cls, model_name: str, provider: str = "ollama", host: str = "http://localhost:11434") -> 'ModelManager':
-        key = (model_name, provider, host)
+    def get_or_create(cls, model_name: str, provider: str = "ollama", host: Optional[str] = None) -> 'ModelManager':
+        key = (model_name, provider, host or "")
         if key not in cls._model_cache:
             if provider.lower() == "ollama":
-                cls._model_cache[key] = OllamaModelManager(model_name, host)
+                cls._model_cache[key] = OllamaModelManager(model_name, host or "http://localhost:11434")
+            elif provider.lower() == "google_ai_studio":
+                cls._model_cache[key] = GoogleModelManager(model_name)
             elif provider.lower() == "mock":
                 cls._model_cache[key] = MockModelManager(model_name)
             else:
@@ -36,8 +39,8 @@ class ModelManager(ABC):
         return cls._model_cache[key]
 
 class OllamaModelManager(ModelManager):
-    def __init__(self, model_name: str = "codellama", host: Optional[str] = None):
-        super().__init__(model_name, provider="ollama", host=host or "http://localhost:11434")
+    def __init__(self, model_name: str = "codellama", host: str = "http://localhost:11434"):
+        super().__init__(model_name, provider="ollama", host=host)
         self.client = ollama.Client(host=self.host)
         self.ensure_model_and_server()
 
@@ -57,12 +60,9 @@ class OllamaModelManager(ModelManager):
             self.logger.warning(f"Ollama server not running or model check failed: {str(e)}. Starting server...")
             subprocess.Popen(["ollama", "serve"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             time.sleep(2)
-            self.ensure_model_and_server()  # Retry after starting server
+            self.ensure_model_and_server()
 
     def generate(self, prompt: str, **kwargs) -> str:
-        use_remote = kwargs.get("use_remote", False)
-        if use_remote:
-            return self.generate_remote(prompt, **kwargs)
         try:
             valid_kwargs = {k: v for k, v in kwargs.items() if k in ['system', 'template', 'context']}
             response = self.client.generate(model=self.model_name, prompt=prompt, **valid_kwargs)
@@ -71,19 +71,26 @@ class OllamaModelManager(ModelManager):
             self.logger.error(f"Failed to generate with {self.model_name}: {str(e)}")
             return ""
 
-    def generate_remote(self, prompt: str, **kwargs) -> str:
-        try:
-            api_key = os.getenv("GOOGLE_AI_STUDIO_API_KEY", "AIzaSyDI_X_d6LSzn6qlnIUtleA0bPohOXJztFg")
-            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
-            headers = {"Content-Type": "application/json"}
-            data = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {
-                    "maxOutputTokens": kwargs.get("max_tokens", 2048),
-                    "temperature": kwargs.get("temperature", 0.7)
-                }
+class GoogleModelManager(ModelManager):
+    def __init__(self, model_name: str = "gemini-1.5-flash"):
+        super().__init__(model_name, provider="google_ai_studio")
+
+    def generate(self, prompt: str, **kwargs) -> str:
+        api_key = os.getenv("GOOGLE_AI_STUDIO_API_KEY")
+        if not api_key:
+            self.logger.error("GOOGLE_AI_STUDIO_API_KEY not set. Set it with 'export GOOGLE_AI_STUDIO_API_KEY=your_key'")
+            return ""
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent"
+        headers = {"Content-Type": "application/json"}
+        data = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "maxOutputTokens": kwargs.get("max_tokens", 2048),
+                "temperature": kwargs.get("temperature", 0.7)
             }
-            response = requests.post(f"{url}?key={api_key}", json=data, headers=headers, timeout=kwargs.get("timeout", 1200))
+        }
+        try:
+            response = requests.post(f"{url}?key={api_key}", json=data, headers=headers, timeout=kwargs.get("timeout", 30))
             response.raise_for_status()
             result = response.json()
             if not result.get("candidates"):
@@ -102,7 +109,7 @@ class MockModelManager(ModelManager):
     def __init__(self, model_name: str = "mock"):
         super().__init__(model_name, provider="mock")
 
-    def generate(self, caller: str, prompt: str, **kwargs) -> str:
+    def generate(self, prompt: str, **kwargs) -> str:
         if "Generate Python code" in prompt:
             return "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]"
         elif "Generate a Python unit test" in prompt:
@@ -110,4 +117,4 @@ class MockModelManager(ModelManager):
         return "Mock response"
 
 def create_model_manager(provider: str = "ollama", model_name: str = "llama3.2:latest", **kwargs) -> ModelManager:
-    return ModelManager.get_or_create(model_name, provider, kwargs.get("host", "http://localhost:11434"))
+    return ModelManager.get_or_create(model_name, provider, kwargs.get("host"))
