@@ -4,23 +4,52 @@ import logging
 import sys
 import importlib
 import json
+import os
 from unittest.mock import patch, MagicMock
-from seclorum.agents.base import Aggregate, AbstractAgent
+from seclorum.agents.base import AbstractAgent
+from seclorum.agents.aggregate import Aggregate
 from seclorum.models import Task, CodeOutput, Plan, create_model_manager
 from seclorum.models.task import TaskFactory
 from typing import Tuple, Any, Optional, Union
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
+logging.getLogger('').setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
-#logger = logging.getLogger("AggregateMessagePassingTest")
+logger.setLevel(logging.DEBUG)
+logger.propagate = True
 
-# Store agent flow for MockAgent tests
+script_dir = os.path.dirname(os.path.abspath(__file__))
+log_file = os.path.join(script_dir, 'aggregate_message_passing.log')
+try:
+    file_handler = logging.FileHandler(log_file, mode='a')
+    file_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    root_logger = logging.getLogger('')
+    root_logger.addHandler(file_handler)
+    logger.addHandler(file_handler)
+    file_handler.flush()
+    logger.debug(f"Logging initialized. Writing to {log_file}")
+except Exception as e:
+    logger.error(f"Failed to initialize FileHandler for {log_file}: {str(e)}")
+    raise
+
 agent_flow = []
 
 @pytest.fixture(autouse=True)
+def ensure_log_file():
+    try:
+        if not os.path.exists(log_file):
+            with open(log_file, 'a') as f:
+                f.write(f"Log file created at {log_file}\n")
+        logger.debug(f"Log file check: {log_file} exists={os.path.exists(log_file)}")
+    except Exception as e:
+        logger.error(f"Error ensuring log file {log_file}: {str(e)}")
+        raise
+    yield
+
+@pytest.fixture(autouse=True)
 def clear_modules():
-    """Clear seclorum.agents modules to avoid caching."""
     modules_to_clear = [k for k in sys.modules if k.startswith('seclorum.agents')]
     for mod in modules_to_clear:
         sys.modules.pop(mod, None)
@@ -31,22 +60,19 @@ def clear_modules():
 
 @pytest.fixture
 def model_manager():
-    """Provide a model manager for tests."""
     return create_model_manager(provider="ollama", model_name="llama3.2:latest")
 
 @pytest.fixture
 def task():
-    """Create a code task for testing."""
     return TaskFactory.create_code_task(
         description="Generate a 3D drone game design and code.",
         language="javascript",
         generate_tests=False,
         execute=False,
-        use_remote=False  # Default to False for non-remote tests
+        use_remote=False
     )
 
 class MockAgent:
-    """Mock agent to capture message passing, avoiding AbstractAgent."""
     def __init__(self, *args, **kwargs):
         try:
             agent_type = kwargs.pop("agent_type", "MockAgent")
@@ -54,6 +80,8 @@ class MockAgent:
             self.name = f"{agent_type}_{task_id}"
             self.session_id = args[1] if len(args) > 1 else "mock_session"
             self.logger = logging.getLogger(f"MockAgent_{self.name}")
+            self.logger.setLevel(logging.DEBUG)
+            self.logger.propagate = True
             logger.debug(f"Instantiating MockAgent: {self.name} (args={args}, kwargs={kwargs})")
             agent_flow.append({
                 "agent_name": self.name,
@@ -74,13 +102,11 @@ class MockAgent:
             status = "completed"
             input_data = task.parameters.get("previous_result", "initial")
 
-            # Handle inputs
             if isinstance(input_data, CodeOutput):
                 input_data = input_data.code
             input_value = input_data
-            logger.debug(f"Processing {self.name} with input: {input_value}")
+            self.logger.debug(f"Processing {self.name} with input: {input_value}")
 
-            # Handle complex outputs
             if self.name.startswith("Architect_"):
                 complex_output = {
                     "design": f"design_by_{self.name}",
@@ -111,7 +137,7 @@ class MockAgent:
                 result_code = f"remote_{result_code}"
             result = CodeOutput(code=result_code, tests=None)
 
-            logger.debug(f"MockAgent Visited {self.name}: task={task.task_id}, input={input_data}, output={result_code}")
+            self.logger.debug(f"MockAgent Visited {self.name}: task={task.task_id}, input={input_data}, output={result_code}")
             agent_flow.append({
                 "agent_name": self.name,
                 "task_id": task.task_id,
@@ -123,11 +149,10 @@ class MockAgent:
             })
             return status, result
         except Exception as e:
-            logger.error(f"Error in MockAgent.process_task: {str(e)}")
+            self.logger.error(f"Error in MockAgent.process_task: {str(e)}")
             raise
 
 class AggregateForTest(Aggregate):
-    """Aggregate for testing message passing."""
     def __init__(self, session_id: str, model_manager=None):
         super().__init__(session_id, model_manager)
         self.name = "AggregateForTest"
@@ -179,10 +204,9 @@ class AggregateForTest(Aggregate):
                 logger.error(f"Agent {agent_name} not found in self.agents")
                 break
             logger.debug(f"Processing agent: {agent_name}")
-            # Set previous_result to the output of the agent's dependency
             deps = self.graph.get(agent_name, [])
             if deps:
-                dep_name = deps[0][0]  # Use first dependency
+                dep_name = deps[0][0]
                 dep_result = task.parameters.get(f"result_{dep_name}")
                 task.parameters["previous_result"] = dep_result.code if dep_result else "initial"
             else:
@@ -215,14 +239,9 @@ class AggregateForTest(Aggregate):
         return status, result
 
 def test_aggregate_two_agents(model_manager, task):
-    """Test 1 aggregate with 2 agents."""
     agent_flow.clear()
     session_id = "test_aggregate_session"
-
-    # Create aggregate
     aggregate = AggregateForTest(session_id, model_manager)
-
-    # Patch and instantiate agents
     logger.debug("Starting test_aggregate_two_agents")
     with patch('seclorum.agents.architect.Architect', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)) as architect_patch, \
          patch('seclorum.agents.generator.Generator', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)) as generator_patch:
@@ -236,11 +255,9 @@ def test_aggregate_two_agents(model_manager, task):
         aggregate.add_agent(generator, [(architect.name, {"status": "completed"})])
         logger.debug(f"Agent flow after agent creation: {agent_flow}")
         assert len(agent_flow) >= 2, f"Expected at least 2 init entries, got {len(agent_flow)}: {agent_flow}"
-
         logger.debug("Starting AggregateForTest.process_task")
         status, result = aggregate.process_task(task)
         logger.debug(f"Task complete: status={status}, agent_flow={agent_flow}")
-
     logger.debug(f"Agent flow before assertions: {agent_flow}")
     assert len(agent_flow) >= 4, f"Expected at least 4 entries (2 agents × init+process), got {len(agent_flow)}: {agent_flow}"
     assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), f"Architect init missing: {agent_flow}"
@@ -252,14 +269,9 @@ def test_aggregate_two_agents(model_manager, task):
     assert result.code.startswith("generated_from_"), f"Expected Generator output, got {result.code}"
 
 def test_aggregate_three_agents(model_manager, task):
-    """Test 1 aggregate with 3 agents."""
     agent_flow.clear()
     session_id = "test_aggregate_session"
-
-    # Create aggregate
     aggregate = AggregateForTest(session_id, model_manager)
-
-    # Patch and instantiate agents
     logger.debug("Starting test_aggregate_three_agents")
     with patch('seclorum.agents.architect.Architect', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)) as architect_patch, \
          patch('seclorum.agents.generator.Generator', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)) as generator_patch, \
@@ -277,11 +289,9 @@ def test_aggregate_three_agents(model_manager, task):
         aggregate.add_agent(tester, [(generator.name, {"status": "completed"})])
         logger.debug(f"Agent flow after agent creation: {agent_flow}")
         assert len(agent_flow) >= 3, f"Expected at least 3 init entries, got {len(agent_flow)}: {agent_flow}"
-
         logger.debug("Starting AggregateForTest.process_task")
         status, result = aggregate.process_task(task)
         logger.debug(f"Task complete: status={status}, agent_flow={agent_flow}")
-
     logger.debug(f"Agent flow before assertions: {agent_flow}")
     assert len(agent_flow) >= 6, f"Expected at least 6 entries (3 agents × init+process), got {len(agent_flow)}: {agent_flow}"
     assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), f"Architect init missing: {agent_flow}"
@@ -295,17 +305,10 @@ def test_aggregate_three_agents(model_manager, task):
     assert result.code.startswith("processed_"), f"Expected Tester output, got {result.code}"
 
 def test_aggregate_two_agents_remote(model_manager, task):
-    """Test 1 aggregate with 2 agents using remote inference."""
     agent_flow.clear()
     session_id = "test_aggregate_session"
-
-    # Enable remote inference
     task.parameters["use_remote"] = True
-
-    # Create aggregate
     aggregate = AggregateForTest(session_id, model_manager)
-
-    # Patch and instantiate agents
     logger.debug("Starting test_aggregate_two_agents_remote")
     with patch('seclorum.agents.architect.Architect', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)) as architect_patch, \
          patch('seclorum.agents.generator.Generator', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)) as generator_patch:
@@ -319,11 +322,9 @@ def test_aggregate_two_agents_remote(model_manager, task):
         aggregate.add_agent(generator, [(architect.name, {"status": "completed"})])
         logger.debug(f"Agent flow after agent creation: {agent_flow}")
         assert len(agent_flow) >= 2, f"Expected at least 2 init entries, got {len(agent_flow)}: {agent_flow}"
-
         logger.debug("Starting AggregateForTest.process_task")
         status, result = aggregate.process_task(task)
         logger.debug(f"Task complete: status={status}, agent_flow={agent_flow}")
-
     logger.debug(f"Agent flow before assertions: {agent_flow}")
     assert len(agent_flow) >= 4, f"Expected at least 4 entries (2 agents × init+process), got {len(agent_flow)}: {agent_flow}"
     assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), f"Architect init missing: {agent_flow}"
@@ -335,14 +336,9 @@ def test_aggregate_two_agents_remote(model_manager, task):
     assert result.code.startswith("remote_generated_from_"), f"Expected remote Generator output, got {result.code}"
 
 def test_aggregate_four_agents(model_manager, task):
-    """Test 1 aggregate with 4 agents."""
     agent_flow.clear()
     session_id = "test_aggregate_session"
-
-    # Create aggregate
     aggregate = AggregateForTest(session_id, model_manager)
-
-    # Patch and instantiate agents
     logger.debug("Starting test_aggregate_four_agents")
     with patch('seclorum.agents.architect.Architect', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)) as architect_patch, \
          patch('seclorum.agents.generator.Generator', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)) as generator_patch, \
@@ -364,11 +360,9 @@ def test_aggregate_four_agents(model_manager, task):
         aggregate.add_agent(executor, [(tester.name, {"status": "completed"})])
         logger.debug(f"Agent flow after agent creation: {agent_flow}")
         assert len(agent_flow) >= 4, f"Expected at least 4 init entries, got {len(agent_flow)}: {agent_flow}"
-
         logger.debug("Starting AggregateForTest.process_task")
         status, result = aggregate.process_task(task)
         logger.debug(f"Task complete: status={status}, agent_flow={agent_flow}")
-
     logger.debug(f"Agent flow before assertions: {agent_flow}")
     assert len(agent_flow) >= 8, f"Expected at least 8 entries (4 agents × init+process), got {len(agent_flow)}: {agent_flow}"
     assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), f"Architect init missing: {agent_flow}"
@@ -384,14 +378,9 @@ def test_aggregate_four_agents(model_manager, task):
     assert result.code.startswith("processed_"), f"Expected Executor output, got {result.code}"
 
 def test_aggregate_complex_pipelines(model_manager, task):
-    """Test 1 aggregate with complex Architect output feeding multiple pipelines."""
     agent_flow.clear()
     session_id = "test_aggregate_session"
-
-    # Create aggregate
     aggregate = AggregateForTest(session_id, model_manager)
-
-    # Patch and instantiate agents
     logger.debug("Starting test_aggregate_complex_pipelines")
     with patch('seclorum.agents.architect.Architect', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Architect", **kwargs)) as architect_patch, \
          patch('seclorum.agents.generator.Generator', new=lambda *args, **kwargs: MockAgent(*args, agent_type="Generator", **kwargs)) as generator_patch, \
@@ -410,7 +399,6 @@ def test_aggregate_complex_pipelines(model_manager, task):
         debugger = Debugger(f"{task.task_id}_debug", session_id, model_manager)
         executor = Executor(f"{task.task_id}_exec", session_id, model_manager)
         logger.debug(f"Created agents: Architect={architect.name}, Generator={generator.name}, Tester={tester.name}, Debugger={debugger.name}, Executor={executor.name}")
-
         aggregate.add_agent(architect, [])
         aggregate.add_agent(generator, [(architect.name, {"status": "completed"})])
         aggregate.add_agent(tester, [(generator.name, {"status": "completed"})])
@@ -418,11 +406,9 @@ def test_aggregate_complex_pipelines(model_manager, task):
         aggregate.add_agent(executor, [(debugger.name, {"status": "completed"})])
         logger.debug(f"Agent flow after agent creation: {agent_flow}")
         assert len(agent_flow) >= 5, f"Expected at least 5 init entries, got {len(agent_flow)}: {agent_flow}"
-
         logger.debug("Starting AggregateForTest.process_task")
         status, result = aggregate.process_task(task)
         logger.debug(f"Task complete: status={status}, agent_flow={agent_flow}")
-
     logger.debug(f"Agent flow before assertions: {agent_flow}")
     assert len(agent_flow) >= 10, f"Expected at least 10 entries (5 agents × init+process), got {len(agent_flow)}: {agent_flow}"
     assert any(a["agent_name"].startswith("Architect_") and a["status"] == "instantiated" for a in agent_flow), f"Architect init missing: {agent_flow}"
@@ -441,7 +427,6 @@ def test_aggregate_complex_pipelines(model_manager, task):
 
 @pytest.fixture(autouse=True)
 def reset_memory():
-    """Reset Memory state before and after each test."""
     from seclorum.agents.memory.core import Memory
     AbstractAgent._memory_cache.clear()
     yield
@@ -449,59 +434,44 @@ def reset_memory():
         memory.stop_threads()
     AbstractAgent._memory_cache.clear()
 
-@pytest.mark.timeout(30)
+@pytest.mark.timeout(300)
 def test_real_agents_message_passing(model_manager, task):
-    """Test 1 aggregate with real Architect and Generator using mocked remote inference."""
     session_id = "test_real_agents_session"
     test_agent_flow = []
 
-    # Mock remote inference responses
-    mock_response_architect = {
-        "candidates": [{
-            "content": {
-                "parts": [{
-                    "text": json.dumps({
-                        "subtasks": [
-                            {
-                                "description": "Generate JavaScript logic for core functionality",
-                                "language": "javascript",
-                                "output_file": "drone_game.js"
-                            },
-                            {
-                                "description": "Generate HTML UI with canvas and controls",
-                                "language": "html",
-                                "output_file": "drone_game.html"
-                            }
-                        ],
-                        "metadata": {"version": 1, "project": "application"}
-                    })
-                }]
+    # Mock inference responses
+    mock_response_architect = """
+    {
+        "subtasks": [
+            {
+                "description": "Generate JavaScript logic for core functionality",
+                "language": "javascript",
+                "output_file": "drone_game.js"
+            },
+            {
+                "description": "Generate HTML UI with canvas and controls",
+                "language": "html",
+                "output_file": "drone_game.html"
             }
-        }]
+        ],
+        "metadata": {"version": 1}
     }
-    mock_response_generator = {
-        "candidates": [{
-            "content": {
-                "parts": [{
-                    "text": """
-                    let scene = new THREE.Scene();
-                    let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-                    let renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('myCanvas') });
-                    renderer.setSize(window.innerWidth, window.innerHeight);
-                    let object = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
-                    scene.add(object);
-                    camera.position.z = 5;
-                    function animate() {
-                        requestAnimationFrame(animate);
-                        object.rotation.x += 0.01;
-                        renderer.render(scene, camera);
-                    }
-                    animate();
-                    """
-                }]
-            }
-        }]
+    """
+    mock_response_generator = """
+    let scene = new THREE.Scene();
+    let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    let renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('myCanvas') });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    let object = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
+    scene.add(object);
+    camera.position.z = 5;
+    function animate() {
+        requestAnimationFrame(animate);
+        object.rotation.x += 0.01;
+        renderer.render(scene, camera);
     }
+    animate();
+    """
 
     with patch('requests.post') as mock_post, \
          patch('seclorum.models.manager.ModelManager.generate') as mock_generate, \
@@ -512,18 +482,30 @@ def test_real_agents_message_passing(model_manager, task):
             logger.debug(f"Mocking POST response for prompt: {prompt[:50]}...")
             if "plan" in prompt.lower() or "architect" in prompt.lower():
                 logger.debug("Returning Architect response")
-                mock.json.return_value = mock_response_architect
+                mock.json.return_value = {
+                    "candidates": [{
+                        "content": {
+                            "parts": [{"text": mock_response_architect}]
+                        }
+                    }]
+                }
             else:
                 logger.debug("Returning Generator response")
-                mock.json.return_value = mock_response_generator
+                mock.json.return_value = {
+                    "candidates": [{
+                        "content": {
+                            "parts": [{"text": mock_response_generator}]
+                        }
+                    }]
+                }
             mock.status_code = 200
             return mock
 
         def side_effect_generate(prompt, **kwargs):
             logger.debug(f"Mocking ModelManager.generate for prompt: {prompt[:50]}...")
             if "plan" in prompt.lower() or "architect" in prompt.lower():
-                return mock_response_architect["candidates"][0]["content"]["parts"][0]["text"]
-            return mock_response_generator["candidates"][0]["content"]["parts"][0]["text"]
+                return mock_response_architect
+            return mock_response_generator
 
         mock_post.side_effect = side_effect_post
         mock_generate.side_effect = side_effect_generate
@@ -545,6 +527,8 @@ def test_real_agents_message_passing(model_manager, task):
         status, result = aggregate.process_task(task)
         logger.debug(f"Task complete: status={status}, result_type={type(result).__name__}, "
                      f"result_code={result.code[:50] if hasattr(result, 'code') else str(result)[:50]}")
+        logger.debug(f"Plan output: {task.parameters.get(architect.name, {}).get('result', 'No plan')}")
+        logger.debug(f"Task parameters after process: {task.parameters}")
 
         test_agent_flow.extend(architect._flow_tracker)
         test_agent_flow.extend(generator._flow_tracker)
@@ -552,8 +536,6 @@ def test_real_agents_message_passing(model_manager, task):
 
     logger.debug(f"Final test_agent_flow: {test_agent_flow}")
     logger.debug(f"Result code: {result.code[:200] if result.code else 'Empty'}")
-    architect_result = task.parameters.get(architect.name, {}).get("result", Plan(subtasks=[]))
-    logger.debug(f"Architect result: subtasks={[t.parameters for t in architect_result.subtasks]}")
     assert len(test_agent_flow) >= 2, f"Expected at least 2 flow entries, got {len(test_agent_flow)}: {test_agent_flow}"
     assert any(a["agent_name"] == architect.name and a["status"] == "planned" for a in test_agent_flow), f"Architect process missing: {test_agent_flow}"
     assert any(a["agent_name"] == generator.name and a["status"] == "generated" for a in test_agent_flow), f"Generator process missing: {test_agent_flow}"

@@ -1,5 +1,5 @@
 # seclorum/agents/debugger.py
-from seclorum.agents.base import Agent
+from seclorum.agents.agent import Agent
 from seclorum.models import Task, CodeOutput, create_model_manager, ModelManager
 from typing import Tuple
 import logging

@@ -1,4 +1,5 @@
-from seclorum.agents.base import Agent
+# seclorum/agents/generator.py
+from seclorum.agents.agent import Agent
 from seclorum.models import Task, CodeOutput, create_model_manager, ModelManager
 from seclorum.languages import LANGUAGE_HANDLERS
 from typing import Tuple

@@ -1,6 +1,6 @@
 # seclorum/agents/developer.py
 from typing import Tuple, Any, List, Dict, Optional
-from seclorum.agents.base import Aggregate
+from seclorum.agents.aggregate import Aggregate
 from seclorum.models import Task, create_model_manager, CodeOutput, CodeResult
 from seclorum.agents.generator import Generator
 from seclorum.agents.tester import Tester

@@ -7,7 +7,9 @@ import logging
 from flask_socketio import SocketIO
 from seclorum.agents.redis_mixin import RedisMixin
 from seclorum.agents.lifecycle import LifecycleMixin
-from seclorum.agents.base import AbstractAgent, Agent, Aggregate
+from seclorum.agents.base import AbstractAgent
+from seclorum.agents.agent import Agent
+from seclorum.agents.aggregate import Aggregate
 from seclorum.agents.generator import Generator
 from seclorum.agents.tester import Tester
 from seclorum.agents.executor import Executor

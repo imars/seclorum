@@ -1,6 +1,6 @@
 # seclorum/agents/__init__.py
 from .base import AbstractAgent
-from .base import Agent
+from .agent import Agent
 from .generator import Generator
 from .tester import Tester
 from .executor import Executor
@@ -17,6 +17,7 @@ from .architect import Architect
 __all__ = [
     "AbstractAgent",
     "Agent",
+    "Aggregate",
     "AbstractAggregate",
     "MasterNode",
     "Generator",

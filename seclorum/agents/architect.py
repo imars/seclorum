@@ -1,9 +1,9 @@
-from seclorum.agents.base import Agent
+# seclorum/agents/architect.py
+from seclorum.agents.agent import Agent
 from seclorum.models import Task, Plan, create_model_manager, ModelManager
-from typing import Tuple, List
 import json
 import logging
-import uuid
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -12,70 +12,73 @@ class Architect(Agent):
         super().__init__(f"Architect_{task_id}", session_id, model_manager)
         self.task_id = task_id
         self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
-        logger.debug(f"Architect initialized for task {task_id}, session_id={session_id}")
+        logger.debug(f"Architect initialized for Task {task_id}, session_id={session_id}")
 
-    def process_task(self, task: Task) -> Tuple[str, Plan]:
-        logger.debug(f"Processing task {task.task_id}: description={task.description[:100]}...")
+    def process_task(self, task: Task) -> tuple[str, Plan]:
+        logger.debug(f"Processing task={task.task_id}, description={task.description[:100]}")
+        start_time = time.time()
         try:
             prompt = (
-                f"Create a plan for the following task:\n{task.description}\n\n"
-                "Generate a JSON object with:\n"
-                "- 'subtasks': List of subtasks, each with 'description' (string), 'language' (e.g., 'javascript', 'html'), and 'output_file' (filename).\n"
-                "- 'metadata': Optional dictionary with additional info (e.g., version, project).\n"
-                "Return only the JSON string, no markdown or explanations."
+                f"Task Description: {task.description}\n\n"
+                "Create a plan for implementing the task. "
+                "Return a JSON object with 'subtasks' (list of objects with 'description', 'language', 'output_file') "
+                "and 'metadata' (object with 'version' and optional fields). "
+                "Example:\n"
+                '{\n  "subtasks": [\n    {"description": "Generate core logic", "language": "javascript", "output_file": "app.js"},\n'
+                '    {"description": "Generate UI", "language": "html", "output_file": "index.html"}\n  ],\n'
+                '  "metadata": {"version": 1}\n}'
             )
+            logger.debug(f"Architect prompt: {prompt[:200]}...")
             use_remote = task.parameters.get("use_remote", False)
-            raw_plan = self.infer(prompt, task, use_remote=use_remote, max_tokens=2000)
+            raw_plan = self.infer(prompt, task, use_remote=use_remote, max_tokens=1000)
             logger.debug(f"Raw plan: {raw_plan[:200]}...")
 
             try:
                 plan_data = json.loads(raw_plan)
+                subtasks = [
+                    Task(
+                        task_id=f"{task.task_id}_{i}",
+                        description=subtask["description"],
+                        parameters={"language": subtask["language"], "output_file": subtask["output_file"]}
+                    )
+                    for i, subtask in enumerate(plan_data.get("subtasks", []))
+                ]
+                metadata = plan_data.get("metadata", {"version": 1})
+                plan = Plan(subtasks=subtasks, metadata=metadata)
+                logger.debug(f"Parsed plan: {len(subtasks)} subtasks, metadata={metadata}")
             except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse plan JSON: {str(e)}, raw_plan={raw_plan[:200]}...")
-                plan_data = {
-                    "subtasks": [
-                        {
-                            "description": "Generate default code",
-                            "language": "javascript",
-                            "output_file": "app.js"
-                        }
+                logger.error(f"Invalid JSON in plan: {str(e)}, raw={raw_plan[:200]}...")
+                plan = Plan(
+                    subtasks=[
+                        Task(
+                            task_id=f"{task.task_id}_0",
+                            description="Generate default JavaScript logic",
+                            parameters={"language": "javascript", "output_file": "drone_game.js"}
+                        )
                     ],
-                    "metadata": {"version": 1, "error": "Invalid JSON fallback"}
-                }
-
-            subtasks = []
-            for subtask_data in plan_data.get("subtasks", []):
-                subtask_id = str(uuid.uuid4())
-                description = subtask_data.get("description", "")
-                language = subtask_data.get("language", "javascript")
-                output_file = subtask_data.get("output_file", "output")
-                subtask = Task(
-                    task_id=subtask_id,
-                    description=description,
-                    parameters={"language": language, "output_file": output_file}
+                    metadata={"version": 1, "error": f"Invalid JSON: {str(e)}"}
                 )
-                subtasks.append(subtask)
-                logger.debug(f"Created subtask {subtask_id}: output_file={output_file}")
-
-            metadata = plan_data.get("metadata", {})
-            plan = Plan(subtasks=subtasks, metadata=metadata)
-            logger.debug(f"Generated plan with {len(subtasks)} subtasks: metadata={metadata}")
+                logger.debug(f"Fallback plan: {len(plan.subtasks)} subtasks")
 
             self.save_output(task, plan, status="planned")
-            self.commit_changes(f"Created plan for task {task.task_id}")
+            elapsed = time.time() - start_time
+            logger.debug(f"Architect.process_task completed in {elapsed:.2f}s")
             self.track_flow(task, "planned", plan, use_remote)
             return "planned", plan
         except Exception as e:
-            logger.error(f"Planning failed for task {task.task_id}: {str(e)}")
-            default_plan = Plan(
+            logger.error(f"Architect failed for task {task.task_id}: {str(e)}")
+            plan = Plan(
                 subtasks=[
                     Task(
-                        task_id=str(uuid.uuid4()),
-                        description="Generate default code",
-                        parameters={"language": "javascript", "output_file": "app.js"}
+                        task_id=f"{task.task_id}_0",
+                        description="Generate default JavaScript logic",
+                        parameters={"language": "javascript", "output_file": "drone_game.js"}
                     )
                 ],
-                metadata={"version": 1, "error": str(e)}
+                metadata={"version": 1, "error": f"Processing failed: {str(e)}"}
             )
-            self.track_flow(task, "failed", default_plan, use_remote)
-            return "failed", default_plan
+            self.save_output(task, plan, status="failed")
+            elapsed = time.time() - start_time
+            logger.debug(f"Architect.process_task failed in {elapsed:.2f}s")
+            self.track_flow(task, "failed", plan, use_remote)
+            return "failed", plan
