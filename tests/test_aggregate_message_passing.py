@@ -425,90 +425,187 @@ def test_aggregate_complex_pipelines(model_manager, task):
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert result.code.startswith("processed_debugged_from_"), f"Expected Executor output, got {result.code}"
 
-@pytest.fixture(autouse=True)
-def reset_memory():
-    from seclorum.agents.memory.core import Memory
-    AbstractAgent._memory_cache.clear()
-    yield
-    for memory in AbstractAgent._memory_cache.values():
-        memory.stop_threads()
-    AbstractAgent._memory_cache.clear()
+# tests/test_aggregate_message_passing.py (only test_real_agents_message_passing)
 
 @pytest.mark.timeout(300)
 def test_real_agents_message_passing(model_manager, task):
+    """Test 1 aggregate with real Architect and Generator using mocked inference."""
     session_id = "test_real_agents_session"
     test_agent_flow = []
+    output_dir = os.path.join("examples", "3d_game")
+    os.makedirs(output_dir, exist_ok=True)
 
     # Mock inference responses
     mock_response_architect = """
     {
         "subtasks": [
             {
-                "description": "Generate JavaScript logic for core functionality",
+                "description": "Generate JavaScript logic for 3D drone game with THREE.js",
                 "language": "javascript",
-                "output_file": "drone_game.js"
+                "output_file": "examples/3d_game/drone_game.js"
             },
             {
                 "description": "Generate HTML UI with canvas and controls",
                 "language": "html",
-                "output_file": "drone_game.html"
+                "output_file": "examples/3d_game/drone_game.html"
             }
         ],
         "metadata": {"version": 1}
     }
     """
     mock_response_generator = """
-    let scene = new THREE.Scene();
-    let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    let renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('myCanvas') });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    let object = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
-    scene.add(object);
-    camera.position.z = 5;
-    function animate() {
-        requestAnimationFrame(animate);
-        object.rotation.x += 0.01;
-        renderer.render(scene, camera);
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
+    function DroneGame() {
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas') });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        // Terrain
+        const terrainGeometry = new THREE.PlaneGeometry(200, 200, 32, 32);
+        const terrainMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22 });
+        const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+        terrain.rotation.x = -Math.PI / 2;
+        scene.add(terrain);
+
+        // Player Drone
+        const droneGeometry = new THREE.SphereGeometry(1, 32, 32);
+        const droneMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const drone = new THREE.Mesh(droneGeometry, droneMaterial);
+        drone.position.set(0, 5, 0);
+        scene.add(drone);
+
+        // AI Drones
+        const aiDrones = [];
+        for (let i = 0; i < 3; i++) {
+            const aiDrone = new THREE.Mesh(droneGeometry, new THREE.MeshBasicMaterial({ color: 0x0000ff }));
+            aiDrone.position.set(Math.random() * 50 - 25, 5, Math.random() * 50 - 25);
+            scene.add(aiDrone);
+            aiDrones.push({ mesh: aiDrone, target: new THREE.Vector3(0, 5, 0) });
+        }
+
+        // Checkpoints
+        const checkpoints = [];
+        for (let i = 0; i < 5; i++) {
+            const checkpoint = new THREE.Mesh(
+                new THREE.TorusGeometry(3, 0.5, 16, 100),
+                new THREE.MeshBasicMaterial({ color: 0xffff00 })
+            );
+            checkpoint.position.set(Math.random() * 100 - 50, 5, Math.random() * 100 - 50);
+            scene.add(checkpoint);
+            checkpoints.push(checkpoint);
+        }
+
+        // Obstacles
+        const obstacles = [];
+        for (let i = 0; i < 10; i++) {
+            const obstacle = new THREE.Mesh(
+                new THREE.BoxGeometry(2, 10, 2),
+                new THREE.MeshBasicMaterial({ color: 0x8B4513 })
+            );
+            obstacle.position.set(Math.random() * 100 - 50, 5, Math.random() * 100 - 50);
+            scene.add(obstacle);
+            obstacles.push(obstacle);
+        }
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(0, 1, 0);
+        scene.add(directionalLight);
+
+        // Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        camera.position.set(0, 20, 20);
+        controls.update();
+
+        // UI
+        const standings = document.getElementById('standings');
+        const timer = document.getElementById('timer');
+        let score = 0;
+        let time = 0;
+
+        // Keyboard Controls
+        const keys = {};
+        window.addEventListener('keydown', (e) => { keys[e.key] = true; });
+        window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+
+        function updateDrone() {
+            const speed = 0.5;
+            if (keys['ArrowUp'] || keys['w']) drone.position.z -= speed;
+            if (keys['ArrowDown'] || keys['s']) drone.position.z += speed;
+            if (keys['ArrowLeft']) drone.position.x -= speed;
+            if (keys['ArrowRight']) drone.position.x += speed;
+        }
+
+        // AI Drone Movement
+        function updateAIDrones() {
+            aiDrones.forEach((ai, i) => {
+                const target = checkpoints[i % checkpoints.length].position;
+                ai.target.copy(target);
+                const direction = target.clone().sub(ai.mesh.position).normalize();
+                ai.mesh.position.add(direction.multiplyScalar(0.2));
+            });
+        }
+
+        // Collision Detection
+        function checkCollisions() {
+            const droneBox = new THREE.Box3().setFromObject(drone);
+            checkpoints.forEach((cp, i) => {
+                const cpBox = new THREE.Box3().setFromObject(cp);
+                if (droneBox.intersectsBox(cpBox)) {
+                    score += 10;
+                    standings.textContent = `Score: ${score}`;
+                    cp.position.set(Math.random() * 100 - 50, 5, Math.random() * 100 - 50);
+                }
+            });
+            obstacles.forEach((obs) => {
+                const obsBox = new THREE.Box3().setFromObject(obs);
+                if (droneBox.intersectsBox(obsBox)) {
+                    score -= 5;
+                    standings.textContent = `Score: ${score}`;
+                    drone.position.set(0, 5, 0);
+                }
+            });
+        }
+
+        // Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            updateDrone();
+            updateAIDrones();
+            checkCollisions();
+            time += 1 / 60;
+            timer.textContent = `Time: ${time.toFixed(1)}s`;
+            renderer.render(scene, camera);
+        }
+        animate();
     }
-    animate();
+    DroneGame();
     """
 
-    with patch('requests.post') as mock_post, \
-         patch('seclorum.models.manager.ModelManager.generate') as mock_generate, \
+    with patch('ollama.Client.generate') as mock_ollama_generate, \
+         patch('requests.post') as mock_post, \
          patch('seclorum.agents.memory.core.Memory.save') as mock_memory_save:
-        def side_effect_post(url, *args, **kwargs):
-            mock = MagicMock()
-            prompt = kwargs.get('json', {}).get('contents', [{}])[0].get('parts', [{}])[0].get('text', '')
-            logger.debug(f"Mocking POST response for prompt: {prompt[:50]}...")
+        def side_effect_ollama(model, prompt, **kwargs):
+            logger.debug(f"Mocking ollama.Client.generate for prompt: {prompt[:50]}...")
             if "plan" in prompt.lower() or "architect" in prompt.lower():
                 logger.debug("Returning Architect response")
-                mock.json.return_value = {
-                    "candidates": [{
-                        "content": {
-                            "parts": [{"text": mock_response_architect}]
-                        }
-                    }]
-                }
-            else:
-                logger.debug("Returning Generator response")
-                mock.json.return_value = {
-                    "candidates": [{
-                        "content": {
-                            "parts": [{"text": mock_response_generator}]
-                        }
-                    }]
-                }
-            mock.status_code = 200
-            return mock
+                return {'response': mock_response_architect}
+            logger.debug("Returning Generator response")
+            return {'response': mock_response_generator}
 
-        def side_effect_generate(prompt, **kwargs):
-            logger.debug(f"Mocking ModelManager.generate for prompt: {prompt[:50]}...")
-            if "plan" in prompt.lower() or "architect" in prompt.lower():
-                return mock_response_architect
-            return mock_response_generator
-
-        mock_post.side_effect = side_effect_post
-        mock_generate.side_effect = side_effect_generate
+        mock_ollama_generate.side_effect = side_effect_ollama
+        mock_post.return_value = MagicMock(status_code=200, json=lambda: {
+            "candidates": [{
+                "content": {
+                    "parts": [{"text": mock_response_generator}]
+                }
+            }]
+        })
         mock_memory_save.return_value = None
 
         aggregate = Aggregate(session_id, model_manager)
@@ -530,25 +627,66 @@ def test_real_agents_message_passing(model_manager, task):
         logger.debug(f"Plan output: {task.parameters.get(architect.name, {}).get('result', 'No plan')}")
         logger.debug(f"Task parameters after process: {task.parameters}")
 
+        # Save outputs
+        js_file = os.path.join(output_dir, "drone_game.js")
+        html_file = os.path.join(output_dir, "drone_game.html")
+        with open(js_file, "w") as f:
+            f.write(result.code)
+        with open(html_file, "w") as f:
+            f.write("""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>3D Drone Game</title>
+                <style>
+                    body { margin: 0; }
+                    canvas { display: block; }
+                    #ui { position: absolute; top: 10px; left: 10px; color: white; }
+                    button { background-color: blue; color: white; padding: 10px; }
+                </style>
+            </head>
+            <body>
+                <canvas id="gameCanvas"></canvas>
+                <div id="ui">
+                    <div id="timer">Time: 0s</div>
+                    <div id="standings">Score: 0</div>
+                    <button onclick="location.reload()">Restart</button>
+                </div>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+                <script src="drone_game.js"></script>
+            </body>
+            </html>
+            """)
+
         test_agent_flow.extend(architect._flow_tracker)
         test_agent_flow.extend(generator._flow_tracker)
         logger.debug(f"Agent flow after process: {test_agent_flow}")
+        logger.debug(f"Result code: {result.code[:200] if result.code else 'Empty'}")
 
-    logger.debug(f"Final test_agent_flow: {test_agent_flow}")
-    logger.debug(f"Result code: {result.code[:200] if result.code else 'Empty'}")
+    # Assertions
     assert len(test_agent_flow) >= 2, f"Expected at least 2 flow entries, got {len(test_agent_flow)}: {test_agent_flow}"
     assert any(a["agent_name"] == architect.name and a["status"] == "planned" for a in test_agent_flow), f"Architect process missing: {test_agent_flow}"
     assert any(a["agent_name"] == generator.name and a["status"] == "generated" for a in test_agent_flow), f"Generator process missing: {test_agent_flow}"
     assert status == "generated", f"Expected status 'generated', got {status}"
     assert isinstance(result, CodeOutput), f"Expected CodeOutput, got {type(result)}"
     assert result.code, "Expected Generator to produce non-empty code"
+    assert "THREE.Scene" in result.code, "Expected THREE.js usage"
+    assert "terrain" in result.code.lower(), "Expected terrain in code"
+    assert "updateDrone" in result.code, "Expected player controls"
+    assert "aiDrones" in result.code, "Expected AI drones"
+    assert "checkpoints" in result.code, "Expected checkpoints"
+    assert "obstacles" in result.code, "Expected obstacles"
+    assert "standings" in result.code, "Expected UI standings"
     assert architect.name in task.parameters, f"Architect output missing: {task.parameters}"
     assert generator.name in task.parameters, f"Generator output missing: {task.parameters}"
     assert isinstance(task.parameters.get(architect.name, {}).get("result"), Plan), f"Architect result should be Plan"
     assert len(task.parameters.get(architect.name, {}).get("result", Plan(subtasks=[])).subtasks) >= 1, "Expected at least one subtask"
-    assert any(t.parameters.get("output_file") == "drone_game.js" for t in task.parameters.get(architect.name, {}).get("result", Plan(subtasks=[])).subtasks), "Expected JavaScript subtask"
-    assert mock_post.called or mock_generate.called, "No inference was called"
-    assert len(mock_post.call_args_list) + len(mock_generate.call_args_list) >= 2, f"Expected at least 2 inference calls, got {len(mock_post.call_args_list)} POST, {len(mock_generate.call_args_list)} generate"
+    assert any(t.parameters.get("output_file") == "examples/3d_game/drone_game.js" for t in task.parameters.get(architect.name, {}).get("result", Plan(subtasks=[])).subtasks), "Expected JavaScript subtask"
+    assert os.path.exists(js_file), f"Expected {js_file} to exist"
+    assert os.path.exists(html_file), f"Expected {html_file} to exist"
+    assert mock_ollama_generate.called, "Expected ollama inference to be called"
+    assert len(mock_ollama_generate.call_args_list) >= 2, f"Expected at least 2 inference calls, got {len(mock_ollama_generate.call_args_list)}"
 
 if __name__ == "__main__":
     pytest.main(["-v", __file__])
