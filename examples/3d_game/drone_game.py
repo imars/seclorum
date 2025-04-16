@@ -57,13 +57,13 @@ def create_drone_game():
     # Define tasks for JavaScript and HTML
     js_task = TaskFactory.create_code_task(
         description=(
-            "Create JavaScript code for a Three.js game with a player-controlled drone (Arrow keys/W/S) in a 3D scene. "
-            "Drones race across a scrolling landscape with mountains, valleys, and flatlands using simplex-noise (via CDN https://cdn.jsdelivr.net/npm/simplex-noise@4.0.3/dist/simplex-noise.min.js). "
-            "Use global window.simplexNoise.createNoise2D() for terrain generation. Include scene, camera, ambient/directional lighting, and a sphere drone model. "
-            "Use global THREE object from CDN (no import statements). "
-            "Implement race mechanics: timer, checkpoints (score points), standings (time-based ranking), win condition (first to all checkpoints or fastest time). "
-            "Add static obstacles (trees, rocks) and AI drones with A* pathfinding to checkpoints, avoiding obstacles. "
-            "Reference HTML elements (canvas#gameCanvas, div#ui, span#timer, span#speed, table#standings, button#startReset) for UI integration."
+            "Create JavaScript code for a Three.js drone racing game with a player-controlled drone (Arrow keys/W/S) in a 3D scene. "
+            "Drones race across a scrolling landscape with mountains, valleys, and flatlands using simplex-noise from CDN https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js. "
+            "Use global simplexNoise.createNoise2D() for terrain generation (no import statements). Include scene, camera, ambient/directional lighting, and a sphere drone model. "
+            "Use global THREE object from CDN https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js (no import statements). "
+            "Implement race mechanics: timer, checkpoints (yellow toruses, score points), standings (time-based ranking in table#standings), win condition (first to all checkpoints or fastest time). "
+            "Add static obstacles (trees as cylinders, rocks as boxes) and AI drones with A* pathfinding to checkpoints, avoiding obstacles. "
+            "Integrate with HTML elements: canvas#gameCanvas for rendering, div#ui for UI container, span#timer for race time, span#speed for drone speed, table#standings for rankings, button#startReset for race control."
         ),
         language="javascript",
         output_file="drone_game.js",
@@ -76,11 +76,11 @@ def create_drone_game():
     html_task = TaskFactory.create_code_task(
         description=(
             "Create HTML code for a Three.js drone racing game. "
-            "Include a full-screen canvas (id='gameCanvas') for the game. "
-            "Add a UI div (id='ui') with timer (span#timer), speed (span#speed), standings table (table#standings), and a blue start/reset button (button#startReset) with hover effects. "
-            "Load Three.js and simplex-noise from CDNs (https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js, https://cdn.jsdelivr.net/npm/simplex-noise@4.0.3/dist/simplex-noise.min.js). "
-            "Include <script src='drone_game.js'> to load the game logic. "
-            "Use CSS for black background, white UI text, semi-transparent standings background, and blue button styling."
+            "Include a full-screen canvas (id='gameCanvas') for rendering the 3D scene. "
+            "Add a UI div (id='ui') containing: timer (span#timer showing seconds), speed (span#speed showing drone speed), standings table (table#standings for drone rankings), and a blue start/reset button (button#startReset) with hover effects (darker blue on hover). "
+            "Load scripts in this order: Three.js from https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js, simplex-noise from https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js, and game logic from drone_game.js. "
+            "Use CSS for: black background (#000), white UI text (Arial, 16px), semi-transparent standings background (rgba(0,0,0,0.7)), blue button (#007bff, hover #0056b3), and full-screen canvas. "
+            "Ensure no JavaScript code is included in the HTML file."
         ),
         language="html",
         output_file="drone_game.html",
@@ -96,34 +96,52 @@ def create_drone_game():
     # Process both tasks
     outputs = []
     for task in [js_task, html_task]:
+        output_file = task.parameters["output_file"]
         status, result = None, None
         try:
             status, result = developer.process_task(task)
-            logger.debug(f"Task {task.parameters['output_file']}: status={status}, result_type={type(result).__name__}")
+            logger.debug(f"Task {output_file}: status={status}, result_type={type(result).__name__}, "
+                        f"code_length={len(result.code) if result and hasattr(result, 'code') else 0}")
             if status is None or result is None:
-                raise ValueError(f"Developer returned None for {task.parameters['output_file']}")
+                raise ValueError(f"Developer returned None for {output_file}")
         except Exception as e:
-            logger.error(f"Developer pipeline failed for {task.parameters['output_file']}: {str(e)}")
+            logger.error(f"Developer pipeline failed for {output_file}: {str(e)}")
             status = "failed"
             result = None
 
-        if status in ["generated", "tested", "executed"] and result and isinstance(result, CodeOutput):
-            logger.info(f"Pipeline output for {task.parameters['output_file']}: {len(result.code)} bytes")
-            outputs.append({
-                "output_file": str(output_dir / task.parameters["output_file"]),
-                "code": result.code,
-                "tests": result.tests,
-                "source": "pipeline"
-            })
+        # Validate pipeline output
+        if status in ["generated", "tested", "executed"] and result and isinstance(result, CodeOutput) and result.code.strip():
+            # Check if code matches expected language
+            is_valid = False
+            if task.language == "javascript":
+                is_valid = "THREE.Scene" in result.code and "simplexNoise.createNoise2D" in result.code
+            elif task.language == "html":
+                is_valid = "<html" in result.code and "<canvas" in result.code and "simplex-noise" in result.code
+            if is_valid:
+                outputs.append({
+                    "output_file": str(output_dir / output_file),
+                    "code": result.code,
+                    "tests": result.tests
+                })
+                logger.info(f"Pipeline output for {output_file}: {len(result.code)} bytes")
+            else:
+                logger.warning(f"Invalid pipeline output for {output_file}: expected {task.language}, got incompatible code")
+        else:
+            logger.warning(f"No valid pipeline output for {output_file}: status={status}, "
+                          f"result_type={type(result).__name__ if result else 'None'}")
 
     # Fallback if pipeline fails or outputs are incomplete
-    if not outputs or len(outputs) < 2:
+    if len(outputs) < 2:
         logger.warning(f"Insufficient outputs generated (got {len(outputs)}), falling back to default code")
         outputs = [
             {
                 "output_file": str(output_dir / "drone_game.js"),
                 "code": """
-// Assumes global THREE and window.simplexNoise from CDNs
+// Assumes global THREE and simplexNoise from CDNs
+if (typeof simplexNoise === 'undefined') {
+    console.error('simplexNoise not loaded. Ensure CDN is available.');
+    throw new Error('simplexNoise required');
+}
 let scene, camera, renderer, playerDrone, aiDrones = [], terrain, checkpoints = [], obstacles = [], timer = 0, standings = [];
 const clock = new THREE.Clock();
 
@@ -138,7 +156,7 @@ function init() {
 
     // Terrain with simplex-noise
     const terrainGeometry = new THREE.PlaneGeometry(1000, 1000, 100, 100);
-    const noise = typeof window.simplexNoise !== 'undefined' ? window.simplexNoise.createNoise2D() : () => 0;
+    const noise = simplexNoise.createNoise2D();
     const vertices = terrainGeometry.attributes.position.array;
     for (let i = 2; i < vertices.length; i += 3) {
         const x = vertices[i-2], y = vertices[i-1];
@@ -304,7 +322,7 @@ function aStarPath(start, goal, obstacles) {
             for (let dz of [-gridSize, 0, gridSize]) {
                 if (dx === 0 && dz === 0) continue;
                 const nextPos = current.pos.clone().add(new THREE.Vector3(dx, 0, dz));
-                const nextKey = `${Math.round(nextPos.x / gridSize)},${Math.round(current.pos.z / gridSize)}`;
+                const nextKey = `${Math.round(nextPos.x / gridSize)},${Math.round(nextPos.z / gridSize)}`;
                 if (closed.has(nextKey) || (grid[Math.round(nextPos.x)] && grid[Math.round(nextPos.x)][Math.round(nextPos.z)] === Infinity)) continue;
                 const g = current.g + gridSize;
                 const h = nextPos.distanceTo(goal);
@@ -391,6 +409,7 @@ describe('Drone Racing Game', () => {
             </div>`;
         window.simplexNoise = { createNoise2D: jest.fn(() => jest.fn((x, y) => Math.random() * 2 - 1)) };
         jest.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => cb());
+        jest.spyOn(console, 'error').mockImplementation(() => {});
         init();
     });
 
@@ -457,10 +476,10 @@ describe('Drone Racing Game', () => {
         window.requestAnimationFrame.mockRestore();
         document.body.innerHTML = '';
         delete window.simplexNoise;
+        console.error.mockRestore();
     });
 });
-""",
-                "source": "fallback"
+"""
             },
             {
                 "output_file": str(output_dir / "drone_game.html"),
@@ -490,14 +509,13 @@ describe('Drone Racing Game', () => {
         <button id="startReset">Start</button>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.3/dist/simplex-noise.min.js" onerror="console.error('Failed to load simplex-noise')"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js" onerror="console.error('Failed to load simplex-noise CDN')"></script>
     <script>
-        // Ensure simplexNoise is defined
-        window.simplexNoise = window.simplexNoise || {};
-        window.simplexNoise.createNoise2D = window.simplexNoise.createNoise2D || function() {
-            console.warn('simplexNoise.createNoise2D not available, using fallback');
-            return function(x, y) { return Math.random() * 2 - 1; };
-        };
+        // Fallback if simplex-noise CDN fails
+        if (typeof simplexNoise === 'undefined') {
+            console.error('simplexNoise not available, terrain generation will be disabled');
+            window.simplexNoise = { createNoise2D: () => (x, y) => 0 };
+        }
     </script>
     <script src="drone_game.js"></script>
 </body>
@@ -515,8 +533,9 @@ describe('Drone Game UI', () => {
                 <button id="startReset">Start</button>
             </div>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-            <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.3/dist/simplex-noise.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js"></script>
             <script src="drone_game.js"></script>`;
+        jest.spyOn(console, 'error').mockImplementation(() => {});
     });
 
     test('has canvas and UI elements', () => {
@@ -528,7 +547,7 @@ describe('Drone Game UI', () => {
     });
 
     test('includes required scripts', () => {
-        const scripts = Array.from(document.getElementsByTagName('script')).map(s => s.src);
+        const scripts = Array.from(document.getElementsByTagName('script')).map(s => s.src || '');
         expect(scripts.some(src => src.includes('three.min.js'))).toBe(true);
         expect(scripts.some(src => src.includes('simplex-noise'))).toBe(true);
         expect(scripts.includes('drone_game.js')).toBe(true);
@@ -541,10 +560,10 @@ describe('Drone Game UI', () => {
 
     afterEach(() => {
         document.body.innerHTML = '';
+        console.error.mockRestore();
     });
 });
-""",
-                "source": "fallback"
+"""
             }
         ]
 
@@ -552,19 +571,18 @@ describe('Drone Game UI', () => {
         output_file = output["output_file"]
         code = re.sub(r'const THREE = require\(\'three\'\);\n?|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid)[^\n]*?\n?', '', output["code"]).strip()
         tests = output["tests"].strip() if output["tests"] else None
-        source = output.get("source", "unknown")
 
         if code and not code.lower().startswith("error"):
             os.makedirs(os.path.dirname(output_file) or '.', exist_ok=True)
             with open(output_file, "w") as f:
                 f.write(code)
-            logger.info(f"File '{output_file}' created, size: {os.path.getsize(output_file)} bytes, source: {source}")
+            logger.info(f"File '{output_file}' created, size: {os.path.getsize(output_file)} bytes")
 
             if tests:
                 test_file = output_file.replace(".js", ".test.js").replace(".html", ".html.test.js")
                 with open(test_file, "w") as f:
                     f.write(tests)
-                logger.info(f"Test file '{test_file}' created, size: {os.path.getsize(test_file)} bytes, source: {source}")
+                logger.info(f"Test file '{test_file}' created, size: {os.path.getsize(test_file)} bytes")
 
     logger.info(f"Task completed with status: {status or 'fallback'}")
     logger.info(f"Run 'open examples/3d_game/drone_game.html' to view the game in a browser.")
