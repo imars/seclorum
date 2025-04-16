@@ -58,6 +58,7 @@ class TaskFactory:
         execute: bool = False,
         use_remote: bool = False,
         output_file: Optional[str] = None,
+        output_files: Optional[List[str]] = None,
         task_id: Optional[str] = None,
         timeout: Optional[int] = None
     ) -> Task:
@@ -71,9 +72,11 @@ class TaskFactory:
         }
         if output_file:
             parameters["output_file"] = output_file
+        if output_files:
+            parameters["output_files"] = output_files
         if timeout is not None:
             parameters["timeout"] = timeout
-        logger.debug(f"Creating code task: task_id={task_id}, output_file={output_file}, parameters={parameters}")
+        logger.debug(f"Creating code task: task_id={task_id}, output_file={output_file}, output_files={output_files}, parameters={parameters}")
         return Task(
             task_id=task_id,
             description=description,

@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 class Generator(Agent):
-    def __init__(self, task_id: str, session_id: str, model_manager: ModelManager):
+    def __init__(self, task_id: str, session_id: str, model_manager: ModelManager = None):
         super().__init__(f"Generator_{task_id}", session_id)
         self.task_id = task_id
         self.model = model_manager
@@ -24,7 +24,10 @@ class Generator(Agent):
                      f"parameters={task.parameters}")
         start_time = time.time()
         language = task.parameters.get("language", "javascript").lower()
-        output_file = task.parameters.get("output_file", "output")
+        output_files = task.parameters.get("output_files", [task.parameters.get("output_file", "output")])
+        if not isinstance(output_files, list):
+            output_files = [output_files]
+        primary_file = task.parameters.get("output_file", output_files[0])
 
         handler = LANGUAGE_HANDLERS.get(language)
         if not handler:
@@ -34,48 +37,56 @@ class Generator(Agent):
             return "failed", result
 
         try:
-            code = handler.get_code(task, output_file)
-            if not code:
-                code_prompt = handler.get_code_prompt(task, output_file)
-                logger.debug(f"Code prompt: {code_prompt[:200]}...")
-                use_remote = task.parameters.get("use_remote", False)
-                raw_code = self.infer(code_prompt, task, use_remote=use_remote, use_context=False, max_tokens=4000)
-                logger.debug(f"Raw inferred code for {output_file}: {raw_code[:200]}...")
-                code = re.sub(r'```(?:javascript|html|python|cpp|css)?\n|\n```|[^\x00-\x7F]+', '', raw_code).strip()
+            results = {}
+            for output_file in output_files:
+                logger.debug(f"Generating code for {output_file}")
+                code = handler.get_code(task, output_file)
+                if not code:
+                    code_prompt = handler.get_code_prompt(task, output_file)
+                    logger.debug(f"Code prompt for {output_file}: {code_prompt[:200]}...")
+                    use_remote = task.parameters.get("use_remote", False)
+                    raw_code = self.infer(code_prompt, task, use_remote=use_remote, use_context=False, max_tokens=4000)
+                    logger.debug(f"Raw inferred code for {output_file}: {raw_code[:200]}...")
+                    code = re.sub(r'```(?:javascript|html|python|cpp|css)?\n|\n```|[^\x00-\x7F]+', '', raw_code).strip()
 
-            logger.debug(f"Generated code before validation: {code[:200]}...")
-            if not handler.validate_code(code):
-                logger.warning(f"Invalid {language} code generated for {output_file}, falling back to default")
-                code = handler.get_fallback_code(task)
+                logger.debug(f"Generated code for {output_file} before validation: {code[:200]}...")
                 if not handler.validate_code(code):
-                    logger.error(f"Fallback {language} code invalid for {output_file}")
-                    code = ""
+                    logger.warning(f"Invalid {language} code for {output_file}, falling back to default")
+                    code = handler.get_fallback_code(task, output_file)
+                    if not handler.validate_code(code):
+                        logger.error(f"Fallback {language} code invalid for {output_file}")
+                        code = ""
 
-            logger.debug(f"Final generated code for {output_file}: {code[:200]}...")
+                results[output_file] = code
+                logger.debug(f"Final generated code for {output_file}: {code[:200]}...")
 
+            primary_code = results.get(primary_file, "")
             tests = None
-            if task.parameters.get("generate_tests", False) and code and language == "javascript":
-                test_prompt = handler.get_test_prompt(code)
+            if task.parameters.get("generate_tests", False) and primary_code and language == "javascript":
+                test_prompt = handler.get_test_prompt(primary_code)
                 logger.debug(f"Test prompt: {test_prompt[:200]}...")
-                use_remote = task.parameters.get("use_remote", False)
                 raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False, max_tokens=2000)
-                logger.debug(f"Raw inferred tests for {output_file}: {raw_tests[:200]}...")
+                logger.debug(f"Raw inferred tests: {raw_tests[:200]}...")
                 tests = re.sub(r'```(?:javascript|html|python|cpp)?\n|\n```|[^\x00-\x7F]+', '', raw_tests).strip()
                 if not tests.startswith(("describe(", "test(")):
-                    logger.warning(f"Invalid Jest tests for {output_file}, discarding")
+                    logger.warning(f"Invalid Jest tests for {primary_file}, discarding")
                     tests = None
-                logger.debug(f"Generated tests for {output_file}: {tests[:200]}..." if tests else "No valid tests generated")
+                logger.debug(f"Generated tests: {tests[:200]}..." if tests else "No valid tests generated")
 
-            result = CodeOutput(code=code, tests=tests)
+            result = CodeOutput(
+                code=primary_code,
+                tests=tests,
+                additional_files={k: v for k, v in results.items() if k != primary_file}
+            )
             self.save_output(task, result, status="generated")
-            self.commit_changes(f"Generated {language} code for {output_file}")
+            self.commit_changes(f"Generated {language} code for {', '.join(output_files)}")
             logger.debug(f"Tracking flow for {self.name}: status=generated, task_id={task.task_id}")
             self.track_flow(task, "generated", result, task.parameters.get("use_remote", False))
             elapsed = time.time() - start_time
             logger.debug(f"Generator.process_task completed in {elapsed:.2f}s")
             return "generated", result
         except Exception as e:
-            logger.error(f"Generation failed for {output_file}: {str(e)}")
+            logger.error(f"Generation failed for {primary_file}: {str(e)}")
             result = CodeOutput(code="", tests=None)
             self.track_flow(task, "failed", result, task.parameters.get("use_remote", False))
             elapsed = time.time() - start_time

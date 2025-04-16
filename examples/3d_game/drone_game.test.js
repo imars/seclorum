@@ -12,6 +12,7 @@ describe('Drone Racing Game', () => {
             </div>`;
         window.simplexNoise = { createNoise2D: jest.fn(() => jest.fn((x, y) => Math.random() * 2 - 1)) };
         jest.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => cb());
+        jest.spyOn(console, 'error').mockImplementation(() => {});
         init();
     });
 
@@ -78,5 +79,6 @@ describe('Drone Racing Game', () => {
         window.requestAnimationFrame.mockRestore();
         document.body.innerHTML = '';
         delete window.simplexNoise;
+        console.error.mockRestore();
     });
 });
