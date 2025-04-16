@@ -1,6 +1,4 @@
-import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
-import { Noise } from 'https://unpkg.com/three-noise/build/three-noise.module.js';
-
+// Assumes global THREE and Noise from CDNs
 let scene, camera, renderer, playerDrone, aiDrones = [], terrain, checkpoints = [], obstacles = [], timer = 0, standings = [];
 const clock = new THREE.Clock();
 
@@ -19,7 +17,7 @@ function init() {
     const vertices = terrainGeometry.attributes.position.array;
     for (let i = 2; i < vertices.length; i += 3) {
         const x = vertices[i-2], y = vertices[i-1];
-        vertices[i] = noise.get(x, y) * 30; // Mountains and valleys
+        vertices[i] = noise.get(x, y) * 30;
     }
     terrainGeometry.attributes.position.needsUpdate = true;
     terrainGeometry.computeVertexNormals();
@@ -139,7 +137,7 @@ function updatePlayerDrone(delta) {
     playerDrone.momentum.clampLength(0, maxSpeed);
     playerDrone.momentum.multiplyScalar(friction);
     playerDrone.position.add(playerDrone.momentum);
-    playerDrone.position.y = Math.max(10, terrain.getHeightAt(playerDrone.position.x, playerDrone.position.z) + 10);
+    playerDrone.position.y = Math.max(10, terrain.getHeightAt ? terrain.getHeightAt(playerDrone.position.x, playerDrone.position.z) + 10 : 10);
 }
 
 function updateAIDrones(delta) {
@@ -153,7 +151,7 @@ function updateAIDrones(delta) {
             const next = d.path.shift();
             const direction = next.clone().sub(d.position).normalize();
             d.position.add(direction.multiplyScalar(3 * delta));
-            d.position.y = Math.max(10, terrain.getHeightAt(d.position.x, d.position.z) + 10);
+            d.position.y = Math.max(10, terrain.getHeightAt ? terrain.getHeightAt(d.position.x, d.position.z) + 10 : 10);
         }
     });
 }
@@ -182,7 +180,7 @@ function aStarPath(start, goal, obstacles) {
                 if (dx === 0 && dz === 0) continue;
                 const nextPos = current.pos.clone().add(new THREE.Vector3(dx, 0, dz));
                 const nextKey = `${Math.round(nextPos.x / gridSize)},${Math.round(nextPos.z / gridSize)}`;
-                if (closed.has(nextKey) || grid[Math.round(nextPos.x)][Math.round(nextPos.z)] === Infinity) continue;
+                if (closed.has(nextKey) || (grid[Math.round(nextPos.x)] && grid[Math.round(nextPos.x)][Math.round(nextPos.z)] === Infinity)) continue;
                 const g = current.g + gridSize;
                 const h = nextPos.distanceTo(goal);
                 open.push({ pos: nextPos, g, h, f: g + h, path: current.path.concat([nextPos]) });

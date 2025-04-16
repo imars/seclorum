@@ -58,8 +58,9 @@ def create_drone_game():
     js_task = TaskFactory.create_code_task(
         description=(
             "Create JavaScript code for a Three.js game with a player-controlled drone (Arrow keys/W/S) in a 3D scene. "
-            "Drones race across a scrolling landscape with mountains, valleys, and flatlands using Perlin noise (via three-noise CDN). "
-            "Include scene, camera, ambient/directional lighting, and a sphere drone model. Use global THREE object from CDN (no import statements). "
+            "Drones race across a scrolling landscape with mountains, valleys, and flatlands using simplex-noise (via CDN https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js). "
+            "Use simplexNoise.createNoise2D() for terrain generation. Include scene, camera, ambient/directional lighting, and a sphere drone model. "
+            "Use global THREE object from CDN (no import statements). "
             "Implement race mechanics: timer, checkpoints (score points), standings (time-based ranking), win condition (first to all checkpoints or fastest time). "
             "Add static obstacles (trees, rocks) and AI drones with A* pathfinding to checkpoints, avoiding obstacles. "
             "Reference HTML elements (canvas#gameCanvas, div#ui, span#timer, span#speed, table#standings, button#startReset) for UI integration."
@@ -77,7 +78,7 @@ def create_drone_game():
             "Create HTML code for a Three.js drone racing game. "
             "Include a full-screen canvas (id='gameCanvas') for the game. "
             "Add a UI div (id='ui') with timer (span#timer), speed (span#speed), standings table (table#standings), and a blue start/reset button (button#startReset) with hover effects. "
-            "Load Three.js and three-noise from CDNs (https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js, https://unpkg.com/three-noise/build/three-noise.min.js). "
+            "Load Three.js and simplex-noise from CDNs (https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js, https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js). "
             "Include <script src='drone_game.js'> to load the game logic. "
             "Use CSS for black background, white UI text, semi-transparent standings background, and blue button styling."
         ),
@@ -119,7 +120,7 @@ def create_drone_game():
             {
                 "output_file": str(output_dir / "drone_game.js"),
                 "code": """
-// Assumes global THREE and Noise from CDNs
+// Assumes global THREE and simplexNoise from CDNs
 let scene, camera, renderer, playerDrone, aiDrones = [], terrain, checkpoints = [], obstacles = [], timer = 0, standings = [];
 const clock = new THREE.Clock();
 
@@ -132,13 +133,13 @@ function init() {
     renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas') });
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    // Terrain with Perlin noise
+    // Terrain with simplex-noise
     const terrainGeometry = new THREE.PlaneGeometry(1000, 1000, 100, 100);
-    const noise = new Noise({ type: 'perlin', scale: 0.05, octaves: 4, persistence: 0.5, lacunarity: 2 });
+    const noise = simplexNoise.createNoise2D();
     const vertices = terrainGeometry.attributes.position.array;
     for (let i = 2; i < vertices.length; i += 3) {
         const x = vertices[i-2], y = vertices[i-1];
-        vertices[i] = noise.get(x, y) * 30;
+        vertices[i] = noise(x * 0.05, y * 0.05) * 30;
     }
     terrainGeometry.attributes.position.needsUpdate = true;
     terrainGeometry.computeVertexNormals();
@@ -385,6 +386,7 @@ describe('Drone Racing Game', () => {
                 <table id="standings"></table>
                 <button id="startReset">Start</button>
             </div>`;
+        window.simplexNoise = { createNoise2D: jest.fn(() => jest.fn((x, y) => Math.random() * 2 - 1)) };
         jest.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => cb());
         init();
     });
@@ -451,6 +453,7 @@ describe('Drone Racing Game', () => {
     afterEach(() => {
         window.requestAnimationFrame.mockRestore();
         document.body.innerHTML = '';
+        delete window.simplexNoise;
     });
 });
 """
@@ -483,7 +486,7 @@ describe('Drone Racing Game', () => {
         <button id="startReset">Start</button>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://unpkg.com/three-noise/build/three-noise.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js"></script>
     <script src="drone_game.js"></script>
 </body>
 </html>
@@ -500,7 +503,7 @@ describe('Drone Game UI', () => {
                 <button id="startReset">Start</button>
             </div>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-            <script src="https://unpkg.com/three-noise/build/three-noise.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js"></script>
             <script src="drone_game.js"></script>`;
     });
 
@@ -515,7 +518,7 @@ describe('Drone Game UI', () => {
     test('includes required scripts', () => {
         const scripts = Array.from(document.getElementsByTagName('script')).map(s => s.src);
         expect(scripts.some(src => src.includes('three.min.js'))).toBe(true);
-        expect(scripts.some(src => src.includes('three-noise'))).toBe(true);
+        expect(scripts.some(src => src.includes('simplex-noise'))).toBe(true);
         expect(scripts.includes('drone_game.js')).toBe(true);
     });
 

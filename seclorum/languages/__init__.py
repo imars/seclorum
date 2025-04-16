@@ -39,6 +39,8 @@ class JavaScriptHandler(LanguageHandler):
             f"Architect's Plan:\n{plan}\n\n"
             f"Generate JavaScript code for {output_file} based on the task description. "
             "Use global THREE object from CDN (no import statements). "
+            "Use simplexNoise.createNoise2D() from https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js for terrain generation. "
+            "Ensure code integrates with HTML elements: canvas#gameCanvas, div#ui, span#timer, span#speed, table#standings, button#startReset. "
             "Return clean JavaScript code, no comments, no markdown."
         )
 
@@ -47,18 +49,20 @@ class JavaScriptHandler(LanguageHandler):
         return (
             f"Given JavaScript code:\n{code}\n\n"
             "Generate Jest tests for the code. "
-            "Test core functionality and key behaviors. "
+            "Test core functionality: scene initialization, drone controls, AI pathfinding, UI updates, collision detection. "
+            "Mock simplexNoise.createNoise2D() and requestAnimationFrame. "
             "Return raw Jest code, no comments, no markdown."
         )
 
     def validate_code(self, code: str) -> bool:
-        valid = bool(code.strip()) and "import " not in code
+        required = ["THREE.Scene", "simplexNoise.createNoise2D", "document.getElementById"]
+        valid = bool(code.strip() and all(kw in code for kw in required) and "import " not in code)
         logger.debug(f"JavaScript validation: {'valid' if valid else 'invalid'}, code_length={len(code)}")
         return valid
 
     def get_code(self, task: Task, output_file: str) -> str:
         logger.debug(f"Generating JavaScript code for task={task.task_id}, output_file={output_file}")
-        return ""  # Let inference handle it
+        return ""
 
     def get_fallback_code(self, task: Task) -> str:
         logger.debug(f"Generating fallback JavaScript for task={task.task_id}")
@@ -67,12 +71,13 @@ class JavaScriptHandler(LanguageHandler):
 let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 let renderer = new THREE.WebGLRenderer({{ canvas: document.getElementById('gameCanvas') }});
 renderer.setSize(window.innerWidth, window.innerHeight);
+let noise = simplexNoise.createNoise2D();
 let object = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({{ color: 0x00ff00 }}));
 scene.add(object);
 camera.position.z = 5;
 function animate() {{
     requestAnimationFrame(animate);
-    object.rotation.x += 0.01;
+    object.rotation.x += noise(object.position.x * 0.01, object.position.y * 0.01);
     renderer.render(scene, camera);
 }}
 animate();
@@ -87,7 +92,8 @@ class HTMLHandler(LanguageHandler):
             f"Architect's Plan:\n{plan}\n\n"
             f"Generate HTML code for {output_file} based on the task description. "
             "Include a canvas (id='gameCanvas'), UI div (id='ui') with timer (span#timer), speed (span#speed), standings (table#standings), and start/reset button (button#startReset). "
-            "Load Three.js and three-noise from CDNs. Include <script src='drone_game.js'>. "
+            "Load Three.js from https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js and simplex-noise from https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js. "
+            "Include <script src='drone_game.js'>. "
             "Return clean HTML code, no JavaScript, no comments, no markdown."
         )
 
@@ -96,12 +102,12 @@ class HTMLHandler(LanguageHandler):
         return (
             f"Given HTML code:\n{code}\n\n"
             "Generate Jest tests for the HTML structure. "
-            "Test presence of canvas, UI elements, and script tags. "
+            "Test presence of canvas, UI elements, and script tags (three.min.js, simplex-noise.min.js, drone_game.js). "
             "Return raw Jest code, no comments, no markdown."
         )
 
     def validate_code(self, code: str) -> bool:
-        required = ["<html", "<body", "<canvas", "<script"]
+        required = ["<html", "<body", "<canvas", "<script", "simplex-noise", "three.min.js"]
         valid = bool(code.strip() and all(kw in code.lower() for kw in required))
         logger.debug(f"HTML validation: {'valid' if valid else 'invalid'}, keywords={required}")
         return valid
@@ -135,7 +141,7 @@ class HTMLHandler(LanguageHandler):
         <button id="startReset">Start</button>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://unpkg.com/three-noise/build/three-noise.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js"></script>
     <script src="drone_game.js"></script>
 </body>
 </html>"""

@@ -23,7 +23,7 @@ class Developer(Aggregate):
     def __init__(self, session_id: str, model_manager=None):
         super().__init__(session_id, model_manager)
         self.name = "Developer"
-        self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
+        self.model_manager = model_manager or create_model_manager(provider="google_ai_studio", model_name="gemini-1.5-flash")
         self.pipelines: Dict[str, List[dict]] = {}
         self.agent_flow = []
         logger.debug(f"Developer initialized: session_id={session_id}")
@@ -45,7 +45,7 @@ class Developer(Aggregate):
              "output_file": output_file, "language": language},
             {"agent": tester, "name": tester.name, "deps": [(generator.name, {"status": "generated"})],
              "output_file": output_file, "language": language},
-            {"agent": executor, "name": executor.name, "deps": [(generator.name, {"status": "generated"})],  # Relaxed
+            {"agent": executor, "name": executor.name, "deps": [(generator.name, {"status": "generated"})],
              "output_file": output_file, "language": language},
             {"agent": debugger, "name": debugger.name, "deps": [(executor.name, {"status": "tested", "passed": False})],
              "output_file": output_file, "language": language},
@@ -70,7 +70,15 @@ class Developer(Aggregate):
             response = self.infer(prompt, task, use_remote=task.parameters.get("use_remote", True))
             logger.debug(f"infer_pipelines response: {response[:200]}...")
             cleaned_response = re.sub(r'^```json\s*|\s*```$', '', response, flags=re.MULTILINE).strip()
-            data = json.loads(cleaned_response)
+            try:
+                data = json.loads(cleaned_response)
+            except json.JSONDecodeError as e:
+                logger.warning(f"JSON parsing failed: {str(e)}, trying to fix")
+                # Attempt to fix common JSON issues
+                cleaned_response = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', cleaned_response)
+                cleaned_response = re.sub(r',\s*]', ']', cleaned_response)
+                cleaned_response = re.sub(r',\s*}', '}', cleaned_response)
+                data = json.loads(cleaned_response)
             pipelines = data.get("pipelines", data) if isinstance(data, dict) else data
             if not isinstance(pipelines, list):
                 raise ValueError("Pipelines must be a list")
@@ -145,7 +153,7 @@ class Developer(Aggregate):
                 output_file=output_file,
                 generate_tests=task.parameters.get("generate_tests", False),
                 execute=task.parameters.get("execute", False),
-                use_remote=True  # Force remote inference
+                use_remote=True
             )
             subtask.parameters.update(task.parameters)
             subtask.parameters["architect_plan"] = plan
