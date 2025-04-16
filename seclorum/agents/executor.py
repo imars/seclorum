@@ -29,18 +29,17 @@ class Executor(Agent):
             logger.error(f"Unsupported language: {language}")
             return "tested", TestResult(test_code="", passed=False, output=f"Language {language} not supported")
 
-        tester_key = next((k for k in task.parameters if k.startswith("Tester_") and k.endswith("_test")), None)
-        generator_key = next((k for k in task.parameters if k.startswith("Generator_") and k.endswith("_gen")), None)
+        # Check for Generator or Tester output
         code_output = None
         test_code = ""
-        if tester_key and tester_key in task.parameters:
-            test_result = task.parameters[tester_key].get("result")
-            if isinstance(test_result, TestResult):
-                test_code = test_result.test_code
-                if test_result.passed:
-                    code_output = task.parameters.get(generator_key, {}).get("result")
-        elif generator_key and generator_key in task.parameters:
-            code_output = task.parameters[generator_key].get("result")
+        for key, value in task.parameters.items():
+            if isinstance(value, dict) and value.get("status") in ["generated", "tested"]:
+                if key.startswith("Generator_") and value.get("result"):
+                    code_output = value["result"]
+                elif key.startswith("Tester_") and value.get("result"):
+                    test_result = value["result"]
+                    if isinstance(test_result, TestResult):
+                        test_code = test_result.test_code
 
         if not code_output or not code_output.code.strip():
             logger.warning(f"No valid code to execute for {output_file}")
@@ -88,7 +87,7 @@ module.exports = {
                     logger.error(f"Execution error for {output_file}:\n{output[:200]}...")
         elif language == "html":
             output = f"HTML execution skipped for {output_file}; validated by Tester"
-            passed = True
+            passed = handler.validate_code(code)
             logger.debug(output)
 
         result = TestResult(test_code=test_code, passed=passed, output=output)

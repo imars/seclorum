@@ -34,19 +34,28 @@ class Agent(AbstractAgent, Remote):
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"maxOutputTokens": 512, "temperature": 0.7}
+                "generationConfig": {
+                    "maxOutputTokens": kwargs.get("max_tokens", 2048),
+                    "temperature": kwargs.get("temperature", 0.7)
+                }
             }
             self.log_update(f"Sending request to {url}")
             try:
-                response = requests.post(url, json=payload, timeout=30)
+                response = requests.post(url, json=payload, timeout=kwargs.get("timeout", 1200))
                 response.raise_for_status()
                 result = response.json()
+                if not result.get("candidates"):
+                    self.log_update("Remote inference returned no candidates")
+                    return ""
                 text = result["candidates"][0]["content"]["parts"][0]["text"]
+                if not text.strip():
+                    self.log_update("Remote inference returned empty text")
+                    return ""
                 self.log_update(f"Remote inference successful: {text[:50]}...")
-                return text
+                return text.strip()
             except requests.RequestException as e:
                 self.log_update(f"Remote inference failed: {str(e)}")
-                raise
+                return ""
         else:
             raise ValueError(f"Unsupported endpoint: {endpoint}")
 
@@ -74,7 +83,20 @@ class Agent(AbstractAgent, Remote):
 
     def infer(self, prompt: str, task: Task, use_remote: Optional[bool] = None, use_context: bool = False, endpoint: str = "google_ai_studio", **kwargs) -> str:
         self.log_update(f"Inferring with model '{self.current_model_key}' on prompt: {prompt[:50]}...")
-        return super().infer(prompt, task, use_remote=use_remote, use_context=use_context, endpoint=endpoint, **kwargs)
+        start_time = time.time()
+        try:
+            if use_remote:
+                result = self.remote_infer(prompt, endpoint=endpoint, **kwargs)
+            else:
+                result = self.model.generate(prompt, **kwargs)
+            if not result:
+                self.log_update(f"Inference returned empty result for task {task.task_id}")
+                return ""
+            self.log_update(f"Inference completed in {time.time() - start_time:.2f}s, result_length={len(result)}")
+            return result
+        except Exception as e:
+            self.log_update(f"Inference failed for task {task.task_id}: {str(e)}")
+            return ""
 
     def process_task(self, task: Task) -> Tuple[str, Any]:
         raise NotImplementedError("Subclasses must implement process_task")
