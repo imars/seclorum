@@ -58,8 +58,8 @@ def create_drone_game():
     js_task = TaskFactory.create_code_task(
         description=(
             "Create JavaScript code for a Three.js game with a player-controlled drone (Arrow keys/W/S) in a 3D scene. "
-            "Drones race across a scrolling landscape with mountains, valleys, and flatlands using simplex-noise (via CDN https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js). "
-            "Use global simplexNoise.createNoise2D() for terrain generation. Include scene, camera, ambient/directional lighting, and a sphere drone model. "
+            "Drones race across a scrolling landscape with mountains, valleys, and flatlands using simplex-noise (via CDN https://cdn.jsdelivr.net/npm/simplex-noise@4.0.3/dist/simplex-noise.min.js). "
+            "Use global window.simplexNoise.createNoise2D() for terrain generation. Include scene, camera, ambient/directional lighting, and a sphere drone model. "
             "Use global THREE object from CDN (no import statements). "
             "Implement race mechanics: timer, checkpoints (score points), standings (time-based ranking), win condition (first to all checkpoints or fastest time). "
             "Add static obstacles (trees, rocks) and AI drones with A* pathfinding to checkpoints, avoiding obstacles. "
@@ -78,7 +78,7 @@ def create_drone_game():
             "Create HTML code for a Three.js drone racing game. "
             "Include a full-screen canvas (id='gameCanvas') for the game. "
             "Add a UI div (id='ui') with timer (span#timer), speed (span#speed), standings table (table#standings), and a blue start/reset button (button#startReset) with hover effects. "
-            "Load Three.js and simplex-noise from CDNs (https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js, https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js). "
+            "Load Three.js and simplex-noise from CDNs (https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js, https://cdn.jsdelivr.net/npm/simplex-noise@4.0.3/dist/simplex-noise.min.js). "
             "Include <script src='drone_game.js'> to load the game logic. "
             "Use CSS for black background, white UI text, semi-transparent standings background, and blue button styling."
         ),
@@ -108,10 +108,12 @@ def create_drone_game():
             result = None
 
         if status in ["generated", "tested", "executed"] and result and isinstance(result, CodeOutput):
+            logger.info(f"Pipeline output for {task.parameters['output_file']}: {len(result.code)} bytes")
             outputs.append({
                 "output_file": str(output_dir / task.parameters["output_file"]),
                 "code": result.code,
-                "tests": result.tests
+                "tests": result.tests,
+                "source": "pipeline"
             })
 
     # Fallback if pipeline fails or outputs are incomplete
@@ -121,7 +123,7 @@ def create_drone_game():
             {
                 "output_file": str(output_dir / "drone_game.js"),
                 "code": """
-// Assumes global THREE and simplexNoise from CDNs
+// Assumes global THREE and window.simplexNoise from CDNs
 let scene, camera, renderer, playerDrone, aiDrones = [], terrain, checkpoints = [], obstacles = [], timer = 0, standings = [];
 const clock = new THREE.Clock();
 
@@ -136,7 +138,7 @@ function init() {
 
     // Terrain with simplex-noise
     const terrainGeometry = new THREE.PlaneGeometry(1000, 1000, 100, 100);
-    const noise = simplexNoise.createNoise2D();
+    const noise = typeof window.simplexNoise !== 'undefined' ? window.simplexNoise.createNoise2D() : () => 0;
     const vertices = terrainGeometry.attributes.position.array;
     for (let i = 2; i < vertices.length; i += 3) {
         const x = vertices[i-2], y = vertices[i-1];
@@ -227,7 +229,7 @@ function onKeyUp(event) {
         case 'ArrowUp': case 'w': playerDrone.controls.forward = false; break;
         case 'ArrowDown': case 's': playerDrone.controls.backward = false; break;
         case 'ArrowLeft': playerDrone.controls.left = false; break;
-        case 'ArrowRight': playerDrone.controls.right = true; break;
+        case 'ArrowRight': playerDrone.controls.right = false; break;
     }
 }
 
@@ -260,7 +262,7 @@ function updatePlayerDrone(delta) {
     playerDrone.momentum.clampLength(0, maxSpeed);
     playerDrone.momentum.multiplyScalar(friction);
     playerDrone.position.add(playerDrone.momentum);
-    playerDrone.position.y = Math.max(10, 10);
+    playerDrone.position.y = 10;
 }
 
 function updateAIDrones(delta) {
@@ -274,7 +276,7 @@ function updateAIDrones(delta) {
             const next = d.path.shift();
             const direction = next.clone().sub(d.position).normalize();
             d.position.add(direction.multiplyScalar(3 * delta));
-            d.position.y = Math.max(10, 10);
+            d.position.y = 10;
         }
     });
 }
@@ -302,7 +304,7 @@ function aStarPath(start, goal, obstacles) {
             for (let dz of [-gridSize, 0, gridSize]) {
                 if (dx === 0 && dz === 0) continue;
                 const nextPos = current.pos.clone().add(new THREE.Vector3(dx, 0, dz));
-                const nextKey = `${Math.round(nextPos.x / gridSize)},${Math.round(nextPos.z / gridSize)}`;
+                const nextKey = `${Math.round(nextPos.x / gridSize)},${Math.round(current.pos.z / gridSize)}`;
                 if (closed.has(nextKey) || (grid[Math.round(nextPos.x)] && grid[Math.round(nextPos.x)][Math.round(nextPos.z)] === Infinity)) continue;
                 const g = current.g + gridSize;
                 const h = nextPos.distanceTo(goal);
@@ -457,7 +459,8 @@ describe('Drone Racing Game', () => {
         delete window.simplexNoise;
     });
 });
-"""
+""",
+                "source": "fallback"
             },
             {
                 "output_file": str(output_dir / "drone_game.html"),
@@ -487,7 +490,15 @@ describe('Drone Racing Game', () => {
         <button id="startReset">Start</button>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.3/dist/simplex-noise.min.js" onerror="console.error('Failed to load simplex-noise')"></script>
+    <script>
+        // Ensure simplexNoise is defined
+        window.simplexNoise = window.simplexNoise || {};
+        window.simplexNoise.createNoise2D = window.simplexNoise.createNoise2D || function() {
+            console.warn('simplexNoise.createNoise2D not available, using fallback');
+            return function(x, y) { return Math.random() * 2 - 1; };
+        };
+    </script>
     <script src="drone_game.js"></script>
 </body>
 </html>
@@ -504,7 +515,7 @@ describe('Drone Game UI', () => {
                 <button id="startReset">Start</button>
             </div>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-            <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.3/dist/simplex-noise.min.js"></script>
             <script src="drone_game.js"></script>`;
     });
 
@@ -532,7 +543,8 @@ describe('Drone Game UI', () => {
         document.body.innerHTML = '';
     });
 });
-"""
+""",
+                "source": "fallback"
             }
         ]
 
@@ -540,18 +552,19 @@ describe('Drone Game UI', () => {
         output_file = output["output_file"]
         code = re.sub(r'const THREE = require\(\'three\'\);\n?|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid)[^\n]*?\n?', '', output["code"]).strip()
         tests = output["tests"].strip() if output["tests"] else None
+        source = output.get("source", "unknown")
 
         if code and not code.lower().startswith("error"):
             os.makedirs(os.path.dirname(output_file) or '.', exist_ok=True)
             with open(output_file, "w") as f:
                 f.write(code)
-            logger.info(f"File '{output_file}' created, size: {os.path.getsize(output_file)} bytes")
+            logger.info(f"File '{output_file}' created, size: {os.path.getsize(output_file)} bytes, source: {source}")
 
             if tests:
                 test_file = output_file.replace(".js", ".test.js").replace(".html", ".html.test.js")
                 with open(test_file, "w") as f:
                     f.write(tests)
-                logger.info(f"Test file '{test_file}' created, size: {os.path.getsize(test_file)} bytes")
+                logger.info(f"Test file '{test_file}' created, size: {os.path.getsize(test_file)} bytes, source: {source}")
 
     logger.info(f"Task completed with status: {status or 'fallback'}")
     logger.info(f"Run 'open examples/3d_game/drone_game.html' to view the game in a browser.")

@@ -1,4 +1,4 @@
-// Assumes global THREE and Noise from CDNs
+// Assumes global THREE and simplexNoise from CDNs
 let scene, camera, renderer, playerDrone, aiDrones = [], terrain, checkpoints = [], obstacles = [], timer = 0, standings = [];
 const clock = new THREE.Clock();
 
@@ -11,13 +11,13 @@ function init() {
     renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas') });
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    // Terrain with Perlin noise
+    // Terrain with simplex-noise
     const terrainGeometry = new THREE.PlaneGeometry(1000, 1000, 100, 100);
-    const noise = new Noise({ type: 'perlin', scale: 0.05, octaves: 4, persistence: 0.5, lacunarity: 2 });
+    const noise = simplexNoise.createNoise2D();
     const vertices = terrainGeometry.attributes.position.array;
     for (let i = 2; i < vertices.length; i += 3) {
         const x = vertices[i-2], y = vertices[i-1];
-        vertices[i] = noise.get(x, y) * 30;
+        vertices[i] = noise(x * 0.05, y * 0.05) * 30;
     }
     terrainGeometry.attributes.position.needsUpdate = true;
     terrainGeometry.computeVertexNormals();
@@ -104,7 +104,7 @@ function onKeyUp(event) {
         case 'ArrowUp': case 'w': playerDrone.controls.forward = false; break;
         case 'ArrowDown': case 's': playerDrone.controls.backward = false; break;
         case 'ArrowLeft': playerDrone.controls.left = false; break;
-        case 'ArrowRight': playerDrone.controls.right = false; break;
+        case 'ArrowRight': playerDrone.controls.right = true; break;
     }
 }
 
@@ -137,7 +137,7 @@ function updatePlayerDrone(delta) {
     playerDrone.momentum.clampLength(0, maxSpeed);
     playerDrone.momentum.multiplyScalar(friction);
     playerDrone.position.add(playerDrone.momentum);
-    playerDrone.position.y = Math.max(10, terrain.getHeightAt ? terrain.getHeightAt(playerDrone.position.x, playerDrone.position.z) + 10 : 10);
+    playerDrone.position.y = Math.max(10, 10);
 }
 
 function updateAIDrones(delta) {
@@ -151,7 +151,7 @@ function updateAIDrones(delta) {
             const next = d.path.shift();
             const direction = next.clone().sub(d.position).normalize();
             d.position.add(direction.multiplyScalar(3 * delta));
-            d.position.y = Math.max(10, terrain.getHeightAt ? terrain.getHeightAt(d.position.x, d.position.z) + 10 : 10);
+            d.position.y = Math.max(10, 10);
         }
     });
 }

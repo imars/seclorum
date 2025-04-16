@@ -9,7 +9,7 @@ describe('Drone Game UI', () => {
                 <button id="startReset">Start</button>
             </div>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-            <script src="https://unpkg.com/three-noise/build/three-noise.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js"></script>
             <script src="drone_game.js"></script>`;
     });
 
@@ -24,7 +24,7 @@ describe('Drone Game UI', () => {
     test('includes required scripts', () => {
         const scripts = Array.from(document.getElementsByTagName('script')).map(s => s.src);
         expect(scripts.some(src => src.includes('three.min.js'))).toBe(true);
-        expect(scripts.some(src => src.includes('three-noise'))).toBe(true);
+        expect(scripts.some(src => src.includes('simplex-noise'))).toBe(true);
         expect(scripts.includes('drone_game.js')).toBe(true);
     });
 
