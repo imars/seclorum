@@ -16,10 +16,10 @@ import time
 import timeout_decorator
 
 class Agent(AbstractAgent, Remote):
-    def __init__(self, name: str, session_id: str, model_manager: Optional[ModelManager] = None, model_name: str = "llama3.2:latest"):
+    def __init__(self, name: str, session_id: str, model_manager: Optional[ModelManager] = None, model_name: str = "gemini-1.5-flash"):
         super().__init__(name, session_id)
         self.logger = logging.getLogger(f"Agent_{name}")
-        self.model = model_manager or create_model_manager(provider="ollama", model_name=model_name)
+        self.model = model_manager or create_model_manager(provider="google_ai_studio", model_name=model_name)
         self.available_models = {"default": self.model}
         self.current_model_key = "default"
         self.memory = self.get_or_create_memory(session_id)
@@ -27,37 +27,36 @@ class Agent(AbstractAgent, Remote):
 
     def remote_infer(self, prompt: str, endpoint: str = "google_ai_studio", **kwargs) -> str:
         self.log_update(f"Running remote inference to {endpoint}")
-        if endpoint == "google_ai_studio":
-            api_key = os.getenv("GOOGLE_AI_STUDIO_API_KEY")
-            if not api_key:
-                raise ValueError("GOOGLE_AI_STUDIO_API_KEY not set")
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {
-                    "maxOutputTokens": kwargs.get("max_tokens", 2048),
-                    "temperature": kwargs.get("temperature", 0.7)
-                }
+        if endpoint != "google_ai_studio":
+            raise ValueError(f"Only google_ai_studio supported, got {endpoint}")
+        api_key = os.getenv("GOOGLE_AI_STUDIO_API_KEY")
+        if not api_key:
+            raise ValueError("GOOGLE_AI_STUDIO_API_KEY not set. Set it with 'export GOOGLE_AI_STUDIO_API_KEY=your_key'")
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "maxOutputTokens": kwargs.get("max_tokens", 2048),
+                "temperature": kwargs.get("temperature", 0.7)
             }
-            self.log_update(f"Sending request to {url}")
-            try:
-                response = requests.post(url, json=payload, timeout=kwargs.get("timeout", 1200))
-                response.raise_for_status()
-                result = response.json()
-                if not result.get("candidates"):
-                    self.log_update("Remote inference returned no candidates")
-                    return ""
-                text = result["candidates"][0]["content"]["parts"][0]["text"]
-                if not text.strip():
-                    self.log_update("Remote inference returned empty text")
-                    return ""
-                self.log_update(f"Remote inference successful: {text[:50]}...")
-                return text.strip()
-            except requests.RequestException as e:
-                self.log_update(f"Remote inference failed: {str(e)}")
+        }
+        self.log_update(f"Sending request to {url}")
+        try:
+            response = requests.post(url, json=payload, timeout=kwargs.get("timeout", 30))
+            response.raise_for_status()
+            result = response.json()
+            if not result.get("candidates"):
+                self.log_update("Remote inference returned no candidates")
                 return ""
-        else:
-            raise ValueError(f"Unsupported endpoint: {endpoint}")
+            text = result["candidates"][0]["content"]["parts"][0]["text"]
+            if not text.strip():
+                self.log_update("Remote inference returned empty text")
+                return ""
+            self.log_update(f"Remote inference successful: {text[:50]}...")
+            return text.strip()
+        except requests.RequestException as e:
+            self.log_update(f"Remote inference failed: {str(e)}")
+            return ""
 
     def add_model(self, model_key: str, model_manager: ModelManager) -> None:
         self.available_models[model_key] = model_manager
@@ -85,10 +84,7 @@ class Agent(AbstractAgent, Remote):
         self.log_update(f"Inferring with model '{self.current_model_key}' on prompt: {prompt[:50]}...")
         start_time = time.time()
         try:
-            if use_remote:
-                result = self.remote_infer(prompt, endpoint=endpoint, **kwargs)
-            else:
-                result = self.model.generate(prompt, **kwargs)
+            result = self.remote_infer(prompt, endpoint=endpoint, **kwargs)
             if not result:
                 self.log_update(f"Inference returned empty result for task {task.task_id}")
                 return ""

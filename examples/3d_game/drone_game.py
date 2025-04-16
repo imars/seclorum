@@ -42,12 +42,16 @@ def setup_logging(summary_mode=False):
 def create_drone_game():
     parser = argparse.ArgumentParser(description="Generate a Three.js drone racing game.")
     parser.add_argument("--summary", action="store_true", help="Output a summary of key events only.")
+    parser.add_argument("--remote", action="store_true", default=True, help="Use remote inference (google_ai_studio).")
+    parser.add_argument("--model", default="gemini-1.5-flash", help="Model name for inference (default: gemini-1.5-flash).")
+    parser.add_argument("--timeout", type=int, default=30, help="Inference timeout in seconds (default: 30).")
     args = parser.parse_args()
 
     logger = setup_logging(args.summary)
     logger.debug(f"Running from: {os.getcwd()}")
+    logger.debug(f"Arguments: remote={args.remote}, model={args.model}, timeout={args.timeout}")
 
-    model_manager = create_model_manager(provider="ollama", model_name="llama3.2:latest")
+    model_manager = create_model_manager(provider="google_ai_studio", model_name=args.model)
     developer = Developer("drone_game_session", model_manager)
 
     # Define tasks for JavaScript and HTML
@@ -64,7 +68,8 @@ def create_drone_game():
         output_file="drone_game.js",
         generate_tests=True,
         execute=True,
-        use_remote=True
+        use_remote=args.remote,
+        timeout=args.timeout
     )
 
     html_task = TaskFactory.create_code_task(
@@ -80,7 +85,8 @@ def create_drone_game():
         output_file="drone_game.html",
         generate_tests=True,
         execute=True,
-        use_remote=True
+        use_remote=args.remote,
+        timeout=args.timeout
     )
 
     output_dir = Path("examples/3d_game")
@@ -132,7 +138,7 @@ function init() {
     const vertices = terrainGeometry.attributes.position.array;
     for (let i = 2; i < vertices.length; i += 3) {
         const x = vertices[i-2], y = vertices[i-1];
-        vertices[i] = noise.get(x, y) * 30; // Mountains and valleys
+        vertices[i] = noise.get(x, y) * 30;
     }
     terrainGeometry.attributes.position.needsUpdate = true;
     terrainGeometry.computeVertexNormals();
@@ -175,8 +181,7 @@ function init() {
     for (let i = 0; i < 20; i++) {
         const type = Math.random() < 0.5 ? 'tree' : 'rock';
         const obstacle = new THREE.Mesh(
-            type === 'tree станет
-            ? new THREE.CylinderGeometry(2, 2, 15, 16) : new THREE.BoxGeometry(5, 5, 5),
+            type === 'tree' ? new THREE.CylinderGeometry(2, 2, 15, 16) : new THREE.BoxGeometry(5, 5, 5),
             new THREE.MeshStandardMaterial({ color: type === 'tree' ? 0x8B4513 : 0x808080 })
         );
         obstacle.position.set(Math.random() * 200 - 100, type === 'tree' ? 7.5 : 2.5, Math.random() * -800 - 50);
@@ -320,7 +325,7 @@ function checkCollisions() {
         });
         obstacles.forEach(o => {
             if (d.position.distanceTo(o.position) < 5) {
-                d.momentum ? d.momentum.multiplyScalar(0.5) : d.position.set(d.position.x, 10, d.position.z);
+                d.momentum ? d.momentum.multiplyScalargrant_type=0.5) : d.position.set(d.position.x, 10, d.position.z);
                 if (d === playerDrone) standings.push({ drone: i + 1, time: Infinity, penalty: true });
             }
         });
@@ -528,7 +533,7 @@ describe('Drone Game UI', () => {
         ]
 
     for output in outputs:
-        output_file = output["output_file"]
+        output_file = output[" czyli output_file"]
         code = re.sub(r'const THREE = require\(\'three\'\);\n?|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid)[^\n]*?\n?', '', output["code"]).strip()
         tests = output["tests"].strip() if output["tests"] else None
 

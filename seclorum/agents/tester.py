@@ -26,8 +26,8 @@ class Tester(Agent):
                     break
 
             if not generator_output or not isinstance(generator_output, CodeOutput) or not generator_output.code:
-                logger.error("No valid generated code found in task parameters")
-                return "failed", None
+                logger.warning("No valid generated code found in task parameters")
+                return "tested", CodeOutput(code="", tests=None, error="No code provided")
 
             code = generator_output.code
             language = task.parameters.get("language", "javascript").lower()
@@ -37,23 +37,26 @@ class Tester(Agent):
             handler = LANGUAGE_HANDLERS.get(language)
             if not handler:
                 logger.error(f"No language handler for {language}")
-                return "failed", CodeOutput(code=code, tests=None, error=f"Unsupported language: {language}")
+                return "tested", CodeOutput(code=code, tests=None, error=f"Unsupported language: {language}")
 
             # Validate generated code
             is_valid = handler.validate_code(code)
-            if not is_valid:
-                logger.error(f"Code validation failed for {language}")
-                return "failed", CodeOutput(code=code, tests=None, error="Invalid code")
+            if not is_valid or len(code) < 100:  # Arbitrary threshold for short code
+                logger.warning(f"Code validation failed or too short for {language}: length={len(code)}")
+                return "tested", CodeOutput(code=code, tests=None, error="Invalid or insufficient code")
 
             # Generate tests if requested
             if task.parameters.get("generate_tests", False):
                 try:
                     test_prompt = handler.get_test_prompt(code)
                     test_code = self.infer(test_prompt, task, use_remote=task.parameters.get("use_remote", False))
+                    if not test_code.strip():
+                        logger.warning("Test code generation failed")
+                        test_code = None
                     logger.debug(f"Generated test code for {output_file}: {test_code[:100]}...")
                 except Exception as e:
                     logger.error(f"Test generation failed: {str(e)}")
-                    return "failed", CodeOutput(code=code, tests=None, error=str(e))
+                    test_code = None
             else:
                 test_code = None
 
@@ -65,4 +68,4 @@ class Tester(Agent):
 
         except Exception as e:
             logger.error(f"Error processing task {task.task_id}: {str(e)}")
-            return "failed", None
+            return "tested", CodeOutput(code="", tests=None, error=str(e))

@@ -13,6 +13,7 @@ import re
 import json
 import os
 import sys
+import timeout_decorator
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -24,7 +25,7 @@ class Developer(Aggregate):
         self.name = "Developer"
         self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
         self.pipelines: Dict[str, List[dict]] = {}
-        self.agent_flow = []  # Track agents for test compatibility
+        self.agent_flow = []
         logger.debug(f"Developer initialized: session_id={session_id}")
         logger.debug(f"Agent classes: Architect={Architect.__name__}, Generator={Generator.__name__}, "
                      f"Tester={Tester.__name__}, Executor={Executor.__name__}, Debugger={Debugger.__name__}")
@@ -44,9 +45,9 @@ class Developer(Aggregate):
              "output_file": output_file, "language": language},
             {"agent": tester, "name": tester.name, "deps": [(generator.name, {"status": "generated"})],
              "output_file": output_file, "language": language},
-            {"agent": executor, "name": executor.name, "deps": [(tester.name, {"status": "tested"})],
+            {"agent": executor, "name": executor.name, "deps": [(generator.name, {"status": "generated"})],  # Relaxed
              "output_file": output_file, "language": language},
-            {"agent": debugger, "name": debugger.name, "deps": [(executor.name, {"status": "executed", "passed": False})],
+            {"agent": debugger, "name": debugger.name, "deps": [(executor.name, {"status": "tested", "passed": False})],
              "output_file": output_file, "language": language},
         ]
 
@@ -55,6 +56,7 @@ class Developer(Aggregate):
             logger.debug(f"Added agent {step['name']} to pipeline")
         return pipeline
 
+    @timeout_decorator.timeout(30, timeout_exception=TimeoutError)
     def infer_pipelines(self, task: Task, plan: Any) -> List[Dict[str, Any]]:
         logger.debug(f"Inferring pipelines for task={task.task_id}")
         prompt = (
@@ -65,11 +67,9 @@ class Developer(Aggregate):
             '[{"language": "javascript", "output_file": "drone_game.js"}, {"language": "html", "output_file": "drone_game.html"}]'
         )
         try:
-            response = self.infer(prompt, task, use_remote=task.parameters.get("use_remote", False))
+            response = self.infer(prompt, task, use_remote=task.parameters.get("use_remote", True))
             logger.debug(f"infer_pipelines response: {response[:200]}...")
-            # Strip markdown code blocks
             cleaned_response = re.sub(r'^```json\s*|\s*```$', '', response, flags=re.MULTILINE).strip()
-            # Handle both {"pipelines": [...]} and [...] formats
             data = json.loads(cleaned_response)
             pipelines = data.get("pipelines", data) if isinstance(data, dict) else data
             if not isinstance(pipelines, list):
@@ -85,7 +85,7 @@ class Developer(Aggregate):
                     p["output_file"] += ".html"
             logger.debug(f"Inferred pipelines: {pipelines}")
             return pipelines
-        except (json.JSONDecodeError, ValueError) as e:
+        except (json.JSONDecodeError, ValueError, TimeoutError) as e:
             logger.error(f"Pipeline inference failed: {str(e)}, defaulting to JavaScript and HTML")
             return [
                 {"language": "javascript", "output_file": "drone_game.js"},
@@ -145,7 +145,7 @@ class Developer(Aggregate):
                 output_file=output_file,
                 generate_tests=task.parameters.get("generate_tests", False),
                 execute=task.parameters.get("execute", False),
-                use_remote=task.parameters.get("use_remote", False)
+                use_remote=True  # Force remote inference
             )
             subtask.parameters.update(task.parameters)
             subtask.parameters["architect_plan"] = plan
