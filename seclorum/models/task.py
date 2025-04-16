@@ -1,3 +1,4 @@
+# seclorum/models/task.py
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List
 import json
@@ -57,7 +58,8 @@ class TaskFactory:
         execute: bool = False,
         use_remote: bool = False,
         output_file: Optional[str] = None,
-        task_id: Optional[str] = None
+        task_id: Optional[str] = None,
+        timeout: Optional[int] = None
     ) -> Task:
         """Create a task for code generation, testing, and execution."""
         task_id = task_id or str(uuid.uuid4())
@@ -69,6 +71,8 @@ class TaskFactory:
         }
         if output_file:
             parameters["output_file"] = output_file
+        if timeout is not None:
+            parameters["timeout"] = timeout
         logger.debug(f"Creating code task: task_id={task_id}, output_file={output_file}, parameters={parameters}")
         return Task(
             task_id=task_id,

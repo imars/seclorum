@@ -325,7 +325,7 @@ function checkCollisions() {
         });
         obstacles.forEach(o => {
             if (d.position.distanceTo(o.position) < 5) {
-                d.momentum ? d.momentum.multiplyScalargrant_type=0.5) : d.position.set(d.position.x, 10, d.position.z);
+                d.momentum ? d.momentum.multiplyScalar(0.5) : d.position.set(d.position.x, 10, d.position.z);
                 if (d === playerDrone) standings.push({ drone: i + 1, time: Infinity, penalty: true });
             }
         });
@@ -533,7 +533,7 @@ describe('Drone Game UI', () => {
         ]
 
     for output in outputs:
-        output_file = output[" czyli output_file"]
+        output_file = output["output_file"]
         code = re.sub(r'const THREE = require\(\'three\'\);\n?|[^\x00-\x7F]+|[^\n]*?(error|warning|invalid)[^\n]*?\n?', '', output["code"]).strip()
         tests = output["tests"].strip() if output["tests"] else None
 
