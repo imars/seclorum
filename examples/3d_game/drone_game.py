@@ -50,52 +50,69 @@ def create_drone_game():
     model_manager = create_model_manager(provider="ollama", model_name="llama3.2:latest")
     developer = Developer("drone_game_session", model_manager)
 
-    task = TaskFactory.create_code_task(
+    # Define tasks for JavaScript and HTML
+    js_task = TaskFactory.create_code_task(
         description=(
-            "Create a Three.js JavaScript game with a player-controlled drone (Arrow keys/W/S) in a 3D scene. "
+            "Create JavaScript code for a Three.js game with a player-controlled drone (Arrow keys/W/S) in a 3D scene. "
             "Drones race across a scrolling landscape with mountains, valleys, and flatlands using Perlin noise (via three-noise CDN). "
             "Include scene, camera, ambient/directional lighting, and a sphere drone model. Use global THREE object from CDN (no import statements). "
             "Implement race mechanics: timer, checkpoints (score points), standings (time-based ranking), win condition (first to all checkpoints or fastest time). "
             "Add static obstacles (trees, rocks) and AI drones with A* pathfinding to checkpoints, avoiding obstacles. "
-            "Include HTML UI with timer, speed, standings (table format), blue start/reset buttons with hover effects."
+            "Reference HTML elements (canvas#gameCanvas, div#ui, span#timer, span#speed, table#standings, button#startReset) for UI integration."
         ),
         language="javascript",
+        output_file="drone_game.js",
         generate_tests=True,
         execute=True,
-        use_remote=True  # Enforce remote inference
+        use_remote=True
+    )
+
+    html_task = TaskFactory.create_code_task(
+        description=(
+            "Create HTML code for a Three.js drone racing game. "
+            "Include a full-screen canvas (id='gameCanvas') for the game. "
+            "Add a UI div (id='ui') with timer (span#timer), speed (span#speed), standings table (table#standings), and a blue start/reset button (button#startReset) with hover effects. "
+            "Load Three.js and three-noise from CDNs (https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js, https://unpkg.com/three-noise/build/three-noise.min.js). "
+            "Include <script src='drone_game.js'> to load the game logic. "
+            "Use CSS for black background, white UI text, semi-transparent standings background, and blue button styling."
+        ),
+        language="html",
+        output_file="drone_game.html",
+        generate_tests=True,
+        execute=True,
+        use_remote=True
     )
 
     output_dir = Path("examples/3d_game")
     output_dir.mkdir(exist_ok=True)
 
-    status, result = None, None
-    try:
-        status, result = developer.process_task(task)
-        if status is None or result is None:
-            raise ValueError("Developer returned None")
-    except Exception as e:
-        logger.error(f"Developer pipeline failed: {str(e)}")
-        status = "failed"
-        result = None
-
+    # Process both tasks
     outputs = []
-    if status in ["generated", "tested", "executed"] and result and isinstance(result, CodeOutput):
-        for key, value in task.parameters.items():
-            if not isinstance(value, dict):
-                logger.debug(f"Skipping invalid parameter value for {key}: {value}")
-                continue
-            if "output_file" in value and isinstance(value.get("result"), CodeOutput) and value["result"].code.strip():
-                outputs.append({
-                    "output_file": str(output_dir / value["output_file"]),
-                    "code": value["result"].code,
-                    "tests": value["result"].tests
-                })
+    for task in [js_task, html_task]:
+        status, result = None, None
+        try:
+            status, result = developer.process_task(task)
+            if status is None or result is None:
+                raise ValueError(f"Developer returned None for {task.output_file}")
+        except Exception as e:
+            logger.error(f"Developer pipeline failed for {task.output_file}: {str(e)}")
+            status = "failed"
+            result = None
 
-    if not outputs:
-        logger.warning(f"No valid outputs generated (status={status}), falling back to default code")
-        outputs = [{
-            "output_file": str(output_dir / "drone_game.js"),
-            "code": """
+        if status in ["generated", "tested", "executed"] and result and isinstance(result, CodeOutput):
+            outputs.append({
+                "output_file": str(output_dir / task.output_file),
+                "code": result.code,
+                "tests": result.tests
+            })
+
+    # Fallback if pipeline fails
+    if not outputs or len(outputs) < 2:
+        logger.warning(f"Insufficient outputs generated (got {len(outputs)}), falling back to default code")
+        outputs = [
+            {
+                "output_file": str(output_dir / "drone_game.js"),
+                "code": """
 // Assumes global THREE and Noise from CDNs
 let scene, camera, renderer, playerDrone, aiDrones = [], terrain, checkpoints = [], obstacles = [], timer = 0, standings = [];
 const clock = new THREE.Clock();
@@ -158,7 +175,8 @@ function init() {
     for (let i = 0; i < 20; i++) {
         const type = Math.random() < 0.5 ? 'tree' : 'rock';
         const obstacle = new THREE.Mesh(
-            type === 'tree' ? new THREE.CylinderGeometry(2, 2, 15, 16) : new THREE.BoxGeometry(5, 5, 5),
+            type === 'tree станет
+            ? new THREE.CylinderGeometry(2, 2, 15, 16) : new THREE.BoxGeometry(5, 5, 5),
             new THREE.MeshStandardMaterial({ color: type === 'tree' ? 0x8B4513 : 0x808080 })
         );
         obstacle.position.set(Math.random() * 200 - 100, type === 'tree' ? 7.5 : 2.5, Math.random() * -800 - 50);
@@ -349,7 +367,7 @@ function animate() {
     renderer.render(scene, camera);
 }
 """,
-            "tests": """
+                "tests": """
 describe('Drone Racing Game', () => {
     beforeEach(() => {
         window.innerWidth = 500;
@@ -431,9 +449,10 @@ describe('Drone Racing Game', () => {
     });
 });
 """
-        }, {
-            "output_file": str(output_dir / "drone_game.html"),
-            "code": """
+            },
+            {
+                "output_file": str(output_dir / "drone_game.html"),
+                "code": """
 <!DOCTYPE html>
 <html>
 <head>
@@ -464,7 +483,7 @@ describe('Drone Racing Game', () => {
 </body>
 </html>
 """,
-            "tests": """
+                "tests": """
 describe('Drone Game UI', () => {
     beforeEach(() => {
         document.body.innerHTML = `
@@ -505,7 +524,8 @@ describe('Drone Game UI', () => {
     });
 });
 """
-        }]
+            }
+        ]
 
     for output in outputs:
         output_file = output["output_file"]
