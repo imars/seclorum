@@ -59,7 +59,7 @@ def create_drone_game():
         description=(
             "Create JavaScript code for a Three.js game with a player-controlled drone (Arrow keys/W/S) in a 3D scene. "
             "Drones race across a scrolling landscape with mountains, valleys, and flatlands using simplex-noise (via CDN https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js). "
-            "Use simplexNoise.createNoise2D() for terrain generation. Include scene, camera, ambient/directional lighting, and a sphere drone model. "
+            "Use global simplexNoise.createNoise2D() for terrain generation. Include scene, camera, ambient/directional lighting, and a sphere drone model. "
             "Use global THREE object from CDN (no import statements). "
             "Implement race mechanics: timer, checkpoints (score points), standings (time-based ranking), win condition (first to all checkpoints or fastest time). "
             "Add static obstacles (trees, rocks) and AI drones with A* pathfinding to checkpoints, avoiding obstacles. "
@@ -99,21 +99,22 @@ def create_drone_game():
         status, result = None, None
         try:
             status, result = developer.process_task(task)
+            logger.debug(f"Task {task.parameters['output_file']}: status={status}, result_type={type(result).__name__}")
             if status is None or result is None:
-                raise ValueError(f"Developer returned None for {task.output_file}")
+                raise ValueError(f"Developer returned None for {task.parameters['output_file']}")
         except Exception as e:
-            logger.error(f"Developer pipeline failed for {task.output_file}: {str(e)}")
+            logger.error(f"Developer pipeline failed for {task.parameters['output_file']}: {str(e)}")
             status = "failed"
             result = None
 
         if status in ["generated", "tested", "executed"] and result and isinstance(result, CodeOutput):
             outputs.append({
-                "output_file": str(output_dir / task.output_file),
+                "output_file": str(output_dir / task.parameters["output_file"]),
                 "code": result.code,
                 "tests": result.tests
             })
 
-    # Fallback if pipeline fails
+    # Fallback if pipeline fails or outputs are incomplete
     if not outputs or len(outputs) < 2:
         logger.warning(f"Insufficient outputs generated (got {len(outputs)}), falling back to default code")
         outputs = [
@@ -226,7 +227,7 @@ function onKeyUp(event) {
         case 'ArrowUp': case 'w': playerDrone.controls.forward = false; break;
         case 'ArrowDown': case 's': playerDrone.controls.backward = false; break;
         case 'ArrowLeft': playerDrone.controls.left = false; break;
-        case 'ArrowRight': playerDrone.controls.right = false; break;
+        case 'ArrowRight': playerDrone.controls.right = true; break;
     }
 }
 
@@ -259,7 +260,7 @@ function updatePlayerDrone(delta) {
     playerDrone.momentum.clampLength(0, maxSpeed);
     playerDrone.momentum.multiplyScalar(friction);
     playerDrone.position.add(playerDrone.momentum);
-    playerDrone.position.y = Math.max(10, terrain.getHeightAt ? terrain.getHeightAt(playerDrone.position.x, playerDrone.position.z) + 10 : 10);
+    playerDrone.position.y = Math.max(10, 10);
 }
 
 function updateAIDrones(delta) {
@@ -273,7 +274,7 @@ function updateAIDrones(delta) {
             const next = d.path.shift();
             const direction = next.clone().sub(d.position).normalize();
             d.position.add(direction.multiplyScalar(3 * delta));
-            d.position.y = Math.max(10, terrain.getHeightAt ? terrain.getHeightAt(d.position.x, d.position.z) + 10 : 10);
+            d.position.y = Math.max(10, 10);
         }
     });
 }
