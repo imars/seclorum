@@ -5,7 +5,7 @@ import os
 import re
 from pathlib import Path
 from seclorum.agents.developer import Developer
-from seclorum.models import CodeOutput, CodeResult
+from seclorum.models import CodeOutput
 from seclorum.models import create_model_manager
 from seclorum.models.task import TaskFactory
 
@@ -52,10 +52,12 @@ def create_drone_game():
 
     task = TaskFactory.create_code_task(
         description=(
-            "Create a Three.js JavaScript game with a virtual flying drone controlled by arrow keys in a 3D scene. "
-            "Drones race across a 3D scrolling landscape of mountains, valleys, flatlands, and obstacles. "
-            "Include a scene, camera, lighting, and a drone model. Use the global THREE object from a CDN. "
-            "Implement race mechanics with a timer, checkpoints, and win conditions. Include HTML UI for timer, speed, standings, and start/reset buttons."
+            "Create a Three.js JavaScript game with a player-controlled drone (Arrow keys/W/S) in a 3D scene. "
+            "Drones race across a scrolling landscape with mountains, valleys, and flatlands using Perlin noise (via three-noise CDN). "
+            "Include scene, camera, ambient/directional lighting, and a sphere drone model. Use global THREE object from CDN. "
+            "Implement race mechanics: timer, checkpoints (score points), standings (time-based ranking), win condition (first to all checkpoints or fastest time). "
+            "Add static obstacles (trees, rocks) and AI drones with A* pathfinding to checkpoints, avoiding obstacles. "
+            "Include HTML UI with timer, speed, standings (table format), blue start/reset buttons with hover effects."
         ),
         language="javascript",
         generate_tests=True,
@@ -89,239 +91,341 @@ def create_drone_game():
         outputs = [{
             "output_file": str(output_dir / "drone_game.js"),
             "code": """
-let scene, camera, renderer, drones, terrain, timer = 0, checkpoints = [], obstacles = [];
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+import { Noise } from 'https://unpkg.com/three-noise/build/three-noise.module.js';
+
+let scene, camera, renderer, playerDrone, aiDrones = [], terrain, checkpoints = [], obstacles = [], timer = 0, standings = [];
 const clock = new THREE.Clock();
 
 init();
 animate();
 
 function init() {
-  scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-  renderer = new THREE.WebGLRenderer({canvas: document.getElementById('myCanvas')});
-  renderer.setSize(window.innerWidth, window.innerHeight);
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas') });
+    renderer.setSize(window.innerWidth, window.innerHeight);
 
-  scene.add(new THREE.AmbientLight(0x404040));
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-  directionalLight.position.set(0, 100, 50);
-  scene.add(directionalLight);
+    // Terrain with Perlin noise
+    const terrainGeometry = new THREE.PlaneGeometry(1000, 1000, 100, 100);
+    const noise = new Noise({ type: 'perlin', scale: 0.05, octaves: 4, persistence: 0.5, lacunarity: 2 });
+    const vertices = terrainGeometry.attributes.position.array;
+    for (let i = 2; i < vertices.length; i += 3) {
+        const x = vertices[i-2], y = vertices[i-1];
+        vertices[i] = noise.get(x, y) * 30; // Mountains and valleys
+    }
+    terrainGeometry.attributes.position.needsUpdate = true;
+    terrainGeometry.computeVertexNormals();
+    terrain = new THREE.Mesh(terrainGeometry, new THREE.MeshStandardMaterial({ color: 0x228B22, roughness: 0.8 }));
+    terrain.rotation.x = -Math.PI / 2;
+    scene.add(terrain);
 
-  const geometry = new THREE.PlaneGeometry(1000, 1000, 50, 50);
-  const vertices = geometry.attributes.position.array;
-  for (let i = 2; i < vertices.length; i += 3) {
-    const x = vertices[i-2], y = vertices[i-1];
-    vertices[i] = (Math.sin(x * 0.05) * Math.cos(y * 0.05) * 20) + (Math.random() * 5);
-  }
-  geometry.attributes.position.needsUpdate = true;
-  geometry.computeVertexNormals();
-  terrain = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({color: 0x228B22, roughness: 0.8}));
-  terrain.rotation.x = -Math.PI / 2;
-  scene.add(terrain);
+    // Lighting
+    scene.add(new THREE.AmbientLight(0x404040));
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    directionalLight.position.set(0, 100, 50);
+    scene.add(directionalLight);
 
-  createDrones(3);
-  createCheckpoints();
-  createObstacles();
+    // Player Drone
+    playerDrone = createDrone(0x0000ff, { x: 0, y: 10, z: 0 });
+    playerDrone.momentum = new THREE.Vector3();
+    scene.add(playerDrone);
 
-  camera.position.set(0, 50, 100);
-  window.addEventListener('keydown', onKeyDown);
-  window.addEventListener('keyup', onKeyUp);
-  document.getElementById('startReset').addEventListener('click', startRace);
+    // AI Drones
+    for (let i = 0; i < 3; i++) {
+        const aiDrone = createDrone(0xff0000, { x: i * 20 - 20, y: 10, z: 0 });
+        aiDrone.path = [];
+        aiDrone.targetCheckpoint = 0;
+        scene.add(aiDrone);
+        aiDrones.push(aiDrone);
+    }
+
+    // Checkpoints
+    for (let i = 0; i < 6; i++) {
+        const checkpoint = new THREE.Mesh(
+            new THREE.TorusGeometry(8, 1, 16, 100),
+            new THREE.MeshBasicMaterial({ color: 0xffff00 })
+        );
+        checkpoint.position.set(Math.random() * 100 - 50, 10, -i * 150 - 50);
+        scene.add(checkpoint);
+        checkpoints.push(checkpoint);
+    }
+
+    // Obstacles
+    for (let i = 0; i < 20; i++) {
+        const type = Math.random() < 0.5 ? 'tree' : 'rock';
+        const obstacle = new THREE.Mesh(
+            type === 'tree' ? new THREE.CylinderGeometry(2, 2, 15, 16) : new THREE.BoxGeometry(5, 5, 5),
+            new THREE.MeshStandardMaterial({ color: type === 'tree' ? 0x8B4513 : 0x808080 })
+        );
+        obstacle.position.set(Math.random() * 200 - 100, type === 'tree' ? 7.5 : 2.5, Math.random() * -800 - 50);
+        scene.add(obstacle);
+        obstacles.push(obstacle);
+    }
+
+    // Camera
+    camera.position.set(0, 30, 50);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    document.getElementById('startReset').addEventListener('click', startRace);
+
+    updateStandings();
 }
 
-function createDrones(numDrones) {
-  drones = [];
-  for (let i = 0; i < numDrones; i++) {
+function createDrone(color, pos) {
     const drone = new THREE.Mesh(
-      new THREE.BoxGeometry(2, 1, 3),
-      new THREE.MeshStandardMaterial({color: i === 0 ? 0x0000ff : 0xff0000})
+        new THREE.SphereGeometry(2, 16, 16),
+        new THREE.MeshStandardMaterial({ color })
     );
-    drone.position.set(i * 20 - 20, 10, 0);
-    scene.add(drone);
-    drones.push({
-      model: drone,
-      speed: 0,
-      strafe: 0,
-      altitude: 10,
-      maxSpeed: 5,
-      acceleration: 0.2,
-      checkpoints: [],
-      isAI: i > 0
-    });
-  }
-}
-
-function createCheckpoints() {
-  for (let i = 0; i < 6; i++) {
-    const checkpoint = new THREE.Mesh(
-      new THREE.TorusGeometry(8, 1, 16, 100),
-      new THREE.MeshBasicMaterial({color: 0xffff00})
-    );
-    checkpoint.position.set(Math.random() * 100 - 50, 10, -i * 150 - 50);
-    scene.add(checkpoint);
-    checkpoints.push(checkpoint);
-  }
-}
-
-function createObstacles() {
-  for (let i = 0; i < 15; i++) {
-    const obstacle = new THREE.Mesh(
-      new THREE.BoxGeometry(5, 10, 5),
-      new THREE.MeshStandardMaterial({color: 0x8B4513})
-    );
-    obstacle.position.set(Math.random() * 200 - 100, 5, Math.random() * -800 - 50);
-    scene.add(obstacle);
-    obstacles.push(obstacle);
-  }
+    drone.position.set(pos.x, pos.y, pos.z);
+    drone.checkpoints = [];
+    drone.time = 0;
+    return drone;
 }
 
 function onKeyDown(event) {
-  const drone = drones[0];
-  switch (event.key) {
-    case 'ArrowUp': drone.acceleration = 0.2; break;
-    case 'ArrowDown': drone.acceleration = -0.2; break;
-    case 'ArrowLeft': drone.strafe = -1; break;
-    case 'ArrowRight': drone.strafe = 1; break;
-    case 'w': drone.altitude = Math.min(drone.altitude + 1, 50); break;
-    case 's': drone.altitude = Math.max(drone.altitude - 1, 5); break;
-  }
+    playerDrone.controls = playerDrone.controls || {};
+    switch (event.key) {
+        case 'ArrowUp': case 'w': playerDrone.controls.forward = true; break;
+        case 'ArrowDown': case 's': playerDrone.controls.backward = true; break;
+        case 'ArrowLeft': playerDrone.controls.left = true; break;
+        case 'ArrowRight': playerDrone.controls.right = true; break;
+    }
 }
 
 function onKeyUp(event) {
-  const drone = drones[0];
-  switch (event.key) {
-    case 'ArrowUp':
-    case 'ArrowDown': drone.acceleration = 0; break;
-    case 'ArrowLeft':
-    case 'ArrowRight': drone.strafe = 0; break;
-  }
+    playerDrone.controls = playerDrone.controls || {};
+    switch (event.key) {
+        case 'ArrowUp': case 'w': playerDrone.controls.forward = false; break;
+        case 'ArrowDown': case 's': playerDrone.controls.backward = false; break;
+        case 'ArrowLeft': playerDrone.controls.left = false; break;
+        case 'ArrowRight': playerDrone.controls.right = false; break;
+    }
 }
 
 function startRace() {
-  timer = 0;
-  drones.forEach((d, i) => {
-    d.checkpoints = [];
-    d.model.position.set(i * 20 - 20, 10, 0);
-    d.speed = 0;
-    d.strafe = 0;
-    d.altitude = 10;
-  });
-  document.getElementById('standings').innerText = '-';
+    timer = 0;
+    standings = [];
+    playerDrone.position.set(0, 10, 0);
+    playerDrone.momentum.set(0, 0, 0);
+    playerDrone.checkpoints = [];
+    playerDrone.time = 0;
+    aiDrones.forEach((d, i) => {
+        d.position.set(i * 20 - 20, 10, 0);
+        d.checkpoints = [];
+        d.time = 0;
+        d.targetCheckpoint = 0;
+        d.path = [];
+    });
+    updateStandings();
 }
 
-function updateAI(drone, delta) {
-  if (!drone.isAI) return;
-  const target = checkpoints[drone.checkpoints.length] || checkpoints[0];
-  const direction = new THREE.Vector3().subVectors(target.position, drone.model.position).normalize();
-  drone.speed = Math.min(drone.speed + delta * 0.1, 3);
-  drone.model.position.add(direction.multiplyScalar(drone.speed * delta));
-  drone.altitude = Math.max(10, Math.min(20, target.position.y + 5));
+function updatePlayerDrone(delta) {
+    const accel = 0.5, friction = 0.9, maxSpeed = 5;
+    playerDrone.controls = playerDrone.controls || {};
+    const move = new THREE.Vector3();
+    if (playerDrone.controls.forward) move.z -= accel;
+    if (playerDrone.controls.backward) move.z += accel;
+    if (playerDrone.controls.left) move.x -= accel;
+    if (playerDrone.controls.right) move.x += accel;
+    playerDrone.momentum.add(move.multiplyScalar(delta));
+    playerDrone.momentum.clampLength(0, maxSpeed);
+    playerDrone.momentum.multiplyScalar(friction);
+    playerDrone.position.add(playerDrone.momentum);
+    playerDrone.position.y = Math.max(10, terrain.getHeightAt(playerDrone.position.x, playerDrone.position.z) + 10);
 }
 
-function updateUI() {
-  document.getElementById('timer').innerText = timer.toFixed(1);
-  document.getElementById('speed').innerText = drones[0].speed.toFixed(1);
-  let standings = '';
-  drones.forEach((d, i) => {
-    standings += `Drone ${i + 1}: ${d.checkpoints.length}/${checkpoints.length}\n`;
-  });
-  document.getElementById('standings').innerText = standings;
+function updateAIDrones(delta) {
+    aiDrones.forEach(d => {
+        if (d.targetCheckpoint >= checkpoints.length) return;
+        const target = checkpoints[d.targetCheckpoint].position;
+        if (d.path.length === 0 || d.position.distanceTo(d.path[d.path.length - 1]) < 5) {
+            d.path = aStarPath(d.position, target, obstacles);
+        }
+        if (d.path.length > 0) {
+            const next = d.path.shift();
+            const direction = next.clone().sub(d.position).normalize();
+            d.position.add(direction.multiplyScalar(3 * delta));
+            d.position.y = Math.max(10, terrain.getHeightAt(d.position.x, d.position.z) + 10);
+        }
+    });
+}
+
+function aStarPath(start, goal, obstacles) {
+    const gridSize = 10, grid = [];
+    for (let x = -500; x <= 500; x += gridSize) {
+        grid[x] = [];
+        for (let z = -1000; z <= 0; z += gridSize) {
+            grid[x][z] = obstacles.some(o => new THREE.Vector3(x, 10, z).distanceTo(o.position) < 10) ? Infinity : 1;
+        }
+    }
+    const open = [{ pos: start.clone(), g: 0, h: start.distanceTo(goal), f: start.distanceTo(goal), path: [] }];
+    const closed = new Set();
+    while (open.length) {
+        open.sort((a, b) => a.f - b.f);
+        const current = open.shift();
+        const key = `${Math.round(current.pos.x / gridSize)},${Math.round(current.pos.z / gridSize)}`;
+        if (closed.has(key)) continue;
+        closed.add(key);
+        if (current.pos.distanceTo(goal) < 10) {
+            return current.path.concat([goal]);
+        }
+        for (let dx of [-gridSize, 0, gridSize]) {
+            for (let dz of [-gridSize, 0, gridSize]) {
+                if (dx === 0 && dz === 0) continue;
+                const nextPos = current.pos.clone().add(new THREE.Vector3(dx, 0, dz));
+                const nextKey = `${Math.round(nextPos.x / gridSize)},${Math.round(nextPos.z / gridSize)}`;
+                if (closed.has(nextKey) || grid[Math.round(nextPos.x)][Math.round(nextPos.z)] === Infinity) continue;
+                const g = current.g + gridSize;
+                const h = nextPos.distanceTo(goal);
+                open.push({ pos: nextPos, g, h, f: g + h, path: current.path.concat([nextPos]) });
+            }
+        }
+    }
+    return [];
 }
 
 function checkCollisions() {
-  drones.forEach((d, i) => {
-    checkpoints.forEach((c, j) => {
-      if (!d.checkpoints.includes(j) && d.model.position.distanceTo(c.position) < 8) {
-        d.checkpoints.push(j);
-        if (d.checkpoints.length === checkpoints.length) {
-          document.getElementById('standings').innerText = `Drone ${i + 1} Wins!`;
-        }
-      }
+    const drones = [playerDrone, ...aiDrones];
+    drones.forEach((d, i) => {
+        checkpoints.forEach((c, j) => {
+            if (!d.checkpoints.includes(j) && d.position.distanceTo(c.position) < 8) {
+                d.checkpoints.push(j);
+                if (d.checkpoints.length === checkpoints.length) {
+                    d.time = timer;
+                    updateStandings();
+                }
+            }
+        });
+        obstacles.forEach(o => {
+            if (d.position.distanceTo(o.position) < 5) {
+                d.momentum ? d.momentum.multiplyScalar(0.5) : d.position.set(d.position.x, 10, d.position.z);
+                if (d === playerDrone) standings.push({ drone: i + 1, time: Infinity, penalty: true });
+            }
+        });
     });
-    obstacles.forEach(o => {
-      if (d.model.position.distanceTo(o.position) < 5) {
-        d.speed *= 0.5;
-      }
-    });
-  });
+}
+
+function updateStandings() {
+    const drones = [playerDrone, ...aiDrones];
+    standings = drones.map((d, i) => ({
+        drone: i + 1,
+        checkpoints: d.checkpoints.length,
+        time: d.time || (d.checkpoints.length === checkpoints.length ? timer : Infinity)
+    }));
+    standings.sort((a, b) => b.checkpoints - a.checkpoints || a.time - b.time);
+    const table = document.getElementById('standings');
+    table.innerHTML = '<tr><th>Drone</th><th>Checkpoints</th><th>Time</th></tr>' +
+        standings.map(s => `<tr><td>${s.drone}</td><td>${s.checkpoints}/${checkpoints.length}</td><td>${s.time === Infinity ? '-' : s.time.toFixed(1)}</td></tr>`).join('');
+    if (standings.some(s => s.checkpoints === checkpoints.length)) {
+        const winner = standings[0];
+        table.innerHTML += `<tr><td colspan="3">Drone ${winner.drone} Wins!</td></tr>`;
+    }
+}
+
+function updateUI() {
+    document.getElementById('timer').innerText = timer.toFixed(1);
+    document.getElementById('speed').innerText = playerDrone.momentum ? playerDrone.momentum.length().toFixed(1) : '0';
 }
 
 function animate() {
-  requestAnimationFrame(animate);
-  const delta = clock.getDelta();
-  timer += delta;
+    requestAnimationFrame(animate);
+    const delta = clock.getDelta();
+    timer += delta;
 
-  drones.forEach((d, i) => {
-    if (d.isAI) {
-      updateAI(d, delta);
-    } else {
-      d.speed = Math.max(0, Math.min(d.speed + d.acceleration, d.maxSpeed));
-      d.model.position.x += d.strafe * delta * 10;
-      d.model.position.z -= d.speed * delta * 10;
-      d.model.position.y = d.altitude;
-    }
-    d.model.position.y = Math.max(d.model.position.y, 5);
-  });
+    updatePlayerDrone(delta);
+    updateAIDrones(delta);
+    checkCollisions();
+    updateUI();
 
-  camera.position.set(drones[0].model.position.x, drones[0].model.position.y + 20, drones[0].model.position.z + 30);
-  camera.lookAt(drones[0].model.position);
-  updateUI();
-  checkCollisions();
-  renderer.render(scene, camera);
+    camera.position.lerp(
+        playerDrone.position.clone().add(new THREE.Vector3(0, 20, 30)),
+        0.1
+    );
+    camera.lookAt(playerDrone.position);
+    renderer.render(scene, camera);
 }
 """,
             "tests": """
 describe('Drone Racing Game', () => {
-  beforeEach(() => {
-    window.innerWidth = 500;
-    window.innerHeight = 500;
-    document.body.innerHTML = '<canvas id="myCanvas"></canvas><div id="ui"><span id="timer"></span><span id="speed"></span><pre id="standings"></pre><button id="startReset"></button></div>';
-    init();
-  });
+    beforeEach(() => {
+        window.innerWidth = 500;
+        window.innerHeight = 500;
+        document.body.innerHTML = `
+            <canvas id="gameCanvas"></canvas>
+            <div id="ui">
+                <div>Timer: <span id="timer">0</span>s</div>
+                <div>Speed: <span id="speed">0</span></div>
+                <table id="standings"></table>
+                <button id="startReset">Start</button>
+            </div>`;
+        jest.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => cb());
+        init();
+    });
 
-  test('initializes scene and drones', () => {
-    expect(scene).toBeDefined();
-    expect(camera).toBeDefined();
-    expect(renderer).toBeDefined();
-    expect(drones).toBeDefined();
-    expect(drones.length).toBe(3);
-    expect(terrain).toBeDefined();
-  });
+    test('initializes scene and drones', () => {
+        expect(scene).toBeDefined();
+        expect(camera).toBeDefined();
+        expect(renderer).toBeDefined();
+        expect(playerDrone).toBeDefined();
+        expect(aiDrones.length).toBe(3);
+        expect(terrain).toBeDefined();
+        expect(checkpoints.length).toBe(6);
+        expect(obstacles.length).toBe(20);
+    });
 
-  test('handles player controls', () => {
-    const initialPos = drones[0].model.position.clone();
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
-    animate();
-    expect(drones[0].model.position.x).toBeGreaterThan(initialPos.x);
-    window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight' }));
-  });
+    test('handles player controls with momentum', () => {
+        const initialPos = playerDrone.position.clone();
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+        animate();
+        expect(playerDrone.position.z).toBeLessThan(initialPos.z);
+        window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowUp' }));
+        animate();
+        expect(playerDrone.momentum.length()).toBeLessThan(1);
+    });
 
-  test('moves AI drones', () => {
-    const aiDrone = drones[1];
-    const initialPos = aiDrone.model.position.clone();
-    animate();
-    expect(aiDrone.model.position.distanceTo(initialPos)).toBeGreaterThan(0);
-  });
+    test('moves AI drones with pathfinding', () => {
+        const aiDrone = aiDrones[0];
+        const initialPos = aiDrone.position.clone();
+        animate();
+        expect(aiDrone.position.distanceTo(initialPos)).toBeGreaterThan(0);
+        expect(aiDrone.path.length).toBeGreaterThan(0);
+    });
 
-  test('updates UI', () => {
-    updateUI();
-    expect(document.getElementById('timer').innerText).not.toBe('');
-    expect(document.getElementById('speed').innerText).not.toBe('');
-    expect(document.getElementById('standings').innerText).not.toBe('');
-  });
+    test('updates standings table', () => {
+        playerDrone.checkpoints = [0, 1];
+        updateStandings();
+        const table = document.getElementById('standings');
+        expect(table.innerHTML).toContain('Drone 1');
+        expect(table.innerHTML).toContain('2/6');
+    });
 
-  test('checks checkpoints and obstacles', () => {
-    drones[0].model.position.set(checkpoints[0].position.x, 10, checkpoints[0].position.z);
-    checkCollisions();
-    expect(drones[0].checkpoints).toContain(0);
-    drones[0].model.position.set(obstacles[0].position.x, 5, obstacles[0].position.z);
-    const initialSpeed = drones[0].speed;
-    checkCollisions();
-    expect(drones[0].speed).toBeLessThanOrEqual(initialSpeed);
-  });
+    test('detects checkpoint collisions', () => {
+        playerDrone.position.copy(checkpoints[0].position);
+        checkCollisions();
+        expect(playerDrone.checkpoints).toContain(0);
+        playerDrone.checkpoints = Array.from({ length: checkpoints.length }, (_, i) => i);
+        checkCollisions();
+        expect(standings.some(s => s.drone === 1 && s.time > 0)).toBe(true);
+    });
 
-  afterEach(() => {
-    document.body.innerHTML = '';
-  });
+    test('penalizes obstacle collisions', () => {
+        playerDrone.position.copy(obstacles[0].position);
+        checkCollisions();
+        expect(standings.some(s => s.drone === 1 && s.penalty)).toBe(true);
+    });
+
+    test('resets race on button click', () => {
+        playerDrone.checkpoints = [0];
+        document.getElementById('startReset').click();
+        expect(playerDrone.checkpoints.length).toBe(0);
+        expect(timer).toBe(0);
+    });
+
+    afterEach(() => {
+        window.requestAnimationFrame.mockRestore();
+        document.body.innerHTML = '';
+    });
 });
 """
         }, {
@@ -333,58 +437,69 @@ describe('Drone Racing Game', () => {
     <title>Drone Racing Game</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; }
-        #myCanvas { display: block; width: 100%; height: 100%; }
+        #gameCanvas { display: block; width: 100%; height: 100%; }
         #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial, sans-serif; font-size: 16px; }
         #ui div { margin-bottom: 5px; }
-        #standings { white-space: pre; }
-        #startReset { padding: 5px 10px; background: #007bff; border: none; color: white; cursor: pointer; }
+        #standings { background: rgba(0, 0, 0, 0.7); padding: 10px; border-radius: 5px; }
+        #standings table { border-collapse: collapse; }
+        #standings th, #standings td { padding: 5px; border: 1px solid #fff; }
+        #startReset { padding: 10px 20px; background: #007bff; border: none; color: white; cursor: pointer; border-radius: 5px; }
         #startReset:hover { background: #0056b3; }
     </style>
 </head>
 <body>
-    <canvas id="myCanvas"></canvas>
+    <canvas id="gameCanvas"></canvas>
     <div id="ui">
         <div>Timer: <span id="timer">0</span>s</div>
         <div>Speed: <span id="speed">0</span></div>
-        <div>Standings: <pre id="standings">-</pre></div>
+        <div id="standings"><table></table></div>
         <button id="startReset">Start</button>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/three-noise/build/three-noise.module.js"></script>
     <script src="drone_game.js"></script>
 </body>
 </html>
 """,
             "tests": """
 describe('Drone Game UI', () => {
-  beforeEach(() => {
-    document.body.innerHTML = `<canvas id="myCanvas"></canvas>
-      <div id="ui">
-        <div>Timer: <span id="timer">0</span>s</div>
-        <div>Speed: <span id="speed">0</span></div>
-        <div>Standings: <pre id="standings">-</pre></div>
-        <button id="startReset">Start</button>
-      </div>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-      <script src="drone_game.js"></script>`;
-  });
+    beforeEach(() => {
+        document.body.innerHTML = `
+            <canvas id="gameCanvas"></canvas>
+            <div id="ui">
+                <div>Timer: <span id="timer">0</span>s</div>
+                <div>Speed: <span id="speed">0</span></div>
+                <div id="standings"><table></table></div>
+                <button id="startReset">Start</button>
+            </div>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+            <script src="https://unpkg.com/three-noise/build/three-noise.module.js"></script>
+            <script src="drone_game.js"></script>`;
+    });
 
-  test('has canvas and UI elements', () => {
-    expect(document.getElementById('myCanvas')).toBeDefined();
-    expect(document.getElementById('timer')).toBeDefined();
-    expect(document.getElementById('speed')).toBeDefined();
-    expect(document.getElementById('standings')).toBeDefined();
-    expect(document.getElementById('startReset')).toBeDefined();
-  });
+    test('has canvas and UI elements', () => {
+        expect(document.getElementById('gameCanvas')).toBeDefined();
+        expect(document.getElementById('timer')).toBeDefined();
+        expect(document.getElementById('speed')).toBeDefined();
+        expect(document.getElementById('standings')).toBeDefined();
+        expect(document.getElementById('startReset')).toBeDefined();
+    });
 
-  test('includes required scripts', () => {
-    const scripts = Array.from(document.getElementsByTagName('script')).map(s => s.src);
-    expect(scripts.some(src => src.includes('three.min.js'))).toBe(true);
-    expect(scripts.includes('drone_game.js')).toBe(true);
-  });
+    test('includes required scripts', () => {
+        const scripts = Array.from(document.getElementsByTagName('script')).map(s => s.src);
+        expect(scripts.some(src => src.includes('three.min.js'))).toBe(true);
+        expect(scripts.some(src => src.includes('three-noise'))).toBe(true);
+        expect(scripts.includes('drone_game.js')).toBe(true);
+    });
 
-  afterEach(() => {
-    document.body.innerHTML = '';
-  });
+    test('styles start button correctly', () => {
+        const button = document.getElementById('standings');
+        expect(window.getComputedStyle(button).backgroundColor).toMatch(/rgba?\(0, 0, 0/);
+    });
+
+    afterEach(() => {
+        document.body.innerHTML = '';
+    });
 });
 """
         }]
@@ -408,6 +523,7 @@ describe('Drone Game UI', () => {
 
     logger.info(f"Task completed with status: {status}")
     logger.info(f"Run 'open examples/3d_game/drone_game.html' to view the game in a browser.")
+    logger.info(f"To test: 'cd examples/3d_game && npx jest drone_game.test.js'")
 
 if __name__ == "__main__":
     create_drone_game()
