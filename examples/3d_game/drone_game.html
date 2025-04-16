@@ -1,3 +1,4 @@
+<!-- examples/3d_game/fallback/drone_game.html -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -22,15 +23,24 @@
         <div id="standings"><table></table></div>
         <button id="startReset">Start</button>
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+('Failed to load Three.js CDN')"></script>
 ('Failed to load simplex-noise CDN')"></script>
     <script>
-        // Fallback if simplex-noise CDN fails
         if (typeof simplexNoise === 'undefined') {
-('simplexNoise not available, terrain generation will be disabled');
+('simplexNoise not available, using flat terrain');
             window.simplexNoise = { createNoise2D: () => (x, y) => 0 };
         }
     </script>
-    <script src="drone_game.js"></script>
+    <script src="scene.js"></script>
+    <script src="terrain.js"></script>
+    <script src="drones.js"></script>
+    <script src="ui.js"></script>
+    <script>
+     initScene();
+     initTerrain();
+     initDrones();
+     initUI();
+     animate();
+    </script>
 </body>
 </html>

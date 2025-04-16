@@ -54,62 +54,109 @@ def create_drone_game():
     model_manager = create_model_manager(provider="google_ai_studio", model_name=args.model)
     developer = Developer("drone_game_session", model_manager)
 
-    # Define tasks
-    js_task = TaskFactory.create_code_task(
-        description=(
-            "Create JavaScript code for a Three.js drone racing game with a player-controlled drone in a 3D scene. "
-            "Split code into four files: "
-            "1. scene.js: Initialize THREE.Scene, PerspectiveCamera (75 FOV, 0.1 near, 1000 far), WebGLRenderer (canvas#gameCanvas), ambient (0x404040) and directional lighting (0xffffff, 0.5 intensity, position 0,100,50). "
-            "2. terrain.js: Generate a scrolling landscape (PlaneGeometry, 1000x1000, 100x100 segments) with mountains/valleys using simplexNoise.createNoise2D() from https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js. Scale noise by 0.02, height by 50. Use MeshStandardMaterial (color 0x228B22, roughness 0.8). "
-            "3. drones.js: Implement player drone (blue sphere, radius 2, Arrow keys/W/S for movement, mouse for yaw/pitch orientation), AI drones (red spheres, A* pathfinding to checkpoints, advance to next checkpoint after each hit), checkpoints (6 yellow toruses, random x -50 to 50, z -50 to -950), obstacles (10 trees as cylinders, 10 rocks as boxes). "
-            "4. ui.js: Manage UI: timer (span#timer, seconds), speed (span#speed, drone momentum), standings (table#standings, rank by checkpoints/time), blue start/reset button (button#startReset). "
-            "Use global THREE from https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js and simplexNoise (no imports). "
-            "Implement race mechanics: score points at checkpoints, win when all checkpoints hit. Check for simplexNoise availability, log error if missing."
+    # Define tasks for JavaScript files and HTML
+    tasks = [
+        TaskFactory.create_code_task(
+            description=(
+                "Create JavaScript code for a Three.js drone racing game’s scene setup in scene.js. "
+                "Initialize a THREE.Scene, PerspectiveCamera (75 FOV, 0.1 near, 1000 far), WebGLRenderer (using canvas#gameCanvas), and THREE.Clock. "
+                "Set renderer size to window.innerWidth/innerHeight. "
+                "Add ambient light (0x404040) and directional light (0xffffff, 0.5 intensity, position 0,100,50). "
+                "Use global THREE from CDN https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js (no imports). "
+                "Define initScene() to set up and expose scene, camera, renderer, clock globally."
+            ),
+            language="javascript",
+            output_file="scene.js",
+            generate_tests=True,
+            execute=True,
+            use_remote=args.remote,
+            timeout=args.timeout
         ),
-        language="javascript",
-        output_file="scene.js",
-        output_files=["scene.js", "terrain.js", "drones.js", "ui.js"],
-        generate_tests=True,
-        execute=True,
-        use_remote=args.remote,
-        timeout=args.timeout
-    )
-
-    html_task = TaskFactory.create_code_task(
-        description=(
-            "Create HTML code for a Three.js drone racing game. "
-            "Include a full-screen canvas (id='gameCanvas'). "
-            "Add a UI div (id='ui') with timer (span#timer), speed (span#speed), standings table (table#standings), blue start/reset button (button#startReset, hover #0056b3). "
-            "Load scripts in order: Three.js (https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js), simplex-noise (https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js), scene.js, terrain.js, drones.js, ui.js. "
-            "Use CSS: black background (#000), white UI text (Arial, 16px), semi-transparent standings (rgba(0,0,0,0.7)), blue button (#007bff). "
-            "Add inline script to define simplexNoise fallback (flat terrain) if CDN fails. No JavaScript logic in HTML."
+        TaskFactory.create_code_task(
+            description=(
+                "Create JavaScript code for a Three.js drone racing game’s terrain generation in terrain.js. "
+                "Generate a 1000x1000 PlaneGeometry (100x100 segments) with simplexNoise.createNoise2D() from CDN https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js. "
+                "Apply noise(x * 0.02, y * 0.02) * 50 to vertex Z positions for prominent mountains/valleys. "
+                "Use MeshStandardMaterial (color 0x228B22, roughness 0.8), rotate plane -90 degrees on X-axis. "
+                "Use global THREE (no imports). Check simplexNoise availability, log error if missing. "
+                "Define initTerrain() to create and add terrain to scene globally."
+            ),
+            language="javascript",
+            output_file="terrain.js",
+            generate_tests=True,
+            execute=True,
+            use_remote=args.remote,
+            timeout=args.timeout
         ),
-        language="html",
-        output_file="drone_game.html",
-        generate_tests=True,
-        execute=True,
-        use_remote=args.remote,
-        timeout=args.timeout
-    )
+        TaskFactory.create_code_task(
+            description=(
+                "Create JavaScript code for a Three.js drone racing game’s drone logic in drones.js. "
+                "Define createDrone(color, pos) for a sphere mesh (radius 2, 16 segments) with MeshStandardMaterial. "
+                "Implement player drone (blue): Arrow keys/W/S for movement, mouse for yaw/pitch orientation (left/right for yaw ±45°, up/down for pitch ±45°). "
+                "Implement 3 AI drones (red): use A* pathfinding to reach 6 checkpoints (yellow toruses, random x -50 to 50, z -50 to -950), advance to next checkpoint after each hit. "
+                "Add 20 obstacles (10 trees as cylinders, 10 rocks as boxes). "
+                "Use global THREE (no imports). Include race mechanics: score points at checkpoints, track completion time. "
+                "Define initDrones(), updatePlayerDrone(delta), updateAIDrones(delta), checkCollisions(timer, standings, updateStandings) to manage drones and expose playerDrone, aiDrones, checkpoints, obstacles globally."
+            ),
+            language="javascript",
+            output_file="drones.js",
+            generate_tests=True,
+            execute=True,
+            use_remote=args.remote,
+            timeout=args.timeout
+        ),
+        TaskFactory.create_code_task(
+            description=(
+                "Create JavaScript code for a Three.js drone racing game’s UI and animation in ui.js. "
+                "Manage HTML elements: span#timer (race time in seconds), span#speed (drone speed), table#standings (rank drones by checkpoints/time), button#startReset (reset race). "
+                "Implement animate() loop: update drones, collisions, UI, camera (follow player). "
+                "Show 'Drone X Wins!' when a drone hits all checkpoints. "
+                "Use global THREE (no imports). "
+                "Define initUI(), startRace(), updateUI(), updateStandings(), animate() to manage UI and expose timer, standings globally."
+            ),
+            language="javascript",
+            output_file="ui.js",
+            generate_tests=True,
+            execute=True,
+            use_remote=args.remote,
+            timeout=args.timeout
+        ),
+        TaskFactory.create_code_task(
+            description=(
+                "Create HTML code for a Three.js drone racing game in drone_game.html. "
+                "Include a full-screen canvas (id='gameCanvas'). "
+                "Add a UI div (id='ui') with timer (span#timer), speed (span#speed), standings table (table#standings), blue start/reset button (button#startReset, hover #0056b3). "
+                "Load scripts in order with defer: Three.js (https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js), simplex-noise (https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js), scene.js, terrain.js, drones.js, ui.js. "
+                "Use CSS: black background (#000), white UI text (Arial, 16px), semi-transparent standings (rgba(0,0,0,0.7)), blue button (#007bff). "
+                "Add inline script to define simplexNoise fallback (flat terrain) if CDN fails. Include final script to call initScene(), initTerrain(), initDrones(), initUI(), animate()."
+            ),
+            language="html",
+            output_file="drone_game.html",
+            generate_tests=True,
+            execute=True,
+            use_remote=args.remote,
+            timeout=args.timeout
+        )
+    ]
 
     output_dir = Path("examples/3d_game")
     output_dir.mkdir(exist_ok=True)
     fallback_dir = output_dir / "fallback"
     fallback_dir.mkdir(exist_ok=True)
 
-    # Process tasks
+    # Process all tasks
     outputs = []
-    for task in [js_task, html_task]:
-        output_files = task.parameters.get("output_files", [task.parameters["output_file"]])
+    for task in tasks:
+        output_file = task.parameters["output_file"]
         status, result = None, None
         try:
             status, result = developer.process_task(task)
-            logger.debug(f"Task {task.parameters['output_file']}: status={status}, result_type={type(result).__name__}, "
+            logger.debug(f"Task {output_file}: status={status}, result_type={type(result).__name__}, "
                         f"code_length={len(result.code) if result and hasattr(result, 'code') else 0}")
             if status is None or result is None:
-                raise ValueError(f"Developer returned None for {task.parameters['output_file']}")
+                raise ValueError(f"Developer returned None for {output_file}")
         except Exception as e:
-            logger.error(f"Developer pipeline failed for {task.parameters['output_file']}: {str(e)}")
+            logger.error(f"Developer pipeline failed for {output_file}: {str(e)}")
             status = "failed"
             result = None
 
@@ -117,31 +164,20 @@ def create_drone_game():
         if status in ["generated", "tested", "executed"] and result and isinstance(result, CodeOutput) and result.code.strip():
             is_valid = False
             if task.language == "javascript":
-                is_valid = "THREE." in result.code and all(
-                    f in (result.additional_files or {}) for f in output_files if f != task.parameters["output_file"]
-                )
+                is_valid = "THREE." in result.code or "simplexNoise" in result.code
             elif task.language == "html":
                 is_valid = "<html" in result.code and "<canvas" in result.code and "simplex-noise" in result.code
             if is_valid:
                 outputs.append({
-                    "output_file": str(output_dir / task.parameters["output_file"]),
+                    "output_file": str(output_dir / output_file),
                     "code": result.code,
                     "tests": result.tests
                 })
-                for additional_file, code in (result.additional_files or {}).items():
-                    if code.strip():
-                        outputs.append({
-                            "output_file": str(output_dir / additional_file),
-                            "code": code,
-                            "tests": None
-                        })
-                logger.info(f"Pipeline output for {task.parameters['output_file']}: {len(result.code)} bytes")
-                if result.additional_files:
-                    logger.info(f"Additional files: {list(result.additional_files.keys())}")
+                logger.info(f"Pipeline output for {output_file}: {len(result.code)} bytes")
             else:
-                logger.warning(f"Invalid pipeline output for {task.parameters['output_file']}: expected {task.language}")
+                logger.warning(f"Invalid pipeline output for {output_file}: expected {task.language}")
         else:
-            logger.warning(f"No valid pipeline output for {task.parameters['output_file']}: status={status}, "
+            logger.warning(f"No valid pipeline output for {output_file}: status={status}, "
                           f"result_type={type(result).__name__ if result else 'None'}")
 
     # Fallback if insufficient outputs
@@ -158,7 +194,7 @@ def create_drone_game():
         }
         for file_name, fallback_path in fallback_files.items():
             if not fallback_path.exists():
-                logger.error(f"Fallback file {fallback_path} not found")
+                logger.warning(f"Fallback file {fallback_path} not found, skipping")
                 continue
             with open(fallback_path, "r") as f:
                 code = f.read()

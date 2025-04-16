@@ -23,24 +23,32 @@
         <div id="standings"><table></table></div>
         <button id="startReset">Start</button>
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.error('Failed to load Three.js CDN')"></script>
-    <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js" onerror="console.error('Failed to load simplex-noise CDN')"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.error('Failed to load Three.js CDN')"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js" onerror="console.error('Failed to load simplex-noise CDN')"></script>
     <script>
-        if (typeof simplexNoise === 'undefined') {
-            console.error('simplexNoise not available, using flat terrain');
-            window.simplexNoise = { createNoise2D: () => (x, y) => 0 };
-        }
+        window.addEventListener('load', () => {
+            if (typeof simplexNoise === 'undefined') {
+                console.error('simplexNoise not available, using flat terrain');
+                window.simplexNoise = { createNoise2D: () => (x, y) => 0 };
+            }
+        });
     </script>
-    <script src="scene.js"></script>
-    <script src="terrain.js"></script>
-    <script src="drones.js"></script>
-    <script src="ui.js"></script>
-    <script>
-     initScene();
-     initTerrain();
-     initDrones();
-     initUI();
-     animate();
+    <script defer src="scene.js"></script>
+    <script defer src="terrain.js"></script>
+    <script defer src="drones.js"></script>
+    <script defer src="ui.js"></script>
+    <script defer>
+     window.addEventListener('load', () => {
+         if (typeof THREE === 'undefined') {
+             console.error('THREE.js not loaded, cannot initialize game');
+             return;
+         }
+         initScene();
+         initTerrain();
+         initDrones();
+         initUI();
+         animate();
+     });
     </script>
 </body>
 </html>

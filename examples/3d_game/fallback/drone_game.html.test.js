@@ -9,8 +9,8 @@ describe('Drone Game UI', () => {
                 <div id="standings"><table></table></div>
                 <button id="startReset">Start</button>
             </div>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-            <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js"></script>
+            <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+            <script defer src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js"></script>
             <script src="scene.js"></script>
             <script src="terrain.js"></script>
             <script src="drones.js"></script>
