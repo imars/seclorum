@@ -1,11 +1,12 @@
-<!-- examples/3d_game/fallback/drone_game.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Drone Racing Game</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; }
-        #gameCanvas { display: block; width: 100%; height: 100%; }
+        #gameCanvas { width: 100vw; height: 100vh; display: block; }
         #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial, sans-serif; font-size: 16px; }
         #ui div { margin-bottom: 5px; }
         #standings { background: rgba(0, 0, 0, 0.7); padding: 10px; border-radius: 5px; }
@@ -18,37 +19,31 @@
 <body>
     <canvas id="gameCanvas"></canvas>
     <div id="ui">
-        <div>Timer: <span id="timer">0</span>s</div>
-        <div>Speed: <span id="speed">0</span></div>
+        <div>Time: <span id="timer">0.0</span>s</div>
+        <div>Speed: <span id="speed">0.0</div>
         <div id="standings"><table></table></div>
         <button id="startReset">Start</button>
     </div>
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.error('Failed to load Three.js CDN')"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js" onerror="console.error('Failed to load simplex-noise CDN')"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r169/three.min.js" onerror="console.error('Failed to load Three.js')"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.umd.js" onerror="console.error('Failed to load simplex-noise')"></script>
     <script>
-        window.addEventListener('load', () => {
-            if (typeof simplexNoise === 'undefined') {
-                console.error('simplexNoise not available, using flat terrain');
-                window.simplexNoise = { createNoise2D: () => (x, y) => 0 };
-            }
-        });
+        if (typeof simplexNoise === 'undefined') {
+            console.error('simplexNoise not available, using flat terrain');
+            window.simplexNoise = { createNoise2D: () => (x, y) => 0 };
+        }
     </script>
-    <script defer src="scene.js"></script>
-    <script defer src="terrain.js"></script>
-    <script defer src="drones.js"></script>
-    <script defer src="ui.js"></script>
-    <script defer>
-     window.addEventListener('load', () => {
-         if (typeof THREE === 'undefined') {
-             console.error('THREE.js not loaded, cannot initialize game');
-             return;
-         }
-         initScene();
-         initTerrain();
-         initDrones();
-         initUI();
-         animate();
-     });
+    <script src="scene.js"></script>
+    <script src="terrain.js"></script>
+    <script src="drones.js"></script>
+    <script src="ui.js"></script>
+    <script>
+     console.log('Initializing game');
+     initScene();
+     initTerrain();
+     initDrones();
+     initUI();
+     animate();
+     console.log('Game initialized');
     </script>
 </body>
 </html>
