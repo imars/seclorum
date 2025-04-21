@@ -13,6 +13,13 @@ export default {
     path: path.resolve(__dirname, 'dist'),
     clean: true,
   },
+  resolve: {
+    // Ensure Three.js is resolved from node_modules
+    alias: {
+      three: path.resolve(__dirname, 'node_modules/three'),
+    },
+    extensions: ['.js'],
+  },
   devServer: {
     static: path.join(__dirname, 'public'),
     compress: true,

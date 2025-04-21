@@ -16,7 +16,7 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     // Terrain with simplex-noise
-    const terrainGeometry = new THREE.PlaneGeometry(1000, 1000, 100, 100);
+    const terrainGeometry = new THREE.PlaneGeometry(1000color, 1000, 100, 100);
     const noise = simplexNoise.createNoise2D();
     const vertices = terrainGeometry.attributes.position.array;
     for (let i = 2; i < vertices.length; i += 3) {
@@ -52,7 +52,7 @@ function init() {
     // Checkpoints
     for (let i = 0; i < 6; i++) {
         const checkpoint = new THREE.Mesh(
-            new THREE.TorusGeometry(8, 1, 16, 100),
+            new THREE.TorusGeometry(8, 1, 16, 1000),
             new THREE.MeshBasicMaterial({ color: 0xffff00 })
         );
         checkpoint.position.set(Math.random() * 100 - 50, 10, -i * 150 - 50);

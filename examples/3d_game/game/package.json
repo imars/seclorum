@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "webpack serve --open",
-    "build": "webpack",
+    "build": "webpack --config webpack.config.mjs",
+    "start": "webpack serve --open --config webpack.config.mjs",
+    "serve": "http-server dist -p 8080",
     "test": "jest",
-    "serve": "node scripts/serve.js",
-    "test:e2e": "jest --config=jest.e2e.config.js"
+    "test:e2e": "start-server-and-test serve:test http://localhost:8080 test:e2e:run",
+    "test:e2e:run": "jest --config=jest.e2e.config.js",
+    "serve:test": "http-server dist -p 8080 -c-1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.8",
@@ -22,6 +24,8 @@
     "jest-canvas-mock": "^2.5.2",
     "jest-environment-jsdom": "^29.7.0",
     "jsdom": "^25.0.1",
+    "puppeteer": "^23.5.3",
+    "start-server-and-test": "^2.0.11",
     "style-loader": "^4.0.0",
     "webpack": "^5.99.5",
     "webpack-cli": "^5.1.4",
