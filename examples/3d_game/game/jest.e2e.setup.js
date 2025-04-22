@@ -14,14 +14,13 @@ beforeAll(async () => {
       '--disable-setuid-sandbox',
       '--disable-gpu-sandbox',
       '--enable-logging',
-      '--disable-webgl=0', // Explicitly enable WebGL
-      '--enable-accelerated-2d-canvas', // Ensure GPU acceleration
+      '--disable-webgl=0',
+      '--enable-accelerated-2d-canvas',
     ],
   });
   page = await browser.newPage();
   console.log('Puppeteer page created');
 
-  // Debug WebGL support
   const webglSupport = await page.evaluate(() => {
     const canvas = document.createElement('canvas');
     const webgl1 = canvas.getContext('webgl');
