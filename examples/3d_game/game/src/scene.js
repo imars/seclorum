@@ -1,90 +1,99 @@
 // src/scene.js
 import * as THREE from 'three';
+import { getSetting } from './settings.js';
 
-console.log('THREE.WebGLRenderer in scene.js:', THREE.WebGLRenderer);
 console.log('Three.js version:', THREE.REVISION);
 
 let scene, camera, renderer, clock;
+let isFirstPerson = false;
 
 function initScene() {
-  console.log('THREE.Scene in initScene:', THREE.Scene);
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x87ceeb);
-  console.log('Scene created:', scene);
-
-  const width = typeof window !== 'undefined' ? window.innerWidth : 800;
-  const height = typeof window !== 'undefined' ? window.innerHeight : 600;
-  camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-  console.log('Camera created:', camera);
-
-  let canvas = typeof document !== 'undefined' ? document.getElementById('gameCanvas') : undefined;
-  if (!canvas) {
-    console.error('Canvas element #gameCanvas not found in DOM');
-    throw new Error('Canvas element #gameCanvas not found');
-  }
-
-  // Try manual WebGL 2 context creation
-  let gl = null;
+  console.log('Initializing scene');
   try {
-    gl = canvas.getContext('webgl2', { antialias: true });
-    if (!gl) {
-      console.error('WebGL 2 context creation failed');
-      throw new Error('WebGL 2 is not supported by this environment');
+    const canvas = document.getElementById('gameCanvas');
+    if (!canvas) {
+      throw new Error('Canvas element #gameCanvas not found');
     }
-    console.log('Manual WebGL 2 context created:', gl.getParameter(gl.VERSION));
-  } catch (error) {
-    console.error('Failed to create WebGL 2 context:', error);
-    throw new Error('WebGL 2 context creation failed: ' + error.message);
-  }
 
-  // Initialize renderer with manual context
-  try {
-    renderer = new THREE.WebGLRenderer({ canvas, context: gl, antialias: true });
-    renderer.setSize(width, height);
-    renderer.setClearColor(0x87ceeb, 1);
-  } catch (error) {
-    console.error('Failed to initialize WebGLRenderer:', error);
-    throw new Error('WebGLRenderer initialization failed: ' + error.message);
-  }
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
 
-  // Verify WebGL 2 context
-  const glVersion = gl.getParameter(gl.VERSION);
-  console.log('WebGL context initialized:', glVersion);
-  if (!glVersion.includes('WebGL 2')) {
-    console.error('WebGL 2 not detected. Context version:', glVersion);
-    throw new Error('WebGL 2 is required but not supported');
-  }
+    const farPlane = getSetting('fog.enabled') ?
+      (isFirstPerson ? getSetting('fog.firstPerson.far') : getSetting('fog.thirdPerson.far')) :
+      getSetting('camera.far');
+    camera = new THREE.PerspectiveCamera(
+      getSetting('camera.fov'),
+      window.innerWidth / window.innerHeight,
+      getSetting('camera.near'),
+      farPlane
+    );
+    const cameraPos = getSetting('camera.initialPosition') || { x: 0, y: 30, z: 50 };
+    camera.position.set(cameraPos.x, cameraPos.y, cameraPos.z);
 
-  // Add lighting
-  scene.add(new THREE.AmbientLight(0x404040, 1));
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
-  directionalLight.position.set(0, 100, 50);
-  scene.add(directionalLight);
-  console.log('Lighting added:', scene.children.filter(c => c.type === 'Light'));
+    renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: getSetting('renderer.antialias'),
+      context: canvas.getContext('webgl2', { alpha: false }),
+    });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = false;
 
-  clock = new THREE.Clock();
-  camera.position.set(0, 50, 100);
-  console.log('Camera position:', camera.position);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    directionalLight.position.set(50, 100, 50);
+    scene.add(directionalLight);
 
-  if (typeof window !== 'undefined') {
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+    scene.add(ambientLight);
+
+    clock = new THREE.Clock();
+    clock.start();
+
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
-      console.log('Window resized:', { width: window.innerWidth, height: window.innerHeight });
     });
-  }
 
-  if (typeof document === 'undefined') {
-    global.scene = scene;
-    global.camera = camera;
-    global.renderer = renderer;
-    global.clock = clock;
-  }
+    updateFog(); // Moved after camera initialization
 
-  console.log('Scene initialized with sky blue background and lighting');
-  console.log('Scene children after init:', scene.children.map(c => c.type));
-  console.log('Renderer info:', renderer.info);
+    console.log('Scene initialized:', {
+      scene: !!scene,
+      camera: !!camera,
+      renderer: !!renderer,
+      clock: !!clock,
+      shadowMap: renderer.shadowMap.enabled,
+      antialias: renderer.antialias,
+      fog: !!scene.fog,
+    });
+
+    return { scene, camera, renderer, clock };
+  } catch (error) {
+    console.error('Error in initScene:', error);
+    return { scene: null, camera: null, renderer: null, clock: null };
+  }
 }
 
-export { initScene, scene, camera, renderer, clock };
+function updateFog(newIsFirstPerson) {
+  if (newIsFirstPerson !== undefined) {
+    isFirstPerson = newIsFirstPerson;
+  }
+  if (!camera) {
+    console.warn('Cannot update fog: camera undefined');
+    return;
+  }
+  if (getSetting('fog.enabled')) {
+    const fogSettings = isFirstPerson ? getSetting('fog.firstPerson') : getSetting('fog.thirdPerson');
+    scene.fog = new THREE.Fog(0x87ceeb, fogSettings.near, fogSettings.far);
+    camera.far = fogSettings.far;
+    camera.updateProjectionMatrix();
+    console.log(`Fog updated for ${isFirstPerson ? 'first-person' : 'third-person'}:`, fogSettings);
+  } else {
+    scene.fog = null;
+    camera.far = getSetting('camera.far');
+    camera.updateProjectionMatrix();
+    console.log('Fog disabled');
+  }
+}
+
+export { initScene, scene, camera, renderer, clock, updateFog };

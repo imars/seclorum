@@ -31,8 +31,6 @@ async function init() {
 
     initScene();
     console.log('Scene initialized');
-    const terrain = initTerrain();
-    console.log('Terrain initialized:', terrain);
     initDrones();
     console.log('Drones initialized');
     await initUI();
@@ -40,7 +38,7 @@ async function init() {
     initGame();
     console.log('Game logic initialized');
   } catch (error) {
-    console.error('Initialization error:', error);
+    console.error('Initialization error:', error.message, error.stack);
   }
 }
 

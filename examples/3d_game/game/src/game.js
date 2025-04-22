@@ -1,30 +1,80 @@
 // src/game.js
 import * as THREE from 'three';
-import { scene, camera, renderer, clock } from './scene.js';
-import { playerDrone, aiDrones, checkpoints, obstacles, updatePlayerDrone, updateAIDrones, checkCollisions } from './drones.js';
-import { updateUI, updateStandings } from './ui.js';
+import { scene, camera, renderer, clock, updateFog } from './scene.js';
+import { playerDrone, aiDrones, checkpoints, obstacles, updatePlayerDrone, updateAIDrones, checkCollisions, onKeyDown, onKeyUp, onMouseMove, onMouseDown, onMouseUp } from './drones.js';
+import { updateStandings, updateUI } from './ui.js';
 import { getTimer, setTimer, getStandings, setStandings } from './state.js';
+import { initTerrain, updateTerrain, setPerspective } from './terrain.js';
+import { getSetting } from './settings.js';
 
 let timer = 0;
 let standings = [];
 let isFirstPerson = false;
 let isAnimating = false;
+let terrainManager = null;
+let isPaused = false;
+let fpsElement = null;
+let lastFrameTime = performance.now();
+let frameCount = 0;
+let fps = 0;
 
 function initGame() {
   console.log('Initializing game logic');
   timer = 0;
   standings = [];
 
-  camera.position.set(0, 30, 50);
+  if (!camera) {
+    console.error('Camera not initialized');
+    return;
+  }
+  const cameraPos = getSetting('camera.initialPosition') || { x: 0, y: 30, z: 50 };
+  camera.position.set(cameraPos.x, cameraPos.y, cameraPos.z);
+
   window.addEventListener('keydown', onKeyDownGame);
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup', onKeyUp);
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mousedown', onMouseDown);
+  window.addEventListener('mouseup', onMouseUp);
+  document.addEventListener('pointerlockchange', () => {
+    console.log('Pointer lock:', document.pointerLockElement ? 'Locked' : 'Unlocked');
+  });
+  document.addEventListener('pointerlockerror', (e) => {
+    console.error('Pointer lock error:', e);
+  });
+
+  const canvas = document.getElementById('gameCanvas');
+  if (!canvas) {
+    console.error('Canvas #gameCanvas not found');
+  } else {
+    canvas.addEventListener('click', () => {
+      console.log('Canvas clicked, requesting pointer lock');
+      if (!document.pointerLockElement) {
+        canvas.requestPointerLock();
+      }
+    });
+  }
+
   const startResetButton = document.getElementById('startReset');
   if (startResetButton) {
     startResetButton.addEventListener('click', startRace);
-    console.log('Start/Reset button listener added');
   } else {
     console.error('Start/Reset button not found');
   }
 
+  fpsElement = document.createElement('div');
+  fpsElement.style.position = 'absolute';
+  fpsElement.style.top = '10px';
+  fpsElement.style.left = '10px';
+  fpsElement.style.color = 'white';
+  fpsElement.style.background = 'rgba(0, 0, 0, 0.5)';
+  fpsElement.style.padding = '5px';
+  fpsElement.style.fontFamily = 'Arial, sans-serif';
+  document.body.appendChild(fpsElement);
+
+  terrainManager = initTerrain();
+  console.log('Terrain manager:', terrainManager ? 'success' : 'failed');
+  console.log('Player drone:', playerDrone ? 'success' : 'failed');
   updateStandings();
   startAnimation();
 }
@@ -36,7 +86,7 @@ function startRace() {
   if (playerDrone) {
     playerDrone.position.set(0, 10, 0);
     playerDrone.momentum.set(0, 0, 0);
-    playerDrone.rotation.set(0, Math.PI / 2, 0);
+    playerDrone.rotation.set(0, 0, 0);
     playerDrone.checkpoints = [];
     playerDrone.time = 0;
   }
@@ -47,6 +97,7 @@ function startRace() {
       d.time = 0;
       d.targetCheckpoint = 0;
       d.path = [];
+      d.lastPathUpdate = getTimer();
     });
   }
   updateStandings();
@@ -57,49 +108,100 @@ function onKeyDownGame(event) {
   if (event.key === 'f' || event.key === 'F') {
     isFirstPerson = !isFirstPerson;
     console.log('Camera mode:', isFirstPerson ? 'First-person' : 'Third-person');
-    if (isFirstPerson && document.pointerLockElement !== document.getElementById('gameCanvas')) {
-      document.getElementById('gameCanvas').requestPointerLock();
+    updateFog(isFirstPerson);
+    if (terrainManager) {
+      terrainManager.setPerspective(isFirstPerson);
+    } else {
+      console.warn('Cannot set terrain perspective: terrainManager not initialized');
     }
+  } else if (event.key === 'Escape') {
+    if (document.pointerLockElement) {
+      console.log('Escape pressed, exiting pointer lock');
+      document.exitPointerLock();
+    }
+  }
+}
+
+function togglePause() {
+  isPaused = !isPaused;
+  console.log('Game', isPaused ? 'paused' : 'resumed');
+  const pauseButton = document.getElementById('pause');
+  if (pauseButton) {
+    pauseButton.innerText = isPaused ? 'Resume' : 'Pause';
   }
 }
 
 function animate() {
   if (!isAnimating) return;
-  console.log('Animation frame');
-  requestAnimationFrame(animate);
-  const delta = clock.getDelta();
-  setTimer(getTimer() + delta);
-  console.log('Timer updated:', getTimer());
+  try {
+    requestAnimationFrame(animate);
+    const now = performance.now();
+    let delta = clock.getDelta();
+    if (delta === 0) {
+      delta = (now - lastFrameTime) / 1000;
+      console.warn('clock.getDelta 0, fallback:', delta);
+    }
+    delta = Math.min(delta, 0.1);
+    lastFrameTime = now;
 
-  updatePlayerDrone(delta);
-  updateAIDrones(delta);
-  checkCollisions();
-  updateUI();
+    frameCount++;
+    if (now - lastFrameTime >= 1000) {
+      fps = frameCount;
+      frameCount = 0;
+      lastFrameTime = now;
+      if (fpsElement) fpsElement.textContent = `FPS: ${fps}`;
+    }
 
-  if (isFirstPerson && playerDrone) {
-    camera.position.copy(playerDrone.position);
-    camera.rotation.copy(playerDrone.rotation);
-  } else {
-    camera.position.lerp(
-      playerDrone.position.clone().add(new THREE.Vector3(0, 20, 30)),
-      0.1
-    );
-    camera.lookAt(playerDrone.position);
+    setTimer(getTimer() + delta);
+
+    if (!isPaused) {
+      updatePlayerDrone(delta);
+      checkCollisions();
+      updateUI();
+
+      if (playerDrone && terrainManager && playerDrone.position) {
+        terrainManager.updateTerrain(playerDrone.position);
+      }
+
+      if (isFirstPerson && playerDrone) {
+        camera.position.copy(playerDrone.position);
+        camera.rotation.copy(playerDrone.rotation);
+      } else if (playerDrone) {
+        camera.position.lerp(
+          playerDrone.position.clone().add(new THREE.Vector3(0, 20, 30)),
+          0.1
+        );
+        camera.lookAt(playerDrone.position);
+      }
+    }
+
+    if (renderer && scene && camera) {
+      renderer.render(scene, camera);
+    }
+    console.log('Frame:', { fps, renderTime: (performance.now() - now).toFixed(2) + 'ms' });
+  } catch (error) {
+    console.error('Animate error:', error);
+    isAnimating = false;
   }
-
-  renderer.render(scene, camera);
 }
 
 function startAnimation() {
   if (!isAnimating) {
     isAnimating = true;
-    console.log('Starting game animation');
-    if (!renderer || !scene || !camera) {
-      console.error('Cannot start animation: missing renderer, scene, or camera');
+    console.log('Starting animation');
+    if (!renderer || !scene || !camera || !clock) {
+      console.error('Missing dependencies:', {
+        renderer: !!renderer,
+        scene: !!scene,
+        camera: !!camera,
+        clock: !!clock
+      });
       return;
     }
+    lastFrameTime = performance.now();
+    clock.start();
     animate();
   }
 }
 
-export { initGame, startRace };
+export { initGame, startRace, togglePause, isFirstPerson };

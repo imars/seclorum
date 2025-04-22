@@ -1,7 +1,7 @@
 // src/path.js
 import * as THREE from 'three';
 
-function aStarPath2D(start, goal, obstacles, gridSize = 10, gridRange = 200, maxNodes = 10000) {
+function aStarPath2D(start, goal, obstacles, gridSize = 40, gridRange = 200, maxNodes = 2000) {
   console.log('Calculating 2D A* path from', start, 'to', goal);
   const grid = [];
   for (let x = -gridRange; x <= gridRange; x += gridSize) {
@@ -47,10 +47,9 @@ function aStarPath2D(start, goal, obstacles, gridSize = 10, gridRange = 200, max
   return [];
 }
 
-function aStarPath3D(start, goal, obstacles, gridSize = 10, maxNodes = 10000) {
+function aStarPath3D(start, goal, obstacles, gridSize = 40, maxNodes = 2000) {
   console.log('Calculating 3D A* path from', start, 'to', goal);
 
-  // Dynamic grid bounds
   const gridRange = Math.max(
     Math.abs(start.x - goal.x),
     Math.abs(start.z - goal.z),
@@ -100,10 +99,10 @@ function aStarPath3D(start, goal, obstacles, gridSize = 10, maxNodes = 10000) {
         for (let dz of [-gridSize, 0, gridSize]) {
           if (dx === 0 && dy === 0 && dz === 0) continue;
           const nextPos = current.pos.clone().add(new THREE.Vector3(dx, dy, dz));
-          const nextKey = `${Math.round(nextPos.x / gridSize)},${Math.round(nextPos.y / gridSize)},${Math.round(nextPos.z / gridSize)}`;
+          const nextKey = `${Math.round(nextPos.x / gridSize)},${Math.round(nextPos.y / gridSize)},${Math.round(current.pos.z / gridSize)}`;
           const nx = Math.round(nextPos.x), ny = Math.round(nextPos.y), nz = Math.round(nextPos.z);
           if (closed.has(nextKey) || (grid[nx] && grid[nx][nz] && grid[nx][nz][ny] === Infinity)) continue;
-          const g = current.g + gridSize * Math.sqrt(dx * dx + dy * dy + dz * dz) / gridSize; // Euclidean distance
+          const g = current.g + gridSize * Math.sqrt(dx * dx + dy * dy + dz * dz) / gridSize;
           const h = nextPos.distanceTo(goal);
           open.push({ pos: nextPos, g, h, f: g + h, path: current.path.concat([nextPos]) });
         }

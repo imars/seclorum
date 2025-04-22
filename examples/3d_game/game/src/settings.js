@@ -1,41 +1,55 @@
 // src/settings.js
 const settings = {
-  // Drone settings
   playerDrone: {
-    accel: 1.5, // Tripled from 0.5
+    accel: 1.5,
     maxSpeed: 10,
     friction: 0.9,
   },
   aiDrone: {
-    accel: 1.5, // Tripled from 0.5 for NPC performance
+    accel: 1.5,
     maxSpeed: 10,
     friction: 0.9,
-    pathUpdateInterval: 1, // Seconds between A* path updates (new)
-    count: 3, // Number of AI drones
+    pathUpdateInterval: 3,
+    count: 3,
   },
-  // Terrain settings
   terrain: {
     tileSize: 200,
-    segments: 8,
-    renderDistance: 2,
-    noiseScale: 100, // For noise2D(x / noiseScale, z / noiseScale)
-    noiseAmplitude: 10, // For noise2D * noiseAmplitude
+    segments: 6,
+    firstPerson: {
+      renderDistance: 1, // 9 tiles for close-up view
+    },
+    thirdPerson: {
+      renderDistance: 2, // 18 tiles for broader view
+    },
+    noiseScale: 100,
+    noiseAmplitude: 10,
   },
-  // Track settings
   track: {
-    checkpointSpacing: 150, // Distance between checkpoints
-    checkpointOffset: 50, // Z-offset for first checkpoint
+    checkpointSpacing: 150,
+    checkpointOffset: 50,
   },
-  // Camera settings
   camera: {
     fov: 75,
     near: 0.1,
     far: 1000,
     initialPosition: { x: 0, y: 30, z: 50 },
   },
+  fog: {
+    enabled: true,
+    firstPerson: {
+      near: 50, // Closer fog for immersion
+      far: 200, // Tighter range for performance
+    },
+    thirdPerson: {
+      near: 100, // Wider fog for visibility
+      far: 400, // Broader range for atmosphere
+    },
+  },
+  renderer: {
+    antialias: false,
+  },
 };
 
-// Get a setting value
 function getSetting(path) {
   try {
     const keys = path.split('.');
@@ -51,7 +65,6 @@ function getSetting(path) {
   }
 }
 
-// Set a setting value (for dynamic updates)
 function setSetting(path, value) {
   try {
     const keys = path.split('.');

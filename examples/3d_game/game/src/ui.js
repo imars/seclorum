@@ -1,6 +1,6 @@
 // src/ui.js
 import { playerDrone, aiDrones, checkpoints } from './drones.js';
-import { startRace } from './game.js'; // Import from game.js
+import { startRace, togglePause } from './game.js'; // Add togglePause import
 import { getTimer, setTimer, getStandings, setStandings } from './state.js';
 
 function initUI() {
@@ -15,12 +15,21 @@ function initUI() {
     console.error('UI elements not found:', { uiDiv, startResetButton });
     return Promise.resolve();
   }
+  // Add pause button
+  const pauseButton = document.createElement('button');
+  pauseButton.id = 'pause';
+  pauseButton.innerText = 'Pause';
+  uiDiv.appendChild(pauseButton);
+  pauseButton.addEventListener('click', () => {
+    console.log('Pause button clicked');
+    togglePause(); // Call imported togglePause
+  });
   startResetButton.addEventListener('click', () => {
     console.log('Start/Reset button clicked in UI');
     startRace();
   });
   updateStandings();
-  console.log('UI initialized');
+  console.log('UI initialized with pause button');
   return Promise.resolve();
 }
 
