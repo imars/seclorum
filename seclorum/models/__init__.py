@@ -1,6 +1,7 @@
 # seclorum/models/__init__.py
 from .task import (
     Task,
+    TaskFactory,
     AgentMessage,
     FileListToolInput,
     FileListToolOutput,
@@ -12,11 +13,17 @@ from .task import (
 )
 from .code import CodeOutput, TestResult, CodeResult
 from .plan import Plan
-from .manager import create_model_manager, ModelManager, OllamaModelManager, MockModelManager
+from .manager import ModelManager, create_model_manager
+from .managers.mock import MockModelManager
+from .managers.ollama import OllamaModelManager
+from .managers.llama_cpp import LlamaCppModelManager
+#from .managers.guidance import GuidanceModelManager
+from .managers.google import GoogleModelManager
 
 __all__ = [
     "Task",
     "Plan",
+    "TaskFactory",
     "AgentMessage",
     "FileListToolInput",
     "FileListToolOutput",
@@ -27,8 +34,12 @@ __all__ = [
     "OutsourcedTaskOutput",
     "CodeOutput",
     "TestResult",
-    "create_model_manager",
+    "CodeResult",
     "ModelManager",
+    "create_model_manager",
     "OllamaModelManager",
+    "LlamaCppModelManager",
+    "GuidanceModelManager",
+    "GoogleModelManager",
     "MockModelManager"
 ]

@@ -1,13 +1,25 @@
 # seclorum/models/plan.py
 from typing import List, Dict, Any, Optional
-from dataclasses import dataclass
-from seclorum.models.task import Task
+from pydantic import BaseModel
+from enum import Enum
 
-@dataclass
-class Plan:
+class Language(str, Enum):
+    html = "html"
+    css = "css"
+    javascript = "javascript"
+    json = "json"
+    text = "text"
+
+class Task(BaseModel):
+    description: str
+    language: Language
+    parameters: Dict[str, Any]  # Flexible dict for output_files, etc.
+    dependencies: List[str]
+    prompt: str
+
+class Plan(BaseModel):
     subtasks: List[Task]
     metadata: Dict[str, Any]
 
-    def __init__(self, subtasks: Optional[List[Task]] = None, metadata: Optional[Dict[str, Any]] = None):
-        self.subtasks = subtasks or []
-        self.metadata = metadata or {}
+    class Config:
+        arbitrary_types_allowed = True

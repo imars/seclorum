@@ -1,4 +1,4 @@
-# seclorum/models/task.py
+# seclorum/models.py
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List
 import json
@@ -11,6 +11,8 @@ class Task(BaseModel):
     task_id: str
     description: str
     parameters: Optional[Dict] = Field(default_factory=dict)
+    dependencies: Optional[List[str]] = Field(default_factory=list)
+    prompt: Optional[str] = None
 
     def to_json(self):
         return self.model_dump_json()
@@ -57,10 +59,12 @@ class TaskFactory:
         generate_tests: bool = False,
         execute: bool = False,
         use_remote: bool = False,
-        output_file: Optional[str] = None,
         output_files: Optional[List[str]] = None,
         task_id: Optional[str] = None,
-        timeout: Optional[int] = None
+        timeout: Optional[int] = None,
+        dependencies: Optional[List[str]] = None,
+        prompt: Optional[str] = None,
+        max_tokens: Optional[int] = None  # Added parameter
     ) -> Task:
         """Create a task for code generation, testing, and execution."""
         task_id = task_id or str(uuid.uuid4())
@@ -70,17 +74,19 @@ class TaskFactory:
             "execute": execute,
             "use_remote": use_remote
         }
-        if output_file:
-            parameters["output_file"] = output_file
         if output_files:
             parameters["output_files"] = output_files
         if timeout is not None:
             parameters["timeout"] = timeout
-        logger.debug(f"Creating code task: task_id={task_id}, output_file={output_file}, output_files={output_files}, parameters={parameters}")
+        if max_tokens is not None:
+            parameters["max_tokens"] = max_tokens
+        logger.debug(f"Creating code task: task_id={task_id}, output_files={output_files}, parameters={parameters}, dependencies={dependencies}, prompt={prompt}")
         return Task(
             task_id=task_id,
             description=description,
-            parameters=parameters
+            parameters=parameters,
+            dependencies=dependencies or [],
+            prompt=prompt
         )
 
     @staticmethod
@@ -89,14 +95,16 @@ class TaskFactory:
         sender: str,
         receiver: str,
         content: str,
-        task_id: Optional[str] = None
+        task_id: Optional[str] = None,
+        prompt: Optional[str] = None
     ) -> AgentMessage:
         """Create an agent message with an embedded task."""
         task_id = task_id or str(uuid.uuid4())
         task = Task(
             task_id=task_id,
             description=description,
-            parameters={}
+            parameters={},
+            prompt=prompt
         )
         return AgentMessage(
             sender=sender,
