@@ -6,7 +6,7 @@ from seclorum.models import Task, TestResult, CodeOutput, Plan
 from seclorum.utils.logger import LoggerMixin
 from seclorum.models.manager import ModelManager, create_model_manager
 from seclorum.core.filesystem import FileSystemManager
-from seclorum.agents.memory.core import Memory
+from seclorum.agents.memory.memory import Memory
 from seclorum.agents.remote import Remote
 import logging
 import requests

@@ -1,4 +1,3 @@
-# seclorum/agents/aggregate.py
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple, Set
 from collections import defaultdict
@@ -8,7 +7,7 @@ from seclorum.agents.agent import Agent
 from seclorum.utils.logger import LoggerMixin
 from seclorum.models.manager import ModelManager, create_model_manager
 from seclorum.core.filesystem import FileSystemManager
-from seclorum.agents.memory.core import Memory
+from seclorum.agents.memory.memory import Memory
 from seclorum.agents.remote import Remote
 import logging
 import requests
@@ -36,7 +35,6 @@ class Aggregate(Agent):
         if "status" in condition and condition["status"] != status:
             self.log_update(f"Condition failed: expected status {condition['status']}, got {status}")
             return False
-        # Skip passed check for Plan results
         if "passed" in condition and isinstance(result, TestResult):
             passed = condition["passed"] == result.passed
             self.log_update(f"Passed condition: expected {condition['passed']}, got {result.passed}")
@@ -67,8 +65,8 @@ class Aggregate(Agent):
                 subtask_count += 1
                 subtask_id = subtask.task_id
                 self.log_update(f"Processing subtask {subtask_id}: description={subtask.description[:50]}, "
-                               f"parameters={subtask.parameters}")
-                if not subtask.description or not subtask.parameters.get("language") or not subtask.parameters.get("output_file"):
+                               f"parameters={subtask.parameters}, prompt={subtask.prompt}")
+                if not subtask.description or not subtask.parameters.get("language") or not subtask.parameters.get("output_files"):
                     self.log_update(f"Skipping invalid subtask {subtask_id}: missing required fields")
                     continue
                 if subtask_id not in self.tasks:
@@ -88,9 +86,11 @@ class Aggregate(Agent):
                         new_task = Task(
                             task_id=subtask_id,
                             description=subtask.description,
-                            parameters={**subtask.parameters, **params}
+                            parameters={**subtask.parameters, **params},
+                            dependencies=subtask.dependencies,
+                            prompt=subtask.prompt  # Pass prompt
                         )
-                        self.log_update(f"Executing {next_agent_name} for subtask {subtask_id} with params: {new_task.parameters}")
+                        self.log_update(f"Executing {next_agent_name} for subtask {subtask_id} with params: {new_task.parameters}, prompt: {new_task.prompt}")
                         try:
                             start_time = time.time()
                             new_status, new_result = next_agent.process_task(new_task)
@@ -123,7 +123,13 @@ class Aggregate(Agent):
                         self.log_update(f"Agent {next_agent_name} not found")
                         continue
                     params = self.tasks[task_id]["outputs"].copy()
-                    new_task = Task(task_id=task_id, description=task.description, parameters=params)
+                    new_task = Task(
+                        task_id=task_id,
+                        description=task.description,
+                        parameters=params,
+                        dependencies=task.dependencies,
+                        prompt=task.prompt
+                    )
                     self.log_update(f"Executing {next_agent_name} for task {task_id}")
                     try:
                         start_time = time.time()
@@ -182,7 +188,6 @@ class Aggregate(Agent):
             )
             self.log_update(f"Dependencies for {next_agent_name}: {deps}, satisfied={deps_satisfied}")
             if not deps_satisfied:
-                # Force execution if Architect has run and status matches
                 if any(dep_name.startswith("Architect_") and agent_outputs.get(dep_name, {}).get("status") == condition.get("status")
                        for dep_name, condition in deps):
                     self.log_update(f"Forcing execution of {next_agent_name} as Architect dependency met")
@@ -191,8 +196,14 @@ class Aggregate(Agent):
                     self.log_update(f"Dependencies not satisfied for {next_agent_name}, skipping")
                     continue
             agent = self.agents[next_agent_name]
-            new_task = Task(task_id=task_id, description=task.description, parameters=agent_outputs)
-            self.log_update(f"Executing agent {next_agent_name} with params: {new_task.parameters}")
+            new_task = Task(
+                task_id=task_id,
+                description=task.description,
+                parameters=agent_outputs,
+                dependencies=task.dependencies,
+                prompt=task.prompt
+            )
+            self.log_update(f"Executing agent {next_agent_name} with params: {new_task.parameters}, prompt: {new_task.prompt}")
             try:
                 start_time = time.time()
                 agent_status, agent_result = agent.process_task(new_task)
@@ -224,41 +235,58 @@ class Aggregate(Agent):
         self.log_update(f"Orchestration complete, final status: {final_status}")
         return final_status, final_result
 
-    def decide_next_step(self, task: Task, pending_agents: Set[str]) -> Optional[str]:
-        task_id = task.task_id
-        self.log_update(f"Deciding next step for task {task_id}, pending agents: {pending_agents}")
+def decide_next_step(self, task: Task, pending_agents: Set[str]) -> Optional[str]:
+    task_id = task.task_id
+    self.log_update(f"Deciding next step for task {task_id}, pending agents: {pending_agents}")
+    satisfied_agents = []
+    for agent_name in pending_agents:
+        deps = self.graph.get(agent_name, [])
+        agent_outputs = self.tasks.get(task_id, {}).get("outputs", {})
+        deps_satisfied = all(
+            dep_name in agent_outputs and
+            self._check_condition(agent_outputs[dep_name]["status"], agent_outputs[dep_name]["result"], condition)
+            for dep_name, condition in deps
+        )
+        if deps_satisfied:
+            satisfied_agents.append(agent_name)
+            self.log_update(f"Agent {agent_name} has satisfied dependencies: {deps}")
+
+    if satisfied_agents:
+        selected_agent = satisfied_agents[0]  # Select first agent with satisfied dependencies
+        self.log_update(f"Selected agent {selected_agent} with satisfied dependencies")
+        return selected_agent
+
+    self.log_update(f"No agent with satisfied dependencies, checking Architect dependencies")
+    # Check if any Architect dependencies are met
+    for agent_name in pending_agents:
+        deps = self.graph.get(agent_name, [])
+        agent_outputs = self.tasks.get(task_id, {}).get("outputs", {})
+        if any(dep_name.startswith("Architect_") and agent_outputs.get(dep_name, {}).get("status") == condition.get("status")
+               for dep_name, condition in deps):
+            self.log_update(f"Selected agent {agent_name} due to Architect dependency")
+            return agent_name
+
+    self.log_update(f"No agent with satisfied dependencies, falling back to inference")
+    try:
+        start_time = time.time()
+        prompt = (
+            f"Given the task '{task.description}' and current state:\n"
+            f"Status: {self.tasks.get(task_id, {}).get('status')}\n"
+            f"Processed agents: {list(self.tasks.get(task_id, {}).get('processed', set()))}\n"
+            f"Outputs: {self.tasks.get(task_id, {}).get('outputs', {})}\n"
+            f"Pending agents: {list(pending_agents)}\n"
+            f"Graph: {self.graph}\n"
+            f"Task prompt: {task.prompt}\n"
+            "Which agent should process the task next? Return only the agent name or 'None' if no step is clear."
+        )
+        decision = self.infer(prompt, task).strip()
+        elapsed = time.time() - start_time
+        self.log_update(f"Inference decided next step: {decision}, time={elapsed:.2f}s")
         for agent_name in pending_agents:
-            deps = self.graph.get(agent_name, [])
-            agent_outputs = self.tasks.get(task_id, {}).get("outputs", {})
-            deps_satisfied = all(
-                dep_name in agent_outputs and
-                self._check_condition(agent_outputs[dep_name]["status"], agent_outputs[dep_name]["result"], condition)
-                for dep_name, condition in deps
-            )
-            if deps_satisfied:
-                self.log_update(f"Selected agent {agent_name} with satisfied dependencies")
+            if agent_name in decision:
+                self.log_update(f"Matched agent {agent_name} in decision")
                 return agent_name
-        self.log_update(f"No agent with satisfied dependencies, falling back to inference")
-        try:
-            start_time = time.time()
-            prompt = (
-                f"Given the task '{task.description}' and current state:\n"
-                f"Status: {self.tasks.get(task_id, {}).get('status')}\n"
-                f"Processed agents: {list(self.tasks.get(task_id, {}).get('processed', set()))}\n"
-                f"Outputs: {self.tasks.get(task_id, {}).get('outputs', {})}\n"
-                f"Pending agents: {list(pending_agents)}\n"
-                f"Graph: {self.graph}\n"
-                "Which agent should process the task next? Return only the agent name or 'None' if no step is clear."
-            )
-            decision = self.infer(prompt, task).strip()
-            elapsed = time.time() - start_time
-            self.log_update(f"Inference decided next step: {decision}, time={elapsed:.2f}s")
-            # Parse agent name explicitly
-            for agent_name in pending_agents:
-                if agent_name in decision:
-                    self.log_update(f"Matched agent {agent_name} in decision")
-                    return agent_name
-            return None
-        except Exception as e:
-            self.log_update(f"Error in decide_next_step inference: {str(e)}")
-            return None
+        return None
+    except Exception as e:
+        self.log_update(f"Error in decide_next_step inference: {str(e)}")
+        return None

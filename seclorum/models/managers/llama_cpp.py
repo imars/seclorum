@@ -1,4 +1,4 @@
-# seclorum/models/model_managers/llama_cpp.py
+# seclorum/models/managers/llama_cpp.py
 from typing import Optional
 import logging
 import os
@@ -35,37 +35,8 @@ class LlamaCppModelManager(ModelManager):
             raise
 
     def _get_model_path(self, model_name: str) -> Optional[str]:
-        ollama_model_dir = os.path.expanduser("~/.ollama/models")
-        manifest_base = os.path.join(ollama_model_dir, "manifests", "registry.ollama.ai", "library")
-        manifest_map = {
-            "llama3.2:latest": os.path.join(manifest_base, "llama3.2", "latest"),
-            "mistral:latest": os.path.join(manifest_base, "mistral", "latest"),
-            "deepseek-r1:8b": os.path.join(ollama_model_dir, "manifests", "registry.ollama.ai", "deepseek", "deepseek-r1", "8b"),
-            "deepseek-r1:latest": os.path.join(ollama_model_dir, "manifests", "registry.ollama.ai", "deepseek", "deepseek-r1", "latest"),
-            "codellama:7b-instruct": os.path.join(manifest_base, "codellama", "7b-instruct"),
-        }
-        manifest_path = manifest_map.get(model_name)
-        if not manifest_path or not os.path.exists(manifest_path):
-            self.logger.warning(f"No manifest file found for {model_name} at {manifest_path}")
-            return None
-        try:
-            with open(manifest_path, 'r') as f:
-                manifest = json.load(f)
-                self.logger.debug(f"Manifest for {model_name}: {json.dumps(manifest, indent=2)}")
-                for layer in manifest.get("layers", []):
-                    if layer.get("mediaType") == "application/vnd.ollama.image.model":
-                        digest = layer.get("digest", "")
-                        if digest.startswith("sha256:"):
-                            file_name = f"sha256-{digest[7:]}"
-                            file_path = os.path.join(ollama_model_dir, "blobs", file_name)
-                            if os.path.exists(file_path):
-                                self.logger.info(f"Found GGUF file for {model_name}: {file_path}")
-                                return file_path
-                self.logger.warning(f"No valid GGUF file found in manifest for {model_name}")
-                return None
-        except Exception as e:
-            self.logger.error(f"Failed to read manifest for {model_name}: {str(e)}")
-            return None
+        """Locate GGUF file for the given model using ModelManager's method."""
+        return super()._get_model_path(model_name)
 
     def _extract_json(self, raw_output: str) -> str:
         raw_output = re.sub(r'```(?:json)?\n([\s\S]*?)\n```', r'\1', raw_output)

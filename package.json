@@ -24,11 +24,15 @@
   "homepage": "https://github.com/imars/seclorum#readme",
   "devDependencies": {
     "jest": "^29.7.0",
+    "jest-canvas-mock": "^2.5.2",
     "jest-environment-jsdom": "^29.7.0",
-    "jsdom": "^26.0.0",
-    "three": "^0.175.0"
+    "jsdom": "^26.1.0",
+    "three": "^0.175.0",
+    "vite": "^6.3.1",
+    "worker-loader": "^3.0.8"
   },
   "dependencies": {
-    "puppeteer": "^24.6.1"
+    "puppeteer": "^24.6.1",
+    "simplex-noise": "^4.0.3"
   }
 }

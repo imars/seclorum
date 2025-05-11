@@ -1,12 +1,13 @@
-# seclorum/models/model_managers/ollama.py
-from typing import Optional
+# seclorum/models/managers/ollama.py
+from typing import Optional, Any
 import subprocess
 import time
 import logging
 import ollama
+import numpy as np
 from ..manager import ModelManager
 
-logger = logging.getLogger("ModelManager")
+logger = logging.getLogger("OllamaModelManager")
 
 class OllamaModelManager(ModelManager):
     def __init__(self, model_name: str = "llama3.2", host: str = "http://localhost:11434"):
@@ -32,8 +33,17 @@ class OllamaModelManager(ModelManager):
             time.sleep(2)
             self.ensure_model_and_server()
 
-    def generate(self, prompt: str, **kwargs) -> str:
+    def generate(self, prompt: str, task: str = "text", **kwargs) -> Any:
         try:
+            if task == "embedding":
+                response = self.client.embeddings(model=self.model_name, prompt=prompt)
+                embedding = response.get("embedding")
+                if not embedding:
+                    self.logger.error(f"No embedding returned for {self.model_name}")
+                    return np.zeros(768)  # Default for nomic-embed-text
+                self.logger.debug(f"Generated embedding for prompt: {prompt[:50]}..., length={len(embedding)}")
+                return np.array(embedding)
+
             max_tokens = kwargs.get("max_tokens", 16384)
             temperature = kwargs.get("temperature", 0.7)
             raw_mode = kwargs.get("raw", False)
@@ -90,5 +100,8 @@ class OllamaModelManager(ModelManager):
             self.logger.debug(f"Standard generation output: {result[:200]}...")
             return result
         except Exception as e:
-            self.logger.error(f"Failed to generate with {self.model_name}: {str(e)}")
-            return ""
+            self.logger.error(f"Failed to generate {task} with {self.model_name}: {str(e)}")
+            return np.zeros(768) if task == "embedding" else ""
+
+    def close(self):
+        self.logger.debug(f"Closing OllamaModelManager for model: {self.model_name}")

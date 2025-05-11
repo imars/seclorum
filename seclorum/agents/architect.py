@@ -1,106 +1,62 @@
-# seclorum/agents/architect.py
-from typing import Tuple, Any, Optional, Dict, List
+from typing import Any, Dict, List, Optional, Tuple, Callable
+from seclorum.models import Task, Plan
 from seclorum.agents.agent import Agent
-from seclorum.models import Plan, Task
-from seclorum.agents.settings import Settings
+from seclorum.utils.logger import logger
 from seclorum.languages import LANGUAGE_HANDLERS
-import logging
+from seclorum.agents.settings import Settings
 import json
-import re
 import uuid
-
-try:
-    import guidance
-except ImportError:
-    guidance = None
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+import sqlite3
 
 class Architect(Agent):
-    def __init__(self, name: str, session_id: str, model_manager=None):
-        super().__init__(name, session_id, model_manager)
-        logger.info(f"Architect initialized: name={name}, session_id={session_id}")
+    def __init__(self, task_id: str, session_id: str, model_manager=None, model_name: str = "gemini-1.5-flash", memory_kwargs: Optional[Dict] = None):
+        memory_kwargs = memory_kwargs or {}
+        super().__init__(name=f"Architect_{task_id}", session_id=session_id, model_manager=model_manager, model_name=model_name, memory_kwargs=memory_kwargs)
+        logger.info(f"Architect initialized: name=Architect_{task_id}, session_id={session_id}")
 
-    def validate_plan(self, raw_plan: str) -> bool:
-        """Validate that the plan includes a configuration subtask and is valid JSON."""
-        try:
-            plan_data = json.loads(raw_plan)
-            if not isinstance(plan_data, dict) or "subtasks" not in plan_data:
-                logger.debug("Validation failed: Plan is not a dict or missing 'subtasks'")
-                return False
-            for subtask in plan_data.get("subtasks", []):
-                if "config_output" in subtask.get("parameters", {}).get("output_files", []):
-                    return True
-            logger.debug("Validation failed: No subtask includes 'config_output'")
-            return False
-        except json.JSONDecodeError as e:
-            logger.debug(f"Validation failed due to JSONDecodeError: {str(e)}")
-            return False
-
-    def clean_raw_plan(self, raw_plan: str) -> str:
-        """Clean raw plan output to extract valid JSON."""
-        cleaned_plan = raw_plan.strip()
-        cleaned_plan = re.sub(r'^```json\n|```$|^.*?\n\s*\{|\s*Note:.*$', '', cleaned_plan, flags=re.MULTILINE | re.DOTALL)
-        cleaned_plan = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', cleaned_plan)
-        cleaned_plan = re.sub(r',\s*([}\]])', r'\1', cleaned_plan)
-        cleaned_plan = re.sub(r'\[\s*,', '[', cleaned_plan)
-        cleaned_plan = re.sub(r'\{\s*,', '{', cleaned_plan)
-        cleaned_plan = re.sub(r'//.*$', '', cleaned_plan, flags=re.MULTILINE)
-        cleaned_plan = re.sub(r'/\*.*?\*/', '', cleaned_plan, flags=re.DOTALL)
-        cleaned_plan = re.sub(r"'([^']*)'", r'"\1"', cleaned_plan)
-        cleaned_plan = re.sub(r'\s*(?:Note:.*|This plan.*|\}\s*[^}]*)$', '}', cleaned_plan, flags=re.DOTALL)
-        cleaned_plan = re.sub(r'}\s*}+$', '}', cleaned_plan)
-        cleaned_plan = re.sub(r':\s*([^\[{"])', r': "\1', cleaned_plan)
-        cleaned_plan = re.sub(r'\[\s*([^\]]*)\s*([^\]\s])', r'[\1]', cleaned_plan)
-        while cleaned_plan.count('{') > cleaned_plan.count('}'):
-            cleaned_plan += '}'
-        while cleaned_plan.count('[') > cleaned_plan.count(']'):
-            cleaned_plan += ']'
-
-        json_match = re.search(r'\{[\s\S]*\}', cleaned_plan)
-        if not json_match:
-            logger.error(f"No valid JSON object found in raw plan: {cleaned_plan[:200]}...")
-            return "{}"
-        cleaned_plan = json_match.group(0)
-
-        try:
-            json.loads(cleaned_plan)
-            logger.debug(f"Cleaned plan: {cleaned_plan[:200]}...")
-        except json.JSONDecodeError as e:
-            logger.warning(f"Cleaned plan is still invalid JSON: {str(e)}")
-            cleaned_plan = "{}"
-        return cleaned_plan
+    def get_prompt(self, task: Task) -> str:
+        language = task.parameters.get("language", "javascript").lower()
+        handler = LANGUAGE_HANDLERS.get(language, LANGUAGE_HANDLERS["javascript"])
+        output_files = handler.map_output_files(["main_output", "config_output", "test_output"], task)
+        prompt = (
+            f"Task Description:\n{task.description}\n\n"
+            f"Generate a JSON plan for implementing the described application. "
+            f"The plan should include 5–10 subtasks to cover HTML, JavaScript, CSS, package.json, and README.md. "
+            f"Each subtask must have:\n"
+            f"- 'description': A brief description of the subtask.\n"
+            f"- 'language': The programming language (e.g., 'html', 'javascript', 'css', 'json', 'text').\n"
+            f"- 'parameters': An object with 'output_files' listing the files to generate (e.g., {output_files}).\n"
+            f"- 'dependencies': A list of subtask descriptions that this subtask depends on.\n"
+            f"- 'prompt': A specific prompt for the Generator agent to produce the code or content.\n"
+            f"Return a JSON object with a 'subtasks' array, using double quotes for strings, "
+            f"no trailing commas, no comments, no markdown, and no text outside the JSON object."
+        )
+        self.log_update(f"Generated prompt for task {task.task_id}: {prompt[:200]}...")
+        return prompt
 
     def get_retry_prompt(self, original_prompt: str, previous_result: str, error: Optional[Exception], validation_passed: bool) -> str:
-        """Generate a retry prompt with generic guidance."""
         issues = []
         if error:
             issues.append(f"Error: {str(error)}")
         if not validation_passed:
             try:
-                plan_data = json.loads(previous_result)
-                if not any("config_output" in subtask.get("parameters", {}).get("output_files", [])
-                           for subtask in plan_data.get("subtasks", [])):
-                    issues.append("Missing 'config_output' in configuration subtask's output_files")
+                cleaned_result = self.strip_markdown_json(previous_result)
+                plan_data = json.loads(cleaned_result)
                 if not plan_data.get("subtasks"):
                     issues.append("No 'subtasks' array found")
             except json.JSONDecodeError:
-                issues.append("Invalid JSON format, possibly due to truncation, missing commas, or non-JSON text")
-
+                issues.append("Invalid JSON format")
         if not issues:
             issues.append("Output did not meet requirements")
-
         feedback = "\n".join([f"- {issue}" for issue in issues])
         guidance = (
             "Output ONLY a valid JSON object with double quotes for strings, "
             "no trailing or leading commas, no comments, no markdown, no code block markers (```), "
             "and no text outside the JSON object. "
             "Each subtask must have 'description', 'language', 'parameters' with 'output_files', "
-            "'dependencies', and 'prompt'. The configuration subtask MUST include 'config_output' in 'output_files'. "
-            "Generate 5–10 subtasks to cover all necessary components efficiently."
+            "'dependencies', and 'prompt'. "
+            "Generate 5–10 subtasks to cover HTML, JavaScript, CSS, package.json, and README.md efficiently."
         )
-
         return (
             f"Previous attempt failed. Output:\n\n{previous_result}\n\n"
             f"Issues:\n{feedback}\n\n"
@@ -109,7 +65,6 @@ class Architect(Agent):
         )
 
     def get_schema(self) -> Dict[str, Any]:
-        """Define JSON schema for function-calling and Guidance."""
         return {
             "type": "object",
             "properties": {
@@ -119,63 +74,101 @@ class Architect(Agent):
                         "type": "object",
                         "properties": {
                             "description": {"type": "string"},
-                            "language": {"type": "string", "enum": ["html", "css", "javascript", "json", "text"]},
+                            "language": {"type": "string"},
                             "parameters": {
                                 "type": "object",
                                 "properties": {
-                                    "output_files": {"type": "array", "items": {"type": "string"}}
+                                    "output_files": {
+                                        "type": "array",
+                                        "items": {"type": "string"}
+                                    }
                                 },
                                 "required": ["output_files"]
                             },
-                            "dependencies": {"type": "array", "items": {"type": "string"}},
+                            "dependencies": {
+                                "type": "array",
+                                "items": {"type": "string"}
+                            },
                             "prompt": {"type": "string"}
                         },
                         "required": ["description", "language", "parameters", "dependencies", "prompt"]
-                    },
-                    "minItems": 5,
-                    "maxItems": 10  # Allow flexibility up to 10 subtasks
+                    }
                 }
             },
             "required": ["subtasks"]
         }
 
-    def process_task(self, task: Task) -> Tuple[str, Any, str]:
+    def strip_markdown_json(self, text: str) -> str:
+        text = text.strip()
+        if text.startswith("```json") and text.endswith("```"):
+            return text[7:-3].strip()
+        elif text.startswith("```") and text.endswith("```"):
+            return text[3:-3].strip()
+        return text
+
+    def validate_plan(self, raw_plan: str) -> bool:
+        try:
+            cleaned_plan = self.strip_markdown_json(raw_plan)
+            plan_data = json.loads(cleaned_plan)
+            if not isinstance(plan_data, dict) or "subtasks" not in plan_data:
+                logger.debug("Validation failed: Plan is not a dict or missing 'subtasks'")
+                return False
+            return True
+        except json.JSONDecodeError as e:
+            logger.debug(f"Validation failed due to JSONDecodeError: {str(e)}")
+            return False
+
+    def create_fallback_subtasks(self, task: Task) -> List[Task]:
+        language = task.parameters.get("language", "javascript").lower()
+        handler = LANGUAGE_HANDLERS.get(language, LANGUAGE_HANDLERS["javascript"])
+        output_files = handler.map_output_files(["main_output"], task)
+        return [
+            Task(
+                task_id=str(uuid.uuid4()),
+                description="Implement main functionality",
+                parameters={
+                    "language": language,
+                    "output_files": output_files
+                },
+                dependencies=[],
+                prompt=handler.get_code_prompt(task, output_files[0])
+            )
+        ]
+
+    def process_task(self, task: Task) -> Tuple[str, Any]:
         logger.info(f"Processing task {task.task_id}: description={task.description[:100]}...")
         try:
             prompt = self.get_prompt(task)
             max_tokens = task.parameters.get(
                 "max_tokens",
-                8192 if task.parameters.get("use_remote", False)
-                else 4096
+                8192 if task.parameters.get("use_remote", False) else 4096
             )
             infer_kwargs = {
                 "max_tokens": max_tokens,
                 "temperature": 0.3,
                 "timeout": Settings.Architect.ProcessTask.TIMEOUT_DEFAULT,
-                "raw": True if self.model.provider == "ollama" else False,
                 "function_call": {"schema": self.get_schema()}
             }
-
-            logger.info(f"Calling infer with use_remote={task.parameters.get('use_remote', False)}, max_tokens={max_tokens}, raw={infer_kwargs.get('raw')}")
-            raw_plan = self.infer(
-                prompt=prompt,
-                task=task,
-                use_remote=task.parameters.get("use_remote", False),
-                use_context=True,
-                validate_fn=self.validate_plan,
-                max_retries=3,  # Reduced retries with Guidance
-                **infer_kwargs
-            )
-            logger.info(f"Raw plan output length: {len(raw_plan)}")
-
-            try:
-                plan_data = json.loads(raw_plan)
-                logger.info(f"Parsed plan: {json.dumps(plan_data, indent=2)[:200]}...")
-            except json.JSONDecodeError as e:
-                logger.error(f"Invalid JSON at position {e.pos}: {str(e)}")
-                logger.debug(f"Raw plan causing error: {raw_plan[:500]}...")
-                raw_plan_cleaned = self.clean_raw_plan(raw_plan)
-                logger.debug(f"Cleaned plan error context: {raw_plan_cleaned[max(0, e.pos-50):e.pos+50]}")
+            logger.info(f"Calling infer with use_remote={task.parameters.get('use_remote', False)}, max_tokens={max_tokens}")
+            raw_plan = None
+            for attempt in range(3):
+                try:
+                    raw_plan = self.infer(
+                        prompt=prompt,
+                        task=task,
+                        use_remote=task.parameters.get("use_remote", False),
+                        use_context=True,
+                        validate_fn=self.validate_plan,
+                        max_retries=3,
+                        **infer_kwargs
+                    )
+                    logger.info(f"Raw plan output length: {len(raw_plan)}")
+                    break
+                except (json.JSONDecodeError, sqlite3.ProgrammingError, LockTimeoutError) as e:
+                    logger.error(f"Inference attempt {attempt + 1} failed for task {task.task_id}: {str(e)}")
+                    continue
+            if not raw_plan or not raw_plan.strip():
+                logger.error("Empty or invalid raw plan received")
                 subtasks = self.create_fallback_subtasks(task)
                 fallback_plan = {
                     "subtasks": [
@@ -189,8 +182,27 @@ class Architect(Agent):
                     ]
                 }
                 self.store_output(task, "generated", fallback_plan, prompt=prompt)
-                return "generated", Plan(subtasks=subtasks), raw_plan_cleaned
-
+                return "generated", Plan(subtasks=subtasks)
+            cleaned_plan = self.strip_markdown_json(raw_plan)
+            try:
+                plan_data = json.loads(cleaned_plan)
+                logger.info(f"Parsed plan: {json.dumps(plan_data, indent=2)[:200]}...")
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON: {str(e)}, raw_plan: {raw_plan[:200]}...")
+                subtasks = self.create_fallback_subtasks(task)
+                fallback_plan = {
+                    "subtasks": [
+                        {
+                            "description": s.description,
+                            "language": s.parameters.get("language"),
+                            "parameters": {"output_files": s.parameters.get("output_files", [])},
+                            "dependencies": s.dependencies,
+                            "prompt": s.prompt
+                        } for s in subtasks
+                    ]
+                }
+                self.store_output(task, "generated", fallback_plan, prompt=prompt)
+                return "generated", Plan(subtasks=subtasks)
             if not isinstance(plan_data, dict) or "subtasks" not in plan_data:
                 logger.warning("Plan missing subtasks, using fallback")
                 subtasks = self.create_fallback_subtasks(task)
@@ -206,8 +218,7 @@ class Architect(Agent):
                     ]
                 }
                 self.store_output(task, "generated", fallback_plan, prompt=prompt)
-                return "generated", Plan(subtasks=subtasks), raw_plan
-
+                return "generated", Plan(subtasks=subtasks)
             subtasks = []
             task_id_map = {}
             for subtask_data in plan_data.get("subtasks", []):
@@ -241,17 +252,14 @@ class Architect(Agent):
                 )
                 task_id_map[subtask.description] = task_id
                 subtasks.append(subtask)
-
             html_task_ids = {s.task_id for s in subtasks if s.parameters.get("language").lower() == "html"}
             for i, subtask in enumerate(subtasks):
                 if subtask.parameters.get("language").lower() in ["javascript", "css"] and html_task_ids:
                     subtask.dependencies.extend([tid for tid in html_task_ids if tid not in subtask.dependencies])
-
             js_task_ids = {s.task_id for s in subtasks if s.parameters.get("language").lower() == "javascript"}
             for i, subtask in enumerate(subtasks):
                 if subtask.parameters.get("language").lower() == "text" and js_task_ids:
                     subtask.dependencies.extend([tid for tid in js_task_ids if tid not in subtask.dependencies])
-
             config_included = any("config_output" in s.parameters.get("output_files", []) for s in subtasks)
             if not config_included:
                 logger.warning("config_output missing, adding configuration subtask")
@@ -270,7 +278,6 @@ class Architect(Agent):
                 )
                 task_id_map[subtask.description] = task_id
                 subtasks.append(subtask)
-
             if not subtasks:
                 logger.warning("No valid subtasks, using fallback")
                 subtasks = self.create_fallback_subtasks(task)
@@ -286,10 +293,9 @@ class Architect(Agent):
                     ]
                 }
                 self.store_output(task, "generated", fallback_plan, prompt=prompt)
-                return "generated", Plan(subtasks=subtasks), raw_plan
-
+                return "generated", Plan(subtasks=subtasks)
             self.store_output(task, "generated", plan_data, prompt=prompt)
-            return "generated", Plan(subtasks=subtasks), raw_plan
+            return "generated", Plan(subtasks=subtasks)
         except Exception as e:
             logger.error(f"Error generating plan for task {task.task_id}: {str(e)}")
             subtasks = self.create_fallback_subtasks(task)
@@ -305,156 +311,4 @@ class Architect(Agent):
                 ]
             }
             self.store_output(task, "failed", fallback_plan, prompt=prompt)
-            return "failed", Plan(subtasks=subtasks), raw_plan
-
-    def create_fallback_subtasks(self, task: Task) -> List[Task]:
-        """Create fallback subtasks using LanguageHandler for output files and prompts."""
-        logger.info("Generating fallback subtasks")
-        output_files = task.parameters.get("output_files", ["main_output"])
-        subtasks = []
-        task_id_map = {}
-
-        for output_file in output_files:
-            language = (
-                "javascript" if output_file.endswith(".js") else
-                "html" if output_file.endswith(".html") else
-                "css" if output_file.endswith(".css") else
-                "json" if output_file.endswith(".json") else
-                task.parameters.get("language", "javascript")
-            )
-            handler = LANGUAGE_HANDLERS.get(language, LANGUAGE_HANDLERS["javascript"])
-            specific_files = handler.map_output_files([output_file], task)
-            task_id = str(uuid.uuid4())
-            subtask = Task(
-                task_id=task_id,
-                description=f"Generate {language} component for {output_file}",
-                parameters={
-                    "language": language,
-                    "output_files": specific_files
-                },
-                dependencies=[],
-                prompt=handler.get_code_prompt(task, output_file)
-            )
-            task_id_map[subtask.description] = task_id
-            subtasks.append(subtask)
-
-        language = task.parameters.get("language", "javascript").lower()
-        handler = LANGUAGE_HANDLERS.get(language, LANGUAGE_HANDLERS["javascript"])
-        task_id = str(uuid.uuid4())
-        core_subtask = Task(
-            task_id=task_id,
-            description="Implement core functionality and configuration",
-            parameters={
-                "language": language,
-                "output_files": handler.map_output_files(["main_output", "config_output"], task)
-            },
-            dependencies=[s.task_id for s in subtasks if s.parameters.get("language") == "html"],
-            prompt=handler.get_code_prompt(task, "main_output")
-        )
-        task_id_map[core_subtask.description] = task_id
-        subtasks.append(core_subtask)
-
-        additional_subtasks = [
-            (
-                "Write unit tests",
-                language,
-                ["test_output"],
-                [core_subtask.task_id],
-                handler.get_code_prompt(task, "test_output")
-            ),
-            (
-                "Reference external resources",
-                "text",
-                ["resources.txt"],
-                [core_subtask.task_id],
-                "List external resources required for the application."
-            )
-        ]
-        for description, lang, files, deps, prompt in additional_subtasks:
-            task_id = str(uuid.uuid4())
-            handler = LANGUAGE_HANDLERS.get(lang, LANGUAGE_HANDLERS["javascript"])
-            subtask = Task(
-                task_id=task_id,
-                description=description,
-                parameters={
-                    "language": lang,
-                    "output_files": handler.map_output_files(files, task)
-                },
-                dependencies=deps,
-                prompt=prompt
-            )
-            task_id_map[description] = task_id
-            subtasks.append(subtask)
-
-        html_task_ids = {s.task_id for s in subtasks if s.parameters.get("language").lower() == "html"}
-        for subtask in subtasks:
-            if subtask.parameters.get("language").lower() in ["javascript", "css"] and html_task_ids:
-                subtask.dependencies.extend([tid for tid in html_task_ids if tid not in subtask.dependencies])
-
-        js_task_ids = {s.task_id for s in subtasks if s.parameters.get("language").lower() == "javascript"}
-        for subtask in subtasks:
-            if subtask.parameters.get("language").lower() == "text" and js_task_ids:
-                subtask.dependencies.extend([tid for tid in js_task_ids if tid not in subtask.dependencies])
-
-        return subtasks
-
-    def get_prompt(self, task: Task) -> str:
-        """Create a language-agnostic prompt for generating a plan with subtasks."""
-        output_files = task.parameters.get("output_files", ["main_output"])
-        max_tokens = task.parameters.get(
-            "max_tokens",
-            8192 if task.parameters.get("use_remote", False)
-            else 4096
-        )
-        system_prompt = (
-            "You are a coding assistant that generates a JSON object with a 'subtasks' array for a web-based application. "
-            "Output ONLY valid JSON with double quotes for strings, no comments, no markdown, no code block markers (```), and no text outside the JSON object. "
-            "Each subtask must have 'description', 'language', 'parameters' with 'output_files', 'dependencies', and 'prompt'. "
-            "The configuration subtask MUST include 'config_output' in 'output_files'. "
-            "Generate 5–10 subtasks to cover all necessary components efficiently."
-        )
-        user_prompt = (
-            f"Task Description: {task.description}\n"
-            f"Required output files: {', '.join(output_files)}.\n"
-            f"Requirements:\n"
-            f"- Generate 5–10 subtasks covering HTML, CSS, JavaScript, JSON, and text pipelines.\n"
-            f"- Include {', '.join(output_files)} in relevant subtasks.\n"
-            f"- The core functionality subtask must include 'main_output' and 'config_output' in 'output_files'.\n"
-            f"- Each subtask must include:\n"
-            f"  - 'description': A unique, brief description.\n"
-            f"  - 'language': One of html, css, javascript, json, or text.\n"
-            f"  - 'parameters': An object with 'output_files' listing file names.\n"
-            f"  - 'dependencies': A list of subtask descriptions (not IDs) this subtask depends on.\n"
-            f"  - 'prompt': Instructions for implementing the subtask, using the language's conventions.\n"
-            f"- CSS subtasks depend on HTML subtasks.\n"
-            f"- JavaScript subtasks depend on HTML subtasks.\n"
-            f"- Text subtasks depend on JavaScript subtasks.\n"
-            f"Example:\n"
-            f'{{"subtasks": ['
-            f'{{"description": "Create UI structure", "language": "html", "parameters": {{"output_files": ["main_output"]}}, "dependencies": [], "prompt": "Generate HTML structure for the application."}},'
-            f'{{"description": "Apply styling", "language": "css", "parameters": {{"output_files": ["main_output"]}}, "dependencies": ["Create UI structure"], "prompt": "Create CSS for UI components and layout."}},'
-            f'{{"description": "Implement core functionality", "language": "javascript", "parameters": {{"output_files": ["main_output", "config_output"]}}, "dependencies": ["Create UI structure"], "prompt": "Implement core functionality and configuration."}},'
-            f'{{"description": "Configure project", "language": "json", "parameters": {{"output_files": ["main_output"]}}, "dependencies": [], "prompt": "Define project configuration."}},'
-            f'{{"description": "List resources", "language": "text", "parameters": {{"output_files": ["main_output"]}}, "dependencies": ["Implement core functionality"], "prompt": "List external resources."}}'
-            f']}}'
-        )
-
-        if self.model.provider == "guidance" and guidance:
-            return (
-                f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
-                f"Generate a JSON object conforming to the following schema:\n{json.dumps(self.get_schema(), indent=2)}\n"
-                f"{system_prompt}<|eot_id|>"
-                f"<|start_header_id|>user<|end_header_id|>\n\n{user_prompt}<|eot_id|>"
-                f"<|start_header_id|>assistant<|end_header_id|>\n\n"
-            )
-        elif self.model.provider == "ollama":
-            return f"{system_prompt}\n\n{user_prompt}"
-        elif self.model.provider == "google_ai_studio":
-            return f"{system_prompt}\n\n{user_prompt}"
-        elif self.model.provider == "llama_cpp":
-            return (
-                f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system_prompt}<|eot_id|>"
-                f"<|start_header_id|>user<|end_header_id|>\n\n{user_prompt}<|eot_id|>"
-                f"<|start_header_id|>assistant<|end_header_id|>\n\n"
-            )
-        return f"{system_prompt}\n\n{user_prompt}"
+            return "failed", Plan(subtasks=subtasks)

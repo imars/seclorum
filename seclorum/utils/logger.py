@@ -1,9 +1,19 @@
+# seclorum/utils/logger.py
 import json
 import os
 from datetime import datetime
 import logging
 from typing import List, Dict
-import os
+
+# Configure global logger
+logger = logging.getLogger("seclorum")
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    handler.setLevel(logging.DEBUG)
+    logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
 
 class LoggerMixin:
     def __init__(self):

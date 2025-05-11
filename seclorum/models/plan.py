@@ -1,25 +1,17 @@
 # seclorum/models/plan.py
-from typing import List, Dict, Any, Optional
-from pydantic import BaseModel
-from enum import Enum
-
-class Language(str, Enum):
-    html = "html"
-    css = "css"
-    javascript = "javascript"
-    json = "json"
-    text = "text"
-
-class Task(BaseModel):
-    description: str
-    language: Language
-    parameters: Dict[str, Any]  # Flexible dict for output_files, etc.
-    dependencies: List[str]
-    prompt: str
+from typing import List
+from pydantic import BaseModel, validator
+from seclorum.languages.enums import Language
+from seclorum.models import Task  # Import Task
 
 class Plan(BaseModel):
     subtasks: List[Task]
-    metadata: Dict[str, Any]
 
-    class Config:
-        arbitrary_types_allowed = True
+    @validator("subtasks")
+    def validate_subtasks(cls, value):
+        if not value:
+            raise ValueError("Plan must include at least one subtask")
+        for i, task in enumerate(value):
+            if "config_output" in task.parameters.get("output_files", []) and i != len(value) - 1:
+                value.append(value.pop(i))  # Move config subtask to end
+        return value

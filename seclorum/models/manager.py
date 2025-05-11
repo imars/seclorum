@@ -1,21 +1,19 @@
 # seclorum/models/manager.py
 from abc import ABC, abstractmethod
-from typing import Optional
-import subprocess
-import time
+from typing import Optional, Dict, Any
 import logging
-import httpx
-import ollama
-import requests
 import os
+import json
+from pathlib import Path
 
 logger = logging.getLogger("ModelManager")
 
 class ModelManager(ABC):
-    _model_cache = {}  # Class-level cache for models
+    _model_cache = {}
+    _model_path_cache = {}  # Cache for model name to manifest path
 
     def __init__(self, model_name: str, provider: str, host: Optional[str] = None):
-        self.logger = logging.getLogger(f"ModelManager")
+        self.logger = logging.getLogger("ModelManager")
         self.model_name = model_name
         self.provider = provider
         self.host = host
@@ -24,12 +22,103 @@ class ModelManager(ABC):
     def generate(self, prompt: str, **kwargs) -> str:
         pass
 
+    def close(self):
+        """Optional method for resource cleanup."""
+        pass
+
+    def _build_model_path_cache(self) -> Dict[str, str]:
+        """Scan Ollama model directory to build a model-to-manifest-path map."""
+        if self._model_path_cache:
+            self.logger.debug("Using cached model path map")
+            return self._model_path_cache
+
+        ollama_model_dir = os.path.expanduser("~/.ollama/models")
+        manifest_base = os.path.join(ollama_model_dir, "manifests", "registry.ollama.ai", "library")
+        self.logger.debug(f"Scanning manifest directory: {manifest_base}")
+
+        if not os.path.exists(manifest_base):
+            self.logger.warning(f"Ollama manifest directory not found: {manifest_base}")
+            return {}
+
+        model_map = {}
+        try:
+            # Walk the library directory to find manifest files
+            for root, _, files in os.walk(manifest_base):
+                for file in files:
+                    if file.endswith(".json") or file in ["latest", "7b", "8b"]:  # Manifest files or tags
+                        # Extract model name and tag from path
+                        rel_path = os.path.relpath(root, manifest_base)
+                        model_parts = rel_path.split(os.sep)
+                        if len(model_parts) == 1:  # e.g., llama3.2/latest
+                            model_name = f"{model_parts[0]}:{file}"
+                            manifest_path = os.path.join(root, file)
+                            model_map[model_name] = manifest_path
+                        elif len(model_parts) == 2:  # e.g., codellama/7b-instruct
+                            model_name = f"{model_parts[0]}:{model_parts[1]}"
+                            manifest_path = os.path.join(root, file)
+                            model_map[model_name] = manifest_path
+
+            self.logger.debug(f"Built model path map: {list(model_map.keys())}")
+            self._model_path_cache = model_map
+            return model_map
+        except Exception as e:
+            self.logger.error(f"Failed to build model path cache: {str(e)}")
+            return {}
+
+    def _get_model_path(self, model_name: str) -> Optional[str]:
+        """Locate GGUF file for the given model in Ollama's model directory."""
+        ollama_model_dir = os.path.expanduser("~/.ollama/models")
+        model_map = self._build_model_path_cache()
+
+        manifest_path = model_map.get(model_name)
+        if not manifest_path:
+            self.logger.warning(f"No manifest mapping for {model_name}")
+            # Fallback: construct path dynamically
+            model_parts = model_name.split(":")
+            model_base = model_parts[0]
+            tag = model_parts[1] if len(model_parts) > 1 else "latest"
+            manifest_path = os.path.join(ollama_model_dir, "manifests", "registry.ollama.ai", "library", model_base, tag)
+
+        self.logger.debug(f"Checking manifest path: {manifest_path}")
+        if not os.path.exists(manifest_path):
+            self.logger.warning(f"No manifest file found for {model_name} at {manifest_path}")
+            return None
+
+        try:
+            with open(manifest_path, 'r') as f:
+                manifest = json.load(f)
+                self.logger.debug(f"Manifest for {model_name}: {json.dumps(manifest, indent=2)}")
+                for layer in manifest.get("layers", []):
+                    if layer.get("mediaType") == "application/vnd.ollama.image.model":
+                        digest = layer.get("digest", "")
+                        if digest.startswith("sha256:"):
+                            file_name = f"sha256-{digest[7:]}"
+                            file_path = os.path.join(ollama_model_dir, "blobs", file_name)
+                            self.logger.debug(f"Checking GGUF file: {file_path}")
+                            if os.path.exists(file_path):
+                                self.logger.info(f"Found GGUF file for {model_name}: {file_path}")
+                                return file_path
+                            else:
+                                self.logger.warning(f"GGUF file not found at {file_path}")
+                self.logger.warning(f"No valid GGUF file found in manifest for {model_name}")
+                return None
+        except Exception as e:
+            self.logger.error(f"Failed to read manifest for {model_name}: {str(e)}")
+            return None
+
     @classmethod
-    def get_or_create(cls, model_name: str, provider: str = "ollama", host: Optional[str] = None) -> 'ModelManager':
+    def get_or_create(cls, model_name: str, provider: str = "outlines", host: Optional[str] = None) -> 'ModelManager':
+        from .managers.ollama import OllamaModelManager
+        from .managers.google import GoogleModelManager
+        from .managers.mock import MockModelManager
+        from .managers.outlines import OutlinesModelManager
+
         key = (model_name, provider, host or "")
         if key not in cls._model_cache:
             if provider.lower() == "ollama":
                 cls._model_cache[key] = OllamaModelManager(model_name, host or "http://localhost:11434")
+            elif provider.lower() == "outlines":
+                cls._model_cache[key] = OutlinesModelManager(model_name)
             elif provider.lower() == "google_ai_studio":
                 cls._model_cache[key] = GoogleModelManager(model_name)
             elif provider.lower() == "mock":
@@ -38,83 +127,5 @@ class ModelManager(ABC):
                 raise ValueError(f"Unknown model provider: {provider}")
         return cls._model_cache[key]
 
-class OllamaModelManager(ModelManager):
-    def __init__(self, model_name: str = "codellama", host: str = "http://localhost:11434"):
-        super().__init__(model_name, provider="ollama", host=host)
-        self.client = ollama.Client(host=self.host)
-        self.ensure_model_and_server()
-
-    def ensure_model_and_server(self):
-        try:
-            response = self.client.list()
-            self.logger.info(f"Ollama server running at {self.host}")
-            models = response.get('models', [])
-            model_key = 'model'
-            if not any(m.get(model_key) == f"{self.model_name}:latest" for m in models):
-                self.logger.info(f"Model {self.model_name} not found. Pulling it...")
-                subprocess.run(["ollama", "pull", self.model_name], check=True)
-                self.logger.info(f"Model {self.model_name} pulled successfully")
-            else:
-                self.logger.info(f"Model {self.model_name} already available")
-        except Exception as e:
-            self.logger.warning(f"Ollama server not running or model check failed: {str(e)}. Starting server...")
-            subprocess.Popen(["ollama", "serve"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            time.sleep(2)
-            self.ensure_model_and_server()
-
-    def generate(self, prompt: str, **kwargs) -> str:
-        try:
-            valid_kwargs = {k: v for k, v in kwargs.items() if k in ['system', 'template', 'context']}
-            response = self.client.generate(model=self.model_name, prompt=prompt, **valid_kwargs)
-            return response['response'].strip()
-        except Exception as e:
-            self.logger.error(f"Failed to generate with {self.model_name}: {str(e)}")
-            return ""
-
-class GoogleModelManager(ModelManager):
-    def __init__(self, model_name: str = "gemini-1.5-flash"):
-        super().__init__(model_name, provider="google_ai_studio")
-
-    def generate(self, prompt: str, **kwargs) -> str:
-        api_key = os.getenv("GOOGLE_AI_STUDIO_API_KEY")
-        if not api_key:
-            self.logger.error("GOOGLE_AI_STUDIO_API_KEY not set. Set it with 'export GOOGLE_AI_STUDIO_API_KEY=your_key'")
-            return ""
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent"
-        headers = {"Content-Type": "application/json"}
-        data = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "maxOutputTokens": kwargs.get("max_tokens", 2048),
-                "temperature": kwargs.get("temperature", 0.7)
-            }
-        }
-        try:
-            response = requests.post(f"{url}?key={api_key}", json=data, headers=headers, timeout=kwargs.get("timeout", 30))
-            response.raise_for_status()
-            result = response.json()
-            if not result.get("candidates"):
-                self.logger.error("Remote inference returned no candidates")
-                return ""
-            text = result["candidates"][0]["content"]["parts"][0]["text"]
-            if not text.strip():
-                self.logger.error("Remote inference returned empty text")
-                return ""
-            return text.strip()
-        except Exception as e:
-            self.logger.error(f"Remote inference failed: {str(e)}")
-            return ""
-
-class MockModelManager(ModelManager):
-    def __init__(self, model_name: str = "mock"):
-        super().__init__(model_name, provider="mock")
-
-    def generate(self, prompt: str, **kwargs) -> str:
-        if "Generate Python code" in prompt:
-            return "import os\ndef list_py_files():\n    return [f for f in os.listdir('.') if f.endswith('.py')]"
-        elif "Generate a Python unit test" in prompt:
-            return "import unittest\ndef test_list_files():\n    files = [f for f in os.listdir('.') if f.endswith('.py')]\n    assert isinstance(files, list)"
-        return "Mock response"
-
-def create_model_manager(provider: str = "ollama", model_name: str = "llama3.2:latest", **kwargs) -> ModelManager:
+def create_model_manager(provider: str = "outlines", model_name: str = "llama3.2:latest", **kwargs) -> ModelManager:
     return ModelManager.get_or_create(model_name, provider, kwargs.get("host"))

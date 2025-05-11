@@ -1,3 +1,5 @@
-from .core import Memory
+# seclorum/agents/memory/__init__.py
+from .memory import Memory
+from .manager import MemoryManager
 
-__all__ = ["nMemory"]
+__all__ = ["Memory, Manager"]

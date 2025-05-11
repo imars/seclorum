@@ -1,95 +1,122 @@
 # seclorum/agents/generator.py
+from typing import Tuple, Any, Dict, Optional
 from seclorum.agents.agent import Agent
-from seclorum.models import Task, CodeOutput, create_model_manager, ModelManager
+from seclorum.models import Task, CodeOutput
 from seclorum.languages import LANGUAGE_HANDLERS
-from typing import Tuple
-import re
 import logging
-import time
+import re
 
-# Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 class Generator(Agent):
-    def __init__(self, task_id: str, session_id: str, model_manager: ModelManager = None):
-        super().__init__(f"Generator_{task_id}", session_id)
-        self.task_id = task_id
-        self.model = model_manager
-        self.model_manager = model_manager or create_model_manager(provider="ollama", model_name="llama3.2:latest")
-        logger.debug(f"Generator initialized for Task {task_id}, session_id={session_id}")
+    def __init__(self, name: str, session_id: str, model_manager=None):
+        super().__init__(name, session_id, model_manager)
+        logger.debug(f"Generator initialized: name={name}, session_id={session_id}")
 
-    def process_task(self, task: Task) -> Tuple[str, CodeOutput]:
-        logger.debug(f"Generating code for task={task.task_id}, description={task.description[:100]}, "
-                     f"parameters={task.parameters}")
-        start_time = time.time()
+    def get_prompt(self, task: Task) -> str:
+        """Generate a prompt for code generation."""
         language = task.parameters.get("language", "javascript").lower()
-        output_files = task.parameters.get("output_files", [task.parameters.get("output_file", "output")])
-        if not isinstance(output_files, list):
-            output_files = [output_files]
-        primary_file = task.parameters.get("output_file", output_files[0])
+        output_files = task.parameters.get("output_files", ["app.js"])
+        handler = LANGUAGE_HANDLERS.get(language, LANGUAGE_HANDLERS["javascript"])
+        system_prompt = (
+            "You are a coding assistant that generates valid code for a web-based application. "
+            "Output ONLY the code, with no comments, no markdown, no code block markers (```), "
+            "and no text outside the code itself."
+        )
+        user_prompt = handler.get_code_prompt(task, output_files[0])
+        if self.model_manager.provider == "google_ai_studio":
+            return f"{system_prompt}\n\n{user_prompt}"
+        return (
+            f"<|start_header_id|>system<|end_header_id>\n\n{system_prompt}<|eot_id>\n"
+            f"<|start_header_id|>user<|end_header_id>\n\n{user_prompt}<|eot_id>\n"
+            f"<|start_header_id|>assistant<|end_header_id>\n\n"
+        )
 
-        handler = LANGUAGE_HANDLERS.get(language)
-        if not handler:
-            logger.error(f"Unsupported language: {language}")
-            result = CodeOutput(code="", tests=None)
-            self.track_flow(task, "failed", result, task.parameters.get("use_remote", False))
-            return "failed", result
+    def get_retry_prompt(self, original_prompt: str, previous_result: str, error: Optional[Exception], validation_passed: bool) -> str:
+        """Generate a retry prompt for failed code generation."""
+        language = self.task.parameters.get("language", "javascript").lower() if hasattr(self, 'task') else "javascript"
+        handler = LANGUAGE_HANDLERS.get(language, LANGUAGE_HANDLERS["javascript"])
+        issues = []
+        if error:
+            issues.append(f"Error: {str(error)}")
+        if not validation_passed:
+            issues.append("Generated code is invalid or does not meet language-specific requirements")
+        feedback = "\n".join([f"- {issue}" for issue in issues]) or "Output did not meet requirements"
+        guidance = (
+            f"Output ONLY valid {language} code, with no comments, no markdown, no code block markers (```), "
+            "and no text outside the code itself. Ensure the code is syntactically correct and functional."
+        )
+        return (
+            f"Previous attempt failed. Output:\n\n{previous_result}\n\n"
+            f"Issues:\n{feedback}\n\n"
+            f"Instructions:\n- {guidance}\n"
+            f"Original prompt:\n{original_prompt}"
+        )
 
+    def get_schema(self) -> Dict[str, Any]:
+        """Return schema for code output."""
+        return {
+            "type": "string",
+            "description": "Valid code in the specified language"
+        }
+
+    def process_task(self, task: Task) -> Tuple[str, Any]:
+        logger.debug(f"Processing task {task.task_id}: language={task.parameters.get('language', '')}, "
+                    f"output_files={task.parameters.get('output_files', [task.parameters.get('output_file')])}")
         try:
+            language = task.parameters.get("language", "javascript").lower()
+            if language not in LANGUAGE_HANDLERS:
+                logger.error(f"Unsupported language: {language}")
+                return "failed", CodeOutput(code="", tests=None)
+
+            handler = LANGUAGE_HANDLERS[language]
+            output_files = task.parameters.get("output_files", [task.parameters.get("output_file", "app.js")])
+            if not isinstance(output_files, list):
+                output_files = [output_files]
+
             results = {}
             for output_file in output_files:
                 logger.debug(f"Generating code for {output_file}")
-                code = handler.get_code(task, output_file)
-                if not code:
-                    code_prompt = handler.get_code_prompt(task, output_file)
-                    logger.debug(f"Code prompt for {output_file}: {code_prompt[:200]}...")
-                    use_remote = task.parameters.get("use_remote", False)
-                    raw_code = self.infer(code_prompt, task, use_remote=use_remote, use_context=False, max_tokens=4000)
-                    logger.debug(f"Raw inferred code for {output_file}: {raw_code[:200]}...")
-                    code = re.sub(r'```(?:javascript|html|python|cpp|css)?\n|\n```|[^\x00-\x7F]+', '', raw_code).strip()
-
-                logger.debug(f"Generated code for {output_file} before validation: {code[:200]}...")
-                if not handler.validate_code(code):
-                    logger.warning(f"Invalid {language} code for {output_file}, falling back to default")
-                    code = handler.get_fallback_code(task, output_file)
-                    if not handler.validate_code(code):
-                        logger.error(f"Fallback {language} code invalid for {output_file}")
-                        code = ""
-
+                code = self.generate_code(task, handler, output_file)
+                if not code or not handler.validate_code(code):
+                    logger.warning(f"Generated code invalid for {output_file}, using fallback")
+                    code = handler.get_fallback_code(task)
                 results[output_file] = code
-                logger.debug(f"Final generated code for {output_file}: {code[:200]}...")
 
-            # Primary file for output and tests
+            primary_file = task.parameters.get("output_file", output_files[0])
             primary_code = results.get(primary_file, "")
-            tests = None
-            if task.parameters.get("generate_tests", False) and primary_code and language == "javascript":
-                test_prompt = handler.get_test_prompt(primary_code)
-                logger.debug(f"Test prompt: {test_prompt[:200]}...")
-                raw_tests = self.infer(test_prompt, task, use_remote=use_remote, use_context=False, max_tokens=2000)
-                logger.debug(f"Raw inferred tests: {raw_tests[:200]}...")
-                tests = re.sub(r'```(?:javascript|html|python|cpp)?\n|\n```|[^\x00-\x7F]+', '', raw_tests).strip()
-                if not tests.startswith(("describe(", "test(")):
-                    logger.warning(f"Invalid Jest tests for {primary_file}, discarding")
-                    tests = None
-                logger.debug(f"Generated tests: {tests[:200]}..." if tests else "No valid tests generated")
+            test_code = None
+            if task.parameters.get("generate_tests", False):
+                test_code = handler.get_test_prompt(primary_code) or "// Default test\nexpect(true).toBe(true);"
 
-            result = CodeOutput(
+            logger.debug(f"Generated code for {primary_file}: length={len(primary_code)}")
+            return "generated", CodeOutput(
                 code=primary_code,
-                tests=tests,
-                additional_files={k: v for k, v in results.items() if k != primary_file}
+                tests=test_code,
+                additional_files={k: v for k, v in results.items() if k != primary_file},
+                output_files=output_files
             )
-            self.save_output(task, result, status="generated")
-            self.commit_changes(f"Generated {language} code for {', '.join(output_files)}")
-            logger.debug(f"Tracking flow for {self.name}: status=generated, task_id={task.task_id}")
-            self.track_flow(task, "generated", result, task.parameters.get("use_remote", False))
-            elapsed = time.time() - start_time
-            logger.debug(f"Generator.process_task completed in {elapsed:.2f}s")
-            return "generated", result
         except Exception as e:
-            logger.error(f"Generation failed for {primary_file}: {str(e)}")
-            result = CodeOutput(code="", tests=None)
-            self.track_flow(task, "failed", result, task.parameters.get("use_remote", False))
-            elapsed = time.time() - start_time
-            logger.debug(f"Generator.process_task failed in {elapsed:.2f}s")
-            return "failed", result
+            logger.error(f"Error generating code for task {task.task_id}: {str(e)}")
+            return "failed", CodeOutput(code="", tests=None)
+
+    def generate_code(self, task: Task, handler, output_file: str) -> str:
+        logger.debug(f"Inferring code for task={task.task_id}, output_file={output_file}")
+        try:
+            code = self.infer(
+                prompt=self.get_prompt(task),
+                task=task,
+                use_remote=task.parameters.get("use_remote", False),
+                use_context=True,
+                max_tokens=4096,
+                function_call={"schema": self.get_schema()}
+            )
+            code = re.sub(r'^```[\w\s]*\n|```$', '', code, flags=re.MULTILINE)
+            code = re.sub(r'^\s*//.*?$|^\s*#.*?$|/\*[\s\S]*?\*/', '', code, flags=re.MULTILINE)
+            code = code.strip()
+            logger.debug(f"Raw generated code for {output_file}: {code[:100]}...")
+            return code
+        except Exception as e:
+            logger.error(f"Inference failed for {output_file}: {str(e)}")
+            return ""

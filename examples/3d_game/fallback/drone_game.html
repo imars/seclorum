@@ -24,11 +24,14 @@
         <div id="standings"><table></table></div>
         <button id="startReset">Start</button>
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r169/three.min.js" onerror="console.error('Failed to load Three.js')"></script>
-    <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.umd.js" onerror="console.error('Failed to load simplex-noise')"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.error('Failed to load Three.js')"></script>
+    <!--<script src="https://unpkg.com/simplex-noise@2.4.0/simplex-noise.min.js" onerror="console.error('Failed to load simplex-noise')"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/simplex-noise@2.4.0/simplex-noise.min.js" onerror="console.error('Failed to load simplex-noise')"></script>
     <script>
-        if (typeof simplexNoise === 'undefined') {
-            console.error('simplexNoise not available, using flat terrain');
+     const simplexNoise = new SimplexNoise;
+     console.log(simplexNoise.noise3D(1.0, 1.0, 1.0));
+     if (typeof simplexNoise === 'undefined') {
+         console.error('simplexNoise not available, using flat terrain');
             window.simplexNoise = { createNoise2D: () => (x, y) => 0 };
         }
     </script>
