@@ -1,3 +1,4 @@
+# seclorum/agents/architect.py
 from typing import Any, Dict, List, Optional, Tuple, Callable
 from seclorum.models import Task, Plan
 from seclorum.agents.agent import Agent
@@ -7,12 +8,13 @@ from seclorum.agents.settings import Settings
 import json
 import uuid
 import sqlite3
+from seclorum.agents.memory.sqlite import LockTimeoutError
 
 class Architect(Agent):
     def __init__(self, task_id: str, session_id: str, model_manager=None, model_name: str = "gemini-1.5-flash", memory_kwargs: Optional[Dict] = None):
-        memory_kwargs = memory_kwargs or {}
         super().__init__(name=f"Architect_{task_id}", session_id=session_id, model_manager=model_manager, model_name=model_name, memory_kwargs=memory_kwargs)
         logger.info(f"Architect initialized: name=Architect_{task_id}, session_id={session_id}")
+        self.log_conversation(f"Architect {task_id} ready to process tasks")
 
     def get_prompt(self, task: Task) -> str:
         language = task.parameters.get("language", "javascript").lower()
@@ -32,6 +34,7 @@ class Architect(Agent):
             f"no trailing commas, no comments, no markdown, and no text outside the JSON object."
         )
         self.log_update(f"Generated prompt for task {task.task_id}: {prompt[:200]}...")
+        self.log_conversation(f"Task prompt for {task.task_id}: {prompt}")
         return prompt
 
     def get_retry_prompt(self, original_prompt: str, previous_result: str, error: Optional[Exception], validation_passed: bool) -> str:
@@ -57,12 +60,14 @@ class Architect(Agent):
             "'dependencies', and 'prompt'. "
             "Generate 5–10 subtasks to cover HTML, JavaScript, CSS, package.json, and README.md efficiently."
         )
-        return (
+        retry_prompt = (
             f"Previous attempt failed. Output:\n\n{previous_result}\n\n"
             f"Issues:\n{feedback}\n\n"
             f"Instructions:\n- {guidance}\n"
             f"Original prompt:\n{original_prompt}"
         )
+        self.log_conversation(f"Retrying task with issues: {feedback}")
+        return retry_prompt
 
     def get_schema(self) -> Dict[str, Any]:
         return {
@@ -109,19 +114,27 @@ class Architect(Agent):
     def validate_plan(self, raw_plan: str) -> bool:
         try:
             cleaned_plan = self.strip_markdown_json(raw_plan)
+            logger.debug(f"Validating plan: {cleaned_plan[:200]}...")
             plan_data = json.loads(cleaned_plan)
-            if not isinstance(plan_data, dict) or "subtasks" not in plan_data:
-                logger.debug("Validation failed: Plan is not a dict or missing 'subtasks'")
+            if not isinstance(plan_data, dict):
+                logger.debug("Validation failed: Plan is not a dict")
+                return False
+            if "subtasks" not in plan_data or not isinstance(plan_data["subtasks"], list):
+                logger.debug("Validation failed: Missing or invalid 'subtasks' array")
                 return False
             return True
         except json.JSONDecodeError as e:
-            logger.debug(f"Validation failed due to JSONDecodeError: {str(e)}")
+            logger.debug(f"Validation failed due to JSONDecodeError: {str(e)}, raw_plan: {raw_plan[:200]}...")
+            return False
+        except Exception as e:
+            logger.debug(f"Validation failed due to unexpected error: {str(e)}")
             return False
 
     def create_fallback_subtasks(self, task: Task) -> List[Task]:
         language = task.parameters.get("language", "javascript").lower()
         handler = LANGUAGE_HANDLERS.get(language, LANGUAGE_HANDLERS["javascript"])
         output_files = handler.map_output_files(["main_output"], task)
+        self.log_conversation(f"Fallback plan for task {task.task_id}: Creating single subtask with {output_files}")
         return [
             Task(
                 task_id=str(uuid.uuid4()),
@@ -137,6 +150,7 @@ class Architect(Agent):
 
     def process_task(self, task: Task) -> Tuple[str, Any]:
         logger.info(f"Processing task {task.task_id}: description={task.description[:100]}...")
+        self.log_conversation(f"Starting task {task.task_id}: {task.description[:200]}...")
         try:
             prompt = self.get_prompt(task)
             max_tokens = task.parameters.get(
@@ -162,13 +176,17 @@ class Architect(Agent):
                         max_retries=3,
                         **infer_kwargs
                     )
+                    logger.debug(f"Raw model response for task {task.task_id}: {raw_plan[:500]}...")
                     logger.info(f"Raw plan output length: {len(raw_plan)}")
+                    self.log_conversation(f"Received plan for task {task.task_id}: {raw_plan[:200]}...")
                     break
                 except (json.JSONDecodeError, sqlite3.ProgrammingError, LockTimeoutError) as e:
                     logger.error(f"Inference attempt {attempt + 1} failed for task {task.task_id}: {str(e)}")
+                    self.log_conversation(f"Inference attempt {attempt + 1} failed for task {task.task_id}: {str(e)}")
                     continue
             if not raw_plan or not raw_plan.strip():
                 logger.error("Empty or invalid raw plan received")
+                self.log_conversation(f"Empty or invalid plan for task {task.task_id}, using fallback")
                 subtasks = self.create_fallback_subtasks(task)
                 fallback_plan = {
                     "subtasks": [
@@ -187,8 +205,10 @@ class Architect(Agent):
             try:
                 plan_data = json.loads(cleaned_plan)
                 logger.info(f"Parsed plan: {json.dumps(plan_data, indent=2)[:200]}...")
+                self.log_conversation(f"Parsed plan for task {task.task_id} with {len(plan_data.get('subtasks', []))} subtasks")
             except json.JSONDecodeError as e:
                 logger.error(f"Invalid JSON: {str(e)}, raw_plan: {raw_plan[:200]}...")
+                self.log_conversation(f"Invalid JSON for task {task.task_id}, using fallback")
                 subtasks = self.create_fallback_subtasks(task)
                 fallback_plan = {
                     "subtasks": [
@@ -205,6 +225,7 @@ class Architect(Agent):
                 return "generated", Plan(subtasks=subtasks)
             if not isinstance(plan_data, dict) or "subtasks" not in plan_data:
                 logger.warning("Plan missing subtasks, using fallback")
+                self.log_conversation(f"Plan missing subtasks for task {task.task_id}, using fallback")
                 subtasks = self.create_fallback_subtasks(task)
                 fallback_plan = {
                     "subtasks": [
@@ -226,6 +247,7 @@ class Architect(Agent):
                 output_files = parameters.get("output_files", [])
                 if not output_files:
                     logger.warning(f"No output_files in subtask, skipping: {subtask_data}")
+                    self.log_conversation(f"Skipping subtask with no output_files: {subtask_data.get('description', 'Unknown')}")
                     continue
                 language = subtask_data.get("language", task.parameters.get("language", "javascript")).lower()
                 if language == "none":
@@ -263,6 +285,7 @@ class Architect(Agent):
             config_included = any("config_output" in s.parameters.get("output_files", []) for s in subtasks)
             if not config_included:
                 logger.warning("config_output missing, adding configuration subtask")
+                self.log_conversation(f"Adding configuration subtask for task {task.task_id}")
                 language = task.parameters.get("language", "javascript").lower()
                 handler = LANGUAGE_HANDLERS.get(language, LANGUAGE_HANDLERS["javascript"])
                 task_id = str(uuid.uuid4())
@@ -280,6 +303,7 @@ class Architect(Agent):
                 subtasks.append(subtask)
             if not subtasks:
                 logger.warning("No valid subtasks, using fallback")
+                self.log_conversation(f"No valid subtasks for task {task.task_id}, using fallback")
                 subtasks = self.create_fallback_subtasks(task)
                 fallback_plan = {
                     "subtasks": [
@@ -295,9 +319,11 @@ class Architect(Agent):
                 self.store_output(task, "generated", fallback_plan, prompt=prompt)
                 return "generated", Plan(subtasks=subtasks)
             self.store_output(task, "generated", plan_data, prompt=prompt)
+            self.log_conversation(f"Completed task {task.task_id} with {len(subtasks)} subtasks")
             return "generated", Plan(subtasks=subtasks)
         except Exception as e:
             logger.error(f"Error generating plan for task {task.task_id}: {str(e)}")
+            self.log_conversation(f"Error in task {task.task_id}: {str(e)}, using fallback")
             subtasks = self.create_fallback_subtasks(task)
             fallback_plan = {
                 "subtasks": [

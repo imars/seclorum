@@ -7,14 +7,35 @@ import re
 from ..manager import ModelManager
 from .chat_template import CustomChatTemplate
 
+logger = logging.getLogger("ModelManager")
+
 try:
     from llama_cpp import Llama, llama_chat_apply_template
+    # Attempt to set llama_cpp log level
+    log_level = os.getenv("LLAMA_CPP_LOG_LEVEL", "ERROR").upper()
+    if hasattr(Llama, 'log_set_level') and hasattr(Llama, 'LOG_LEVEL_ERROR'):
+        try:
+            level_map = {
+                "ERROR": Llama.LOG_LEVEL_ERROR,
+                "WARN": Llama.LOG_LEVEL_WARN,
+                "INFO": Llama.LOG_LEVEL_INFO,
+                "DEBUG": Llama.LOG_LEVEL_DEBUG,
+                "NONE": Llama.LOG_LEVEL_NONE if hasattr(Llama, 'LOG_LEVEL_NONE') else Llama.LOG_LEVEL_ERROR
+            }
+            if log_level in level_map:
+                Llama.log_set_level(level_map[log_level])
+                logger.info(f"Set llama_cpp log level to {log_level}")
+            else:
+                logger.warning(f"Invalid LLAMA_CPP_LOG_LEVEL: {log_level}. Using ERROR.")
+                Llama.log_set_level(Llama.LOG_LEVEL_ERROR)
+        except Exception as e:
+            logger.warning(f"Failed to set llama_cpp log level: {str(e)}. Using verbose=False as fallback.")
+    else:
+        logger.warning("llama_cpp.log_set_level not available; relying on verbose=False.")
 except ImportError as e:
-    logging.error(f"Failed to import llama_cpp: {str(e)}. Install with `pip install llama_cpp_python`.")
+    logger.error(f"Failed to import llama_cpp: {str(e)}. Install with `pip install llama_cpp_python`.")
     Llama = None
     llama_chat_apply_template = None
-
-logger = logging.getLogger("ModelManager")
 
 class LlamaCppModelManager(ModelManager):
     def __init__(self, model_name: str = "llama3.2"):
@@ -27,7 +48,8 @@ class LlamaCppModelManager(ModelManager):
             raise ValueError(f"No GGUF file found for model {model_name}")
         try:
             self.logger.info(f"Loading GGUF model from {model_path} for {model_name}")
-            self.llama_cpp = Llama(model_path=model_path, n_ctx=16384, verbose=True)
+            # Use verbose=False to minimize llama_cpp output if log_set_level is unavailable
+            self.llama_cpp = Llama(model_path=model_path, n_ctx=16384, verbose=False)
             self.chat_template = CustomChatTemplate(model_name)
             self.logger.info(f"LlamaCpp model initialized for {model_name}")
         except Exception as e:

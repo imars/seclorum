@@ -13,6 +13,8 @@ import requests
 import os
 import time
 import timeout_decorator
+import tempfile
+from seclorum.agents.memory.vector import VectorBackend
 
 class AbstractAgent(ABC, LoggerMixin):
     _memory_cache = {}
@@ -30,7 +32,20 @@ class AbstractAgent(ABC, LoggerMixin):
     @classmethod
     def get_or_create_memory(cls, session_id: str) -> Memory:
         if session_id not in cls._memory_cache:
-            cls._memory_cache[session_id] = Memory(session_id, disable_embedding=True)
+            sqlite_db_path = os.path.join(tempfile.gettempdir(), f"memory_{session_id}.db")
+            log_path = os.path.join("agents/logs/conversations", f"conversation_{session_id}.json")
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+            vector_db_path = os.path.join(tempfile.gettempdir(), "chroma_db")
+            vector_backend = VectorBackend(vector_db_path)
+            cls._memory_cache[session_id] = Memory(
+                session_id=session_id,
+                sqlite_db_path=sqlite_db_path,
+                log_path=log_path,
+                vector_backend=vector_backend,
+                embedding_model="nomic-embed-text:latest:ollama",
+                preserve_db=False,
+                disable_embedding=False
+            )
         return cls._memory_cache[session_id]
 
     @abstractmethod
@@ -118,4 +133,3 @@ class AbstractAgent(ABC, LoggerMixin):
         if use_remote:
             return self.remote_infer(prompt, endpoint=endpoint, **kwargs)
         return self.model.generate(prompt, **kwargs)
-

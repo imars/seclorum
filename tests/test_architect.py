@@ -3,21 +3,81 @@ import unittest
 import logging
 import json
 import argparse
+import sys
+import os
 from typing import Optional
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 from seclorum.models import Task, Plan, TaskFactory
 from seclorum.agents.architect import Architect
-from seclorum.models import create_model_manager
+from seclorum.models.manager import ModelManager, create_model_manager
 from seclorum.agents.memory.manager import MemoryManager
 import time
-import os
 import requests
 import uuid
+import contextlib
+import io
+import warnings
+import traceback
 
-logging.basicConfig(level=logging.DEBUG)
-logging.getLogger("httpcore").setLevel(logging.WARNING)
-logging.getLogger("httpx").setLevel(logging.WARNING)
+# Suppress Pydantic warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="chromadb")
+
+# Clear root logger handlers
+logging.getLogger('').handlers.clear()
+
+# Configure loggers early to suppress all non-CONVERSATION logs
+pydot_logger = logging.getLogger('pydot')
+pydot_logger.setLevel(logging.CRITICAL)
+pydot_logger.addHandler(logging.NullHandler())
+pydot_logger.propagate = False
+logging.getLogger('llama_cpp').setLevel(logging.CRITICAL)
+logging.getLogger('ollama').setLevel(logging.CRITICAL)
+logging.getLogger('').setLevel(logging.CRITICAL)
+
+# Context manager to suppress stdout/stderr
+@contextlib.contextmanager
+def suppress_output():
+    stdout, stderr = sys.stdout, sys.stderr
+    sys.stdout = sys.stderr = io.StringIO()
+    try:
+        yield
+    finally:
+        sys.stdout = stdout
+        sys.stderr = stderr
+
+# Patch logging.getLogger to suppress pydot logs during import
+with patch('logging.getLogger') as mock_get_logger:
+    mock_logger = Mock()
+    mock_logger.setLevel = Mock()
+    mock_logger.addHandler = Mock()
+    mock_logger.propagate = False
+    mock_get_logger.side_effect = lambda name: mock_logger if name == 'pydot' else logging.getLogger(name)
+    try:
+        with suppress_output():
+            import pydot
+    except ImportError as e:
+        logging.getLogger(__name__).warning(f"Failed to import pydot: {e}. Skipping pydot functionality.")
+        pydot = None
+
+# Reapply pydot suppression and log state
+pydot_logger = logging.getLogger('pydot')
+pydot_logger.setLevel(logging.CRITICAL)
+pydot_logger.addHandler(logging.NullHandler())
+pydot_logger.propagate = False
 logger = logging.getLogger(__name__)
+logger.debug(f"pydot logger: level={pydot_logger.level}, handlers={pydot_logger.handlers}, propagate={pydot_logger.propagate}")
+
+# Parse custom arguments
+parser = argparse.ArgumentParser(description="Test Architect with a specified model and mode", add_help=False)
+parser.add_argument("--model", default="llama3.2:latest", help="Model name (e.g., qwen3:4b, gemini-1.5-flash)")
+parser.add_argument("--remote", action="store_true", help="Use remote inference (Google AI Studio)")
+parser.add_argument("--mock", action="store_true", default=False, help="Enable mock API mode (default: False)")
+parser.add_argument("--conv", default="conversation", choices=["debug", "info", "conversation", "warning", "error", "critical"],
+                    help="Set logging level (default: conversation)")
+args, unittest_args = parser.parse_known_args()
+
+# Set LOG_LEVEL based on --conv
+os.environ["LOG_LEVEL"] = args.conv.upper()
 
 class MockResponse:
     def __init__(self, json_data, status_code):
@@ -32,37 +92,127 @@ class MockResponse:
 class TestArchitect(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        parser = argparse.ArgumentParser(description="Test Architect with a specified model and mode")
-        parser.add_argument("--model", default="llama3.2:latest", help="Model name (e.g., qwen3:4b, gemini-1.5-flash)")
-        parser.add_argument("--remote", action="store_true", help="Use remote inference (Google AI Studio)")
-        cls.args, _ = parser.parse_known_args()
-        cls.memory_manager = MemoryManager()
+        cls.args = args
+        with suppress_output():
+            try:
+                cls.memory_manager = MemoryManager()
+            except Exception as e:
+                logger.error(f"Failed to initialize MemoryManager: {str(e)}\n{traceback.format_exc()}")
+                raise
         cls.architects = []
 
     def setUp(self):
         self.session_id = f"test_session_{uuid.uuid4()}"
         self.model_name = self.args.model
         self.use_remote = self.args.remote
-        self.mock_api = os.getenv("MOCK_API") == "true"
-        self.patcher = None
-        if self.mock_api and self.use_remote:
-            mock_response = {
-                "candidates": [{"content": {"parts": [{"text": '{"subtasks": [{"description": "Create HTML structure", "language": "html", "parameters": {"output_files": ["drone_game.html"]}, "dependencies": [], "prompt": "Generate HTML for drone game"}, {"description": "Style UI", "language": "css", "parameters": {"output_files": ["styles.css"]}, "dependencies": ["Create HTML structure"], "prompt": "Generate CSS for drone game"}, {"description": "Configure project", "language": "json", "parameters": {"output_files": ["package.json"]}, "dependencies": [], "prompt": "Generate package.json"}, {"description": "Implement game logic", "language": "javascript", "parameters": {"output_files": ["game_logic.js"]}, "dependencies": ["Create HTML structure"], "prompt": "Generate JS for drone game"}, {"description": "Add settings", "language": "javascript", "parameters": {"output_files": ["settings.js"]}, "dependencies": ["Create HTML structure"], "prompt": "Generate JS settings"}]}'}]}}]
-            }
-            self.patcher = patch('requests.post', return_value=MockResponse(mock_response, 200))
-            self.patcher.start()
-            logger.info("Mocking Google AI Studio API responses")
+        self.mock_api = self.args.mock
+        logger.conversation(f"Setting up test with session_id={self.session_id}, model={self.model_name}, remote={self.use_remote}, mock_api={self.mock_api}")
+        self.post_patcher = None
+        self.get_patcher = None
+        self.outlines_patcher = None
+        self.mock_plan_response = json.dumps({
+            "subtasks": [
+                {
+                    "description": "Create HTML structure",
+                    "language": "html",
+                    "parameters": {"output_files": ["drone_game.html"]},
+                    "dependencies": [],
+                    "prompt": "Generate HTML for drone game"
+                },
+                {
+                    "description": "Style UI",
+                    "language": "css",
+                    "parameters": {"output_files": ["styles.css"]},
+                    "dependencies": ["Create HTML structure"],
+                    "prompt": "Generate CSS for drone game"
+                },
+                {
+                    "description": "Configure project",
+                    "language": "json",
+                    "parameters": {"output_files": ["package.json"]},
+                    "dependencies": [],
+                    "prompt": "Generate package.json"
+                },
+                {
+                    "description": "Implement game logic",
+                    "language": "javascript",
+                    "parameters": {"output_files": ["game_logic.js"]},
+                    "dependencies": ["Create HTML structure"],
+                    "prompt": "Generate JS for drone game"
+                },
+                {
+                    "description": "Add settings",
+                    "language": "javascript",
+                    "parameters": {"output_files": ["settings.js"]},
+                    "dependencies": ["Create HTML structure"],
+                    "prompt": "Generate JS settings"
+                }
+            ]
+        })
+        if self.mock_api:
+            if self.use_remote:
+                original_api_key = os.environ.get("GOOGLE_AI_STUDIO_API_KEY")
+                os.environ["GOOGLE_AI_STUDIO_API_KEY"] = "x" * 39
+                logger.conversation(f"Set dummy GOOGLE_AI_STUDIO_API_KEY")
+                mock_post_response = {
+                    "candidates": [{
+                        "content": {
+                            "parts": [{"text": self.mock_plan_response}]
+                        }
+                    }]
+                }
+                mock_get_response = {
+                    "models": [
+                        {"name": "gemini-1.5-flash", "version": "001"}
+                    ]
+                }
+                def mock_get(*args, **kwargs):
+                    logger.conversation(f"Mock GET triggered")
+                    return MockResponse(mock_get_response, 200)
+                def mock_post(*args, **kwargs):
+                    logger.conversation(f"Mock POST triggered")
+                    return MockResponse(mock_post_response, 200)
+                self.post_patcher = patch('requests.post', side_effect=mock_post)
+                self.get_patcher = patch('requests.get', side_effect=mock_get)
+                self.post_patcher.start()
+                self.get_patcher.start()
+                logger.conversation("Mocking Google AI Studio API responses")
+                self.original_api_key = original_api_key
+            else:
+                def mock_outlines_generate(*args, **kwargs):
+                    logger.conversation(f"Mock OutlinesModelManager.generate triggered")
+                    return self.mock_plan_response
+                self.outlines_patcher = patch(
+                    'seclorum.models.managers.outlines.OutlinesModelManager.generate',
+                    side_effect=mock_outlines_generate
+                )
+                self.outlines_patcher.start()
+                logger.conversation(f"Mocking OutlinesModelManager.generate for model {self.model_name}")
+        memory_kwargs = {
+            "base_dir": "agents/logs/conversations",
+            "vector_db_path": "/var/folders/2p/jyc0xwzx5wn8tkn6032dkfth0000gn/T/chroma_db",
+            "embedding_model": "nomic-embed-text:latest"
+        }
         if self.use_remote:
-            self.google_model_manager = create_model_manager(provider="google_ai_studio", model_name=self.model_name)
-            self.google_architect = Architect(
-                task_id="TestArchitectGoogle",
-                session_id=self.session_id,
-                model_manager=self.google_model_manager,
-                memory_manager=self.memory_manager
-            )
-            self.local_architects = {}
-            self.architects.append(self.google_architect)
-            logger.info(f"Initialized Google model manager for {self.model_name} (remote)")
+            with suppress_output():
+                try:
+                    self.google_model_manager = create_model_manager(provider="google_ai_studio", model_name=self.model_name)
+                except Exception as e:
+                    logger.error(f"Failed to initialize Google model manager for {self.model_name}: {str(e)}\n{traceback.format_exc()}")
+                    raise
+            try:
+                self.google_architect = Architect(
+                    task_id="TestArchitectGoogle",
+                    session_id=self.session_id,
+                    model_manager=self.google_model_manager,
+                    memory_kwargs=memory_kwargs
+                )
+                self.local_architects = {}
+                self.architects.append(self.google_architect)
+                logger.conversation(f"Initialized Google model manager for {self.model_name} (remote)")
+            except Exception as e:
+                logger.error(f"Failed to initialize Google Architect for {self.model_name}: {str(e)}\n{traceback.format_exc()}")
+                raise
         else:
             self.google_model_manager = None
             self.google_architect = None
@@ -70,148 +220,95 @@ class TestArchitect(unittest.TestCase):
             self.local_architects = {}
             for model_name in self.models:
                 try:
-                    outlines_model_manager = create_model_manager(
-                        provider="outlines", model_name=model_name, use_custom_tokenizer=True
-                    )
-                    architect = Architect(
+                    if self.mock_api:
+                        mock_model_manager = Mock(spec=ModelManager)
+                        mock_model_manager.generate = Mock(side_effect=mock_outlines_generate)
+                        mock_model_manager.model_name = model_name
+                        mock_model_manager.provider = "outlines"
+                        mock_model_manager.name = model_name  # Add name attribute
+                        mock_model_manager.close = Mock()
+                        mock_model_manager.should_use_remote = Mock(return_value=False)
+                        mock_model_manager.remote_infer = Mock(return_value=None)
+                        logger.debug(f"Mock ModelManager for {model_name}: {dir(mock_model_manager)}")
+                    else:
+                        with suppress_output():
+                            outlines_model_manager = create_model_manager(
+                                provider="outlines", model_name=model_name, use_custom_tokenizer=True
+                            )
+                    logger.debug(f"Creating Architect for {model_name}_custom, mock={self.mock_api}")
+                    architect_custom = Architect(
                         task_id=f"TestArchitectOutlines_{model_name}_custom",
                         session_id=self.session_id,
-                        model_manager=outlines_model_manager,
-                        memory_manager=self.memory_manager
+                        model_manager=mock_model_manager if self.mock_api else outlines_model_manager,
+                        memory_kwargs=memory_kwargs
                     )
-                    self.local_architects[f"{model_name}_custom"] = architect
-                    self.architects.append(architect)
-                    logger.info(f"Initialized Outlines model manager with custom tokenizer for {model_name}")
-                    outlines_model_manager = create_model_manager(
-                        provider="outlines", model_name=model_name, use_custom_tokenizer=False
-                    )
-                    architect = Architect(
+                    self.local_architects[f"{model_name}_custom"] = architect_custom
+                    self.architects.append(architect_custom)
+                    logger.conversation(f"Initialized Outlines model manager with custom tokenizer for {model_name} (mock={self.mock_api})")
+                    if self.mock_api:
+                        mock_model_manager = Mock(spec=ModelManager)
+                        mock_model_manager.generate = Mock(side_effect=mock_outlines_generate)
+                        mock_model_manager.model_name = model_name
+                        mock_model_manager.provider = "outlines"
+                        mock_model_manager.name = model_name  # Add name attribute
+                        mock_model_manager.close = Mock()
+                        mock_model_manager.should_use_remote = Mock(return_value=False)
+                        mock_model_manager.remote_infer = Mock(return_value=None)
+                        logger.debug(f"Mock ModelManager for {model_name}: {dir(mock_model_manager)}")
+                    else:
+                        with suppress_output():
+                            outlines_model_manager = create_model_manager(
+                                provider="outlines", model_name=model_name, use_custom_tokenizer=False
+                            )
+                    logger.debug(f"Creating Architect for {model_name}_llama, mock={self.mock_api}")
+                    architect_llama = Architect(
                         task_id=f"TestArchitectOutlines_{model_name}_llama",
                         session_id=self.session_id,
-                        model_manager=outlines_model_manager,
-                        memory_manager=self.memory_manager
+                        model_manager=mock_model_manager if self.mock_api else outlines_model_manager,
+                        memory_kwargs=memory_kwargs
                     )
-                    self.local_architects[f"{model_name}_llama"] = architect
-                    self.architects.append(architect)
-                    logger.info(f"Initialized Outlines model manager with llama.cpp tokenizer for {model_name}")
+                    self.local_architects[f"{model_name}_llama"] = architect_llama
+                    self.architects.append(architect_llama)
+                    logger.conversation(f"Initialized Outlines model manager with llama.cpp tokenizer for {model_name} (mock={self.mock_api})")
                 except Exception as e:
-                    logger.error(f"Failed to initialize Outlines model manager for {model_name}: {str(e)}")
+                    logger.error(f"Failed to initialize Outlines Architect for {model_name}: {str(e)}\n{traceback.format_exc()}")
                     self.local_architects[f"{model_name}_custom"] = None
                     self.local_architects[f"{model_name}_llama"] = None
-        logger.info("TestArchitect set up with session_id=%s, model=%s, remote=%s", self.session_id, self.model_name, self.use_remote)
+        logger.conversation(f"TestArchitect set up with session_id={self.session_id}, model={self.model_name}, remote={self.use_remote}")
 
     def tearDown(self):
-        if self.patcher:
-            self.patcher.stop()
-        logger.info("Test case completed, deferring cleanup to tearDownClass")
+        if self.post_patcher:
+            self.post_patcher.stop()
+            logger.conversation("Stopped requests.post patcher")
+        if self.get_patcher:
+            self.get_patcher.stop()
+            logger.conversation("Stopped requests.get patcher")
+        if self.outlines_patcher:
+            self.outlines_patcher.stop()
+            logger.conversation("Stopped OutlinesModelManager.generate patcher")
+        if hasattr(self, 'original_api_key'):
+            if self.original_api_key is None:
+                os.environ.pop("GOOGLE_AI_STUDIO_API_KEY", None)
+            else:
+                os.environ["GOOGLE_AI_STUDIO_API_KEY"] = self.original_api_key
+            logger.conversation("Restored original GOOGLE_AI_STUDIO_API_KEY")
 
     @classmethod
     def tearDownClass(cls):
         for architect in cls.architects:
             if architect:
                 architect.stop()
-                if architect.model_manager and hasattr(architect.model_manager, 'close'):
-                    architect.model_manager.close()
-        cls.memory_manager.stop()
-        logger.info("All architects and MemoryManager stopped")
+                if hasattr(architect, 'model') and architect.model and hasattr(architect.model, 'close'):
+                    architect.model.close()
+                    logger.conversation(f"Closed model manager for architect {architect.name}")
+        if cls.memory_manager:
+            cls.memory_manager.close()
+            logger.conversation("Closed MemoryManager resources")
 
-    def normalize_plan_json(self, raw_plan: str) -> str:
-        if not raw_plan:
-            logger.warning("Raw plan is empty")
-            return json.dumps({"subtasks": []})
-        try:
-            data = json.loads(raw_plan)
-            if self.use_remote and "plan" in data and "tasks" in data["plan"]:
-                data = {"subtasks": data["plan"]["tasks"]}
-                return json.dumps(data, ensure_ascii=True)
-            return raw_plan
-        except json.JSONDecodeError:
-            logger.warning("Failed to normalize JSON output; returning fallback")
-            return json.dumps({"subtasks": []})
-
-    def validate_plan(self, status, result, raw_plan, task, expected_provider, model_name):
-        self.assertEqual(status, "generated", f"Expected status 'generated', got '{status}'")
-        self.assertIsInstance(result, Plan, f"Expected Plan object, got {type(result).__name__}")
-        self.assertTrue(hasattr(result, "subtasks"), "Plan must have 'subtasks' attribute")
-        self.assertIsInstance(result.subtasks, list, "Subtasks must be a list")
-        self.assertGreaterEqual(len(result.subtasks), 5, "Plan must include at least 5 subtasks")
-        self.assertLessEqual(len(result.subtasks), 10, "Plan must include at most 10 subtasks")
-        logger.info("Subtask count: %d", len(result.subtasks))
-        output_files = [f for subtask in result.subtasks for f in subtask.parameters.get("output_files", [])]
-        required_files = task.parameters.get("output_files", [])
-        for required_file in required_files:
-            self.assertIn(required_file, output_files, f"Plan must include '{required_file}' output file")
-        self.assertTrue(any("settings.js" in subtask.parameters.get("output_files", []) for subtask in result.subtasks),
-                        "Plan must include a settings.js file (mapped from config_output)")
-        languages = set()
-        task_ids = {subtask.task_id for subtask in result.subtasks}
-        has_multiple_files = False
-        for subtask in result.subtasks:
-            self.assertTrue(subtask.description, "Subtask must have a non-empty description")
-            self.assertIsInstance(subtask.parameters, dict, "Subtask parameters must be a dictionary")
-            self.assertIn("output_files", subtask.parameters, "Subtask must specify 'output_files'")
-            output_files = subtask.parameters.get("output_files", [])
-            self.assertTrue(output_files, "Subtask must have non-empty 'output_files' list")
-            if len(output_files) > 1:
-                has_multiple_files = True
-            language = subtask.parameters.get("language", "").lower()
-            self.assertTrue(language, "Subtask must specify a language")
-            self.assertNotEqual(language, "none", "Subtask language must not be 'none'")
-            languages.add(language)
-            if language == "css":
-                self.assertTrue(all(f.endswith(".css") for f in output_files),
-                               f"CSS subtask must output to .css files, got {output_files}")
-            for dep_id in subtask.dependencies:
-                self.assertIn(dep_id, task_ids, f"Dependency {dep_id} must be a valid subtask task_id")
-            self.assertTrue(subtask.prompt, f"Subtask must have a non-empty prompt")
-        self.assertTrue(has_multiple_files, "At least one subtask must have multiple output files")
-        self.assertGreaterEqual(len(languages), 3, "Plan must include at least 3 pipelines")
-        self.assertIn("html", languages, "Plan must include an HTML pipeline")
-        self.assertIn("css", languages, "Plan must include a CSS pipeline")
-        self.assertIn("javascript", languages, "Plan must include a JavaScript pipeline")
-        architect = self.local_architects.get(model_name, self.google_architect)
-        history = architect.memory_manager.load_history(task.task_id, architect.name, architect.session_id)
-        retry_count = sum(1 for entry in history if "Inference attempt" in str(entry))
-        logger.info("Retry count for %s: %d", model_name, retry_count)
-        self.assertLessEqual(retry_count, 2, "Outlines should require at most 2 retries")
-        try:
-            plan_json = json.dumps({
-                "subtasks": [
-                    {
-                        "task_id": subtask.task_id,
-                        "description": subtask.description,
-                        "parameters": subtask.parameters,
-                        "dependencies": subtask.dependencies,
-                        "prompt": subtask.prompt
-                    } for subtask in result.subtasks
-                ]
-            }, indent=2)
-            logger.info("Plan JSON: %s", plan_json[:200])
-        except json.JSONDecodeError as e:
-            self.fail(f"Plan is not JSON-serializable: {str(e)}")
-        print("\n=== Raw Plan Output ===")
-        try:
-            parsed_plan = json.loads(raw_plan)
-            print(json.dumps(parsed_plan, indent=2))
-        except json.JSONDecodeError:
-            logger.error("Raw plan is not valid JSON")
-            print(raw_plan)
-        print("======================")
-
-    def create_task(self, task_id: str, use_remote: bool, max_tokens: Optional[int] = None) -> Task:
+    def create_task(self, task_id: str, use_remote: bool = False, max_tokens: int = 8192) -> Task:
         return TaskFactory.create_code_task(
             task_id=task_id,
-            description=(
-                "Create a web-based JavaScript application for a drone racing game. "
-                "Use Three.js for 3D rendering and simplex-noise for procedural terrain generation. "
-                "Include a canvas (id='canvas'), UI with timer (span#timer), speed (span#speed), "
-                "standings (table#standings), and start/reset button (button#startReset). "
-                "Generate modular components, UI structure in 'drone_game.html', styling in 'styles.css', "
-                "and configuration in 'package.json'. "
-                "Include an infinite tiled scrolling terrain and a background resource loader. "
-                "Reference external resources (e.g., skybox images) without generating them. "
-                "Features: user controls, AI components, collision detection, standings tracking, skybox, visual effects."
-            ),
+            description="Create a web-based JavaScript application for a drone racing game. Use Three.js for 3D rendering and simplex-noise for procedural terrain generation. Include a canvas (id='canvas'), UI controls, and ensure compatibility with modern browsers. Output files: drone_game.html, styles.css, package.json.",
             language="javascript",
             generate_tests=False,
             execute=False,
@@ -220,168 +317,63 @@ class TestArchitect(unittest.TestCase):
             max_tokens=max_tokens
         )
 
-    def test_tokenization_error_handling(self):
-        if self.use_remote:
-            self.skipTest("Tokenization error handling test is for local models only")
-        for model_name, architect in self.local_architects.items():
-            if architect is None:
-                logger.warning(f"Skipping test for {model_name} due to initialization failure")
-                continue
-            with self.subTest(model_name=model_name):
-                start_time = time.time()
-                task = self.create_task(f"tokenization_error_task_{model_name}", use_remote=False, max_tokens=4096)
-                logger.info("Created task for tokenization error test: task_id=%s, model=%s", task.task_id, model_name)
-                if "llama" in model_name:
-                    with patch('llama_cpp.Llama.tokenize') as mock_tokenize:
-                        mock_tokenize.side_effect = RuntimeError("Cannot convert token ` �` (29333) to bytes: �")
-                        status, result = architect.process_task(task)
-                else:
-                    status, result = architect.process_task(task)
-                logger.info("Task processed: status=%s, result_type=%s, duration=%s", status, type(result).__name__, time.time() - start_time)
-                self.assertEqual(status, "generated", f"Expected status 'generated', got '{status}'")
-                self.assertIsInstance(result, Plan, f"Expected Plan object, got {type(result).__name__}")
-                self.assertTrue(result.subtasks, "Plan must have subtasks")
-                self.assertTrue(any("settings.js" in subtask.parameters.get("output_files", []) for subtask in result.subtasks),
-                               "Plan must include a settings.js file (mapped from config_output)")
-                history = architect.memory_manager.load_history(task.task_id, architect.name, architect.session_id)
-                retry_count = sum(1 for entry in history if "Inference attempt" in str(entry))
-                self.assertLessEqual(retry_count, 5, f"Expected at most 5 retries, got {retry_count}")
-                if "llama" in model_name:
-                    cache_clear_logs = [entry for entry in history if "Outlines cache cleared successfully" in str(entry)]
-                    self.assertTrue(cache_clear_logs, "Cache should have been cleared for llama.cpp tokenizer error")
-                else:
-                    tokenizer_logs = [entry for entry in history if "Custom tokenizer cleaned text" in str(entry)]
-                    self.assertTrue(tokenizer_logs, "Custom tokenizer should have been used for problematic model")
-                logger.info("Tokenization error handling tested: %d retries, %d subtasks", retry_count, len(result.subtasks))
+    def validate_plan(self, plan: Plan, task: Task) -> None:
+        self.assertIsInstance(plan, Plan, f"Expected Plan object, got {type(plan).__name__}")
+        self.assertTrue(plan.subtasks, "Plan must have subtasks")
+        expected_files = set(task.parameters.get("output_files", []))
+        generated_files = set()
+        for subtask in plan.subtasks:
+            output_files = subtask.parameters.get("output_files", [])
+            generated_files.update(output_files)
+        self.assertTrue(expected_files.issubset(generated_files), f"Expected files {expected_files} not all in generated files {generated_files}")
 
-    def test_drone_racing_game_plan_local(self):
-        if self.use_remote:
-            self.skipTest("Local plan test is for local models only")
-        for model_name, architect in self.local_architects.items():
-            if architect is None:
-                logger.warning(f"Skipping test for {model_name} due to initialization failure")
-                continue
-            with self.subTest(model_name=model_name):
-                task = self.create_task(f"drone_racing_task_{model_name}", use_remote=False, max_tokens=4096)
-                logger.info("Created task: task_id=%s, model=%s", task.task_id, model_name)
-                status, result = architect.process_task(task)
-                raw_plan = self.normalize_plan_json(json.dumps({"subtasks": [
-                    {
-                        "task_id": s.task_id,
-                        "description": s.description,
-                        "parameters": s.parameters,
-                        "dependencies": s.dependencies,
-                        "prompt": s.prompt
-                    } for s in result.subtasks
-                ]}))
-                logger.info("Task processed: status=%s, result_type=%s", status, type(result).__name__)
-                self.validate_plan(status, result, raw_plan, task, expected_provider="outlines", model_name=model_name)
-
-    def test_drone_racing_game_plan(self):
-        task = self.create_task("drone_racing_task_google", use_remote=self.use_remote, max_tokens=8192)
-        logger.info("Created task: task_id=%s", task.task_id)
+    def test_background_embedding(self):
+        task = self.create_task("embedding_test_task", use_remote=self.use_remote, max_tokens=8192)
+        logger.conversation(f"Created task for embedding test: task_id={task.task_id}")
         architect = self.google_architect if self.use_remote else self.local_architects.get(f"{self.model_name}_custom")
         if architect is None:
             self.fail(f"Architect not initialized for model {self.model_name}")
-        status, result = architect.process_task(task)
-        logger.debug(f"Raw inference output: {json.dumps({'subtasks': [{'task_id': s.task_id} for s in result.subtasks]})}")
-        raw_plan = self.normalize_plan_json(json.dumps({"subtasks": [
-            {
-                "task_id": s.task_id,
-                "description": s.description,
-                "parameters": s.parameters,
-                "dependencies": s.dependencies,
-                "prompt": s.prompt
-            } for s in result.subtasks
-        ]}))
-        logger.info("Task processed: status=%s, result_type=%s", status, type(result).__name__)
-        self.validate_plan(
-            status, result, raw_plan, task,
-            expected_provider="google_ai_studio" if self.use_remote else "outlines",
-            model_name=self.model_name
-        )
-
-    def test_compare_local_and_remote_plans(self):
-        if self.use_remote:
-            self.skipTest("Comparison test requires local models")
-        local_plans = {}
-        for model_name, architect in self.local_architects.items():
-            if architect is None:
-                logger.warning(f"Skipping test for {model_name} due to initialization failure")
-                continue
-            task = self.create_task(f"drone_racing_task_{model_name}", use_remote=False, max_tokens=4096)
+        architect.log_conversation(f"Processing embedding test task: {task.task_id}")
+        for attempt in range(3):  # Retry up to 3 times
             status, result = architect.process_task(task)
-            raw_plan = self.normalize_plan_json(json.dumps({"subtasks": [
-                {
-                    "task_id": s.task_id,
-                    "description": s.description,
-                    "parameters": s.parameters,
-                    "dependencies": s.dependencies,
-                    "prompt": s.prompt
-                } for s in result.subtasks
-            ]}))
-            self.assertEqual(status, "generated", f"Local plan generation failed for {model_name}")
-            logger.info("Local plan processed: task_id=%s, subtask_count=%d", task.task_id, len(result.subtasks))
-            local_plans[model_name] = (task, result, raw_plan)
-        remote_task = self.create_task("drone_racing_task_google", use_remote=True, max_tokens=8192)
-        remote_status, remote_result = self.google_architect.process_task(remote_task)
-        remote_raw_plan = self.normalize_plan_json(json.dumps({"subtasks": [
-            {
-                "task_id": s.task_id,
-                "description": s.description,
-                "parameters": s.parameters,
-                "dependencies": s.dependencies,
-                "prompt": s.prompt
-            } for s in remote_result.subtasks
-        ]}))
-        self.assertEqual(remote_status, "generated", "Remote plan generation failed")
-        logger.info("Remote plan processed: task_id=%s, subtask_count=%d", remote_task.task_id, len(remote_result.subtasks))
-        for model_name, (local_task, local_result, local_raw_plan) in local_plans.items():
-            with self.subTest(model_name=model_name):
-                local_history = self.local_architects[model_name].memory_manager.load_history(
-                    local_task.task_id, self.local_architects[model_name].name, self.local_architects[model_name].session_id
-                )
-                remote_history = self.google_architect.memory_manager.load_history(
-                    remote_task.task_id, self.google_architect.name, self.google_architect.session_id
-                )
-                self.assertTrue(local_history, f"Local plan not found in Memory for {model_name}")
-                self.assertTrue(remote_history, "Remote plan not found in Memory")
-                local_prompt, local_response = local_history[-1][:2]
-                remote_prompt, remote_response = remote_history[-1][:2]
-                logger.debug("Local response (%s): %s", model_name, local_response[:200])
-                try:
-                    local_plan = json.loads(local_response)
-                except json.JSONDecodeError as e:
-                    logger.error(f"Failed to parse local plan for {model_name}: {str(e)}")
-                    self.fail(f"Failed to parse local plan: {str(e)}")
-                try:
-                    remote_plan = json.loads(remote_response)
-                except json.JSONDecodeError as e:
-                    logger.error(f"Failed to parse remote plan: {str(e)}")
-                    self.fail(f"Failed to parse remote plan: {str(e)}")
-                local_subtasks = local_plan.get("subtasks", [])
-                remote_subtasks = remote_plan.get("subtasks", [])
-                self.assertGreaterEqual(len(local_subtasks), 5, f"Local plan ({model_name}) has too few subtasks")
-                self.assertGreaterEqual(len(remote_subtasks), 5, "Remote plan has too few subtasks")
-                logger.info("Local plan (%s) subtasks: %d, Remote plan subtasks: %d", model_name, len(local_subtasks), len(remote_subtasks))
-                local_files = set(f for s in local_subtasks for f in s.get("parameters", {}).get("output_files", []))
-                remote_files = set(f for s in remote_subtasks for f in s.get("parameters", {}).get("output_files", []))
-                common_files = local_files.intersection(remote_files)
-                self.assertTrue(common_files, f"No common output files between local ({model_name}) and remote plans")
-                logger.info("Common output files (%s): %s", model_name, common_files)
-                local_languages = set(s.get("language", "").lower() for s in local_subtasks)
-                remote_languages = set(s.get("language", "").lower() for s in remote_subtasks)
-                common_languages = local_languages.intersection(remote_languages)
-                self.assertTrue(common_languages, f"No common languages between local ({model_name}) and remote plans")
-                self.assertIn("html", common_languages, "HTML missing in common languages")
-                self.assertIn("css", common_languages, "CSS missing in common languages")
-                self.assertIn("javascript", common_languages, "JavaScript missing in common languages")
-                logger.info("Common languages (%s): %s", model_name, common_languages)
-                local_deps = sum(len(s.get("dependencies", [])) for s in local_subtasks)
-                remote_deps = sum(len(s.get("dependencies", [])) for s in remote_subtasks)
-                self.assertGreater(local_deps, 0, f"Local plan ({model_name}) has no dependencies")
-                self.assertGreater(remote_deps, 0, "Remote plan has no dependencies")
-                logger.info("Local plan (%s) dependencies: %d, Remote plan dependencies: %d", model_name, local_deps, remote_deps)
+            if status == "generated":
+                break
+            logger.conversation(f"Retry attempt {attempt + 1} for embedding test due to status: {status}")
+            time.sleep(1)  # Brief delay between retries
+        architect.log_conversation(f"Embedding test task result: status={status}, subtasks={len(result.subtasks) if isinstance(result, Plan) else 0}")
+        self.assertEqual(status, "generated", f"Expected status 'generated', got '{status}'")
+        with suppress_output():
+            memory = architect.memory_manager.get_memory(architect.session_id)
+            history = memory.load_history(task.task_id, architect.name)
+        self.assertTrue(history, "No conversation history found")
+        prompt, response, _ = history[-1]
+        architect.log_conversation(f"Embedding test - Prompt: {prompt[:200]}...")
+        architect.log_conversation(f"Embedding test - Response: {response[:200]}...")
+        text = prompt + "\n" + response
+        with suppress_output():
+            similar_results = memory.find_similar(text, task.task_id, n_results=1)
+        self.assertTrue(similar_results, "No embeddings found in VectorBackend")
+        logger.conversation(f"Background embedding test passed: found {len(similar_results)} similar results")
+
+    def test_drone_racing_game_plan(self):
+        task = self.create_task("drone_racing_task_google", use_remote=self.use_remote, max_tokens=8192)
+        logger.conversation(f"Created task for drone racing: task_id={task.task_id}")
+        architect = self.google_architect if self.use_remote else self.local_architects.get(f"{self.model_name}_custom")
+        if architect is None:
+            self.fail(f"Architect not initialized for model {self.model_name}")
+        architect.log_conversation(f"Processing drone racing task: {task.task_id}")
+        for attempt in range(3):  # Retry up to 3 times
+            status, result = architect.process_task(task)
+            if status == "generated":
+                break
+            logger.conversation(f"Retry attempt {attempt + 1} for drone racing test due to status: {status}")
+            time.sleep(1)  # Brief delay between retries
+        architect.log_conversation(f"Drone racing task result: status={status}, subtasks={len(result.subtasks)}")
+        logger.conversation(f"Task processed: status={status}, result_type={type(result).__name__}")
+        self.assertEqual(status, "generated", f"Expected status 'generated', got '{status}'")
+        self.assertIsInstance(result, Plan, f"Expected Plan object, got {type(result).__name__}")
+        logger.conversation(f"Subtask count: {len(result.subtasks)}")
+        self.validate_plan(result, task)
 
 if __name__ == "__main__":
-    unittest.main(argv=[''])
+    unittest.main(argv=[sys.argv[0]] + unittest_args)

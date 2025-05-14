@@ -20,13 +20,14 @@ import hashlib
 import random
 
 class Agent(AbstractAgent, Remote):
-    def __init__(self, name: str, session_id: str, model_manager: Optional[ModelManager] = None, model_name: str = "gemini-1.5-flash", memory_manager: Optional[MemoryManager] = None):
+    def __init__(self, name: str, session_id: str, model_manager: Optional[ModelManager] = None, model_name: str = "gemini-1.5-flash", memory_kwargs: Optional[Dict] = None):
         super().__init__(name, session_id)
         self.logger = logging.getLogger(f"Agent_{name}")
         self.model = model_manager or create_model_manager(provider="google_ai_studio", model_name=model_name)
         self.available_models = {"default": self.model}
         self.current_model_key = "default"
-        self.memory_manager = memory_manager or MemoryManager()
+        memory_kwargs = memory_kwargs or {}
+        self.memory_manager = MemoryManager(**memory_kwargs)
         self.log_update(f"Agent {name} initialized with model {self.model.model_name}, provider {self.model.provider}, session_id={session_id}")
 
     def stop(self):
@@ -205,7 +206,7 @@ class Agent(AbstractAgent, Remote):
         context = ""
         if use_context:
             self.log_update(f"Loading conversation history for task_id={task.task_id}, agent_name={self.name}")
-            history = self.memory_manager.load_history(task.task_id, self.name, self.session_id)
+            history = self.memory_manager.load_history(task_id=task.task_id, agent_name=self.name, session_id=self.session_id)
             self.log_update(f"Loaded history for task_id={task.task_id}, agent_name={self.name}, count={len(history)}")
             if history:
                 context = "\n".join([f"Prompt: {h[0]}\nResponse: {h[1]}" for h in history])
