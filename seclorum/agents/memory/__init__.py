@@ -2,4 +2,4 @@
 from .memory import Memory
 from .manager import MemoryManager
 
-__all__ = ["Memory, Manager"]
+__all__ = ["Memory, MemoryManager"]

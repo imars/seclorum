@@ -1,38 +1,69 @@
 # seclorum/agents/memory/manager.py
 import os
 import logging
-import json
-from datetime import datetime
-import chromadb
-import ollama
 import subprocess
 import atexit
+import time
+import socket
 from typing import List, Dict, Optional, Tuple
 from seclorum.models import Task
 from seclorum.agents.memory.memory import Memory
+from seclorum.agents.memory.sqlite import SQLiteBackend
+from seclorum.agents.memory.file import FileBackend
 from seclorum.agents.memory.vector import VectorBackend
+import ollama
 
 logger = logging.getLogger(__name__)
 
 class MemoryManager:
-    def __init__(self, base_dir: str = "agents/logs/conversations", vector_db_path: str = None, embedding_model: str = None):
+    def __init__(
+        self,
+        base_dir: str = "agents/logs/conversations",
+        backends: Optional[List[Dict[str, any]]] = None,
+        embedding_model: str = "nomic-embed-text:latest",
+    ):
+        """
+        Initialize MemoryManager with configurable backends and embedding model.
+
+        Args:
+            base_dir: Base directory for backend storage (e.g., SQLite DBs, JSON logs).
+            backends: List of backend configurations, each with 'backend' (class) and 'config' (dict).
+            embedding_model: Name of the embedding model for VectorBackend.
+        """
         self.base_dir = base_dir
-        self.vector_db_path = vector_db_path or "/var/folders/2p/jyc0xwzx5wn8tkn6032dkfth0000gn/T/chroma_db"
-        self.embedding_model = embedding_model or "nomic-embed-text:latest"
-        self.vector_db = None
+        self.embedding_model = embedding_model
         self.ollama_process = None
         self.sessions: Dict[str, Memory] = {}
+        self.backends = backends or self._default_backends()
         self._initialize()
 
+    def _default_backends(self) -> List[Dict[str, any]]:
+        """Define default backend configurations."""
+        return [
+            {
+                "backend": SQLiteBackend,
+                "config": {"db_path": os.path.join(self.base_dir, "{session_id}.db"), "preserve_db": True}
+            },
+            {
+                "backend": FileBackend,
+                "config": {"log_path": os.path.join(self.base_dir, "conversation_{session_id}.json")}
+            },
+            {
+                "backend": VectorBackend,
+                "config": {
+                    "db_path": os.path.join(self.base_dir, "vector_db_{session_id}"),
+                    "embedding_model": self.embedding_model
+                }
+            }
+        ]
+
     def _initialize(self):
-        """Initialize chromadb and ollama resources."""
+        """Initialize ollama resources for embedding model."""
         try:
-            # Initialize chromadb
-            self.vector_db = chromadb.PersistentClient(path=self.vector_db_path, settings=chromadb.Settings(anonymized_telemetry=False))
-            logger.info("Initialized chromadb client")
-            # Start ollama server if not running
+            # Check if ollama server is running
             try:
                 ollama.list()
+                logger.info("Ollama server already running")
             except Exception:
                 logger.info("Starting ollama server")
                 self.ollama_process = subprocess.Popen(
@@ -54,47 +85,68 @@ class MemoryManager:
             raise
 
     def _stop_ollama(self):
-        """Stop the ollama server subprocess."""
+        """Clean up ollama resources without shutting down the shared server."""
         if self.ollama_process:
             try:
-                logger.info("Stopping ollama server")
+                logger.info("Stopping ollama server started by MemoryManager")
                 self.ollama_process.terminate()
                 self.ollama_process.wait(timeout=5)
+                logger.debug("Ollama process terminated")
             except subprocess.TimeoutExpired:
                 logger.warning("Ollama process did not terminate, killing")
                 self.ollama_process.kill()
+                try:
+                    self.ollama_process.wait(timeout=5)
+                    logger.debug("Ollama process killed")
+                except subprocess.TimeoutExpired:
+                    logger.error("Ollama process could not be killed")
             except Exception as e:
                 logger.warning(f"Failed to stop ollama server: {str(e)}")
             finally:
                 self.ollama_process = None
+        else:
+            logger.debug("No ollama process to stop; assuming shared server")
 
     def get_memory(self, session_id: str) -> Memory:
         """Get or create a Memory instance for the session."""
         if session_id not in self.sessions:
-            sqlite_db_path = os.path.join(self.base_dir, f"{session_id}.db")
-            log_path = os.path.join(self.base_dir, f"conversation_{session_id}.json")
-            vector_backend = VectorBackend(self.vector_db_path)
-            self.sessions[session_id] = Memory(
-                session_id=session_id,
-                sqlite_db_path=sqlite_db_path,
-                log_path=log_path,
-                vector_backend=vector_backend,
-                embedding_model=self.embedding_model
-            )
+            # Substitute session_id in backend configurations
+            session_backends = []
+            for backend_config in self.backends:
+                backend_class = backend_config["backend"]
+                config = backend_config.get("config", {}).copy()
+                # Replace {session_id} placeholders in config values
+                for key, value in config.items():
+                    if isinstance(value, str):
+                        config[key] = value.format(session_id=session_id)
+                session_backends.append({"backend": backend_class, "config": config})
+            self.sessions[session_id] = Memory(session_id=session_id, backends=session_backends)
+            logger.debug(f"Created Memory instance for session_id={session_id}")
         return self.sessions[session_id]
 
     def save(self, prompt: str, response: str, task_id: str, agent_name: str, session_id: str) -> None:
         """Save a conversation to the Memory instance for the session."""
         memory = self.get_memory(session_id)
         memory.save(prompt, response, task_id, agent_name)
-        logger.debug(f"Saved conversation via MemoryManager: session_id={session_id}, task_id={task_id}, agent_name={agent_name}")
+        logger.debug(
+            f"Saved conversation via MemoryManager: session_id={session_id}, "
+            f"task_id={task_id}, agent_name={agent_name}"
+        )
+
+    def save_task(self, task: Task, session_id: str) -> None:
+        """Save a task to the Memory instance for the session."""
+        memory = self.get_memory(session_id)
+        memory.save_task(task)
+        logger.debug(f"Saved task via MemoryManager: session_id={session_id}, task_id={task.task_id}")
 
     def load_cached_response(self, prompt_hash: str, session_id: str) -> Optional[str]:
         """Load a cached response for the prompt hash from the session's Memory."""
         memory = self.get_memory(session_id)
         response = memory.load_cached_response(prompt_hash)
         if response:
-            logger.debug(f"Loaded cached response via MemoryManager: session_id={session_id}, prompt_hash={prompt_hash}")
+            logger.debug(
+                f"Loaded cached response via MemoryManager: session_id={session_id}, prompt_hash={prompt_hash}"
+            )
         return response
 
     def load_task(self, task_id: str, session_id: str) -> Optional[Task]:
@@ -109,7 +161,10 @@ class MemoryManager:
         """Load conversation history for the task and agent from the session's Memory."""
         memory = self.get_memory(session_id)
         history = memory.load_history(task_id, agent_name)
-        logger.debug(f"Loaded conversation history via MemoryManager: session_id={session_id}, task_id={task_id}, agent_name={agent_name}, count={len(history)}")
+        logger.debug(
+            f"Loaded conversation history via MemoryManager: session_id={session_id}, "
+            f"task_id={task_id}, agent_name={agent_name}, count={len(history)}"
+        )
         return history
 
     def stop(self):
@@ -132,10 +187,4 @@ class MemoryManager:
                 del self.sessions[session_id]
             except Exception as e:
                 logger.warning(f"Failed to close session {session_id}: {str(e)}")
-        if self.vector_db:
-            try:
-                self.vector_db = None  # Let Python GC handle chromadb cleanup
-                logger.info("Closed chromadb client")
-            except Exception as e:
-                logger.warning(f"Failed to close chromadb client: {str(e)}")
         self.sessions.clear()
